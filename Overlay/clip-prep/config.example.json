@@ -1,0 +1,10 @@
+{
+  "dumpDir": "C:/Users/YOU/Videos/_incoming",
+  "targetRoot": "C:/Users/YOU/Videos",
+  "httpPort": 6789,
+  "dominantGameThreshold": 0.95,
+  "orphanWarnMinutes": 10,
+  "fileQuietSeconds": 2,
+  "logCapacity": 200,
+  "keepMkv": true
+}
