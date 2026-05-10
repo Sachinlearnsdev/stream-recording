@@ -862,7 +862,8 @@
       const j = await r.json();
       if (!r.ok) { setCfgStatus(j.error || 'Save failed', 'err'); return; }
       setCfgStatus('Saved. Restarting watcher to apply...', 'ok');
-      await fetch(API + '/restart', { method: 'POST' });
+      try { await fetch(API + '/restart', { method: 'POST' }); }
+      catch (e) { /* expected — watcher exits before response drains */ }
     } catch (e) { setCfgStatus('Save failed: ' + e.message, 'err'); }
   });
 
@@ -872,8 +873,10 @@
       const r = await fetch(API + '/games');
       $('games-text').value = await r.text();
       $('games-status').textContent = '';
+      $('games-status').style.color = '';
     } catch (e) {
       $('games-status').textContent = 'Failed to load: ' + e.message;
+      $('games-status').style.color = 'var(--accent-rec)';
     }
   }
   $('games-save').addEventListener('click', async () => {
