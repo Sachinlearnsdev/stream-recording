@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sasi Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  /* Layout */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: #0a0c10;
+    border-right: 1px solid var(--bg-divider);
+    padding: var(--sp-5) 0;
+    position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  .main { flex: 1; padding: var(--sp-6) var(--sp-7); max-width: 920px; }
+
+  /* Sidebar header */
+  .sb-head { padding: 0 var(--sp-4) var(--sp-4); border-bottom: 1px solid var(--bg-divider); margin-bottom: var(--sp-3); }
+  .sb-brand { display: flex; align-items: center; gap: var(--sp-2); }
+  .sb-mark {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent-rec), var(--accent-warn));
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--bg-page); font-weight: 900; font-size: 13px;
+  }
+  /* Note: the gradient on the brand mark is the ONLY allowed gradient — it's the logo, not chrome. */
+  .sb-name { color: var(--text-primary); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
+  .sb-ver  { color: var(--text-muted); font-size: 9px; letter-spacing: 0.12em; margin-top: 1px; }
+  .sb-status { display: flex; align-items: center; gap: var(--sp-1); margin-top: var(--sp-3); }
+  .sb-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-muted);
+    transition: background var(--t-fast);
+  }
+  .sb-dot.online { background: var(--accent-online); box-shadow: 0 0 6px var(--accent-online); }
+  .sb-dot.offline { background: var(--accent-rec); }
+  .sb-status-text { color: var(--text-secondary); font-size: 10px; font-weight: 500; }
+
+  /* Sidebar tabs */
+  .tabs { flex: 1; }
+  .tab-btn {
+    display: block; width: 100%;
+    padding: 10px var(--sp-4);
+    background: transparent; border: none;
+    color: var(--text-secondary);
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    letter-spacing: 0.04em; text-align: left; cursor: pointer;
+    transition: color var(--t-fast), background var(--t-fast);
+    border-left: 2px solid transparent;
+  }
+  .tab-btn:hover { color: var(--text-primary); }
+  .tab-btn.active {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.03);
+    border-left-color: var(--text-primary);
+    font-weight: 600;
+  }
+  .tab-badge {
+    background: var(--accent-rec); color: #fff;
+    font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 8px;
+    margin-left: var(--sp-1);
+  }
+
+  /* Page header */
+  .page-head { margin-bottom: var(--sp-6); }
+  .page-eyebrow { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .page-title { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.02em; }
+
+  /* Tab panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-brand">
+        <div class="sb-mark">S</div>
+        <div>
+          <div class="sb-name">Sasi Studio</div>
+          <div class="sb-ver">v0.2.0</div>
+        </div>
+      </div>
+      <div class="sb-status">
+        <div class="sb-dot" id="sb-dot"></div>
+        <span class="sb-status-text" id="sb-status-text">Connecting...</span>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="now">● Now</button>
+      <button class="tab-btn" data-tab="overlays">Overlays</button>
+      <button class="tab-btn" data-tab="recordings">Recordings</button>
+      <button class="tab-btn" data-tab="obs">OBS</button>
+      <button class="tab-btn" data-tab="keys">Keys</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <section class="panel active" data-panel="now">
+      <div class="page-head">
+        <div class="page-eyebrow">Dashboard</div>
+        <div class="page-title">Now</div>
+      </div>
+      <p class="t-small">Now-tab content goes here in Task 3.</p>
+    </section>
+    <section class="panel" data-panel="overlays">
+      <div class="page-head">
+        <div class="page-eyebrow">Stream</div>
+        <div class="page-title">Overlays</div>
+      </div>
+      <p class="t-small">Overlays placeholder goes here in Task 7.</p>
+    </section>
+    <section class="panel" data-panel="recordings">
+      <div class="page-head">
+        <div class="page-eyebrow">Library</div>
+        <div class="page-title">Recordings</div>
+      </div>
+      <p class="t-small">Recordings content goes here in Task 5.</p>
+    </section>
+    <section class="panel" data-panel="obs">
+      <div class="page-head">
+        <div class="page-eyebrow">Studio</div>
+        <div class="page-title">OBS</div>
+      </div>
+      <p class="t-small">OBS content goes here in Task 4.</p>
+    </section>
+    <section class="panel" data-panel="keys">
+      <div class="page-head">
+        <div class="page-eyebrow">Stream</div>
+        <div class="page-title">Keys</div>
+      </div>
+      <p class="t-small">Keys placeholder goes here in Task 7.</p>
+    </section>
+    <section class="panel" data-panel="settings">
+      <div class="page-head">
+        <div class="page-eyebrow">System</div>
+        <div class="page-title">Settings</div>
+      </div>
+      <p class="t-small">Settings content goes here in Task 6.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+  const API = 'http://127.0.0.1:6789';
+
+  // CSRF wrapper — required for POST/PUT/DELETE to the watcher.
+  // The watcher rejects mutating requests without X-Clip-Prep: 1.
+  if (!window.__sasiFetchWrapped) {
+    const orig = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const isLocal = url.startsWith(API);
+      const method = ((init && init.method) || 'GET').toUpperCase();
+      const mutating = method === 'POST' || method === 'PUT' || method === 'DELETE';
+      if (isLocal && mutating) {
+        const merged = { ...(init || {}) };
+        merged.headers = { ...(merged.headers || {}), 'X-Clip-Prep': '1' };
+        return orig(input, merged);
+      }
+      return orig(input, init);
+    };
+    window.__sasiFetchWrapped = true;
+  }
+
+  // Tab switching
+  function activateTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    document.querySelectorAll('.panel').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === name);
+    });
+    if (history.replaceState) history.replaceState(null, '', '#' + name);
+  }
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.addEventListener('click', () => activateTab(b.dataset.tab));
+  });
+  // Honor #hash on load
+  const hashTab = (location.hash || '').replace('#', '');
+  if (hashTab && document.querySelector(`[data-tab="${hashTab}"]`)) activateTab(hashTab);
+
+  // Status poller — drives the sidebar online dot + uptime
+  const sbDot = document.getElementById('sb-dot');
+  const sbStatusText = document.getElementById('sb-status-text');
+  function fmtUptime(startedAt) {
+    if (!startedAt) return '';
+    const ms = Date.now() - new Date(startedAt).getTime();
+    const m = Math.floor(ms / 60000);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  }
+  async function pollStatus() {
+    try {
+      const r = await fetch(API + '/status');
+      if (!r.ok) throw new Error('http ' + r.status);
+      const s = await r.json();
+      sbDot.className = 'sb-dot online';
+      sbStatusText.textContent = `Online · ${fmtUptime(s.startedAt)}`;
+      window.__sasiStatus = s;
+    } catch (e) {
+      sbDot.className = 'sb-dot offline';
+      sbStatusText.textContent = 'Offline';
+      window.__sasiStatus = null;
+    }
+  }
+  pollStatus();
+  setInterval(pollStatus, 3000);
+</script>
+</body>
+</html>
