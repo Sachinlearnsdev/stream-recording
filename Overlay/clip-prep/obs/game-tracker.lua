@@ -8,6 +8,13 @@ local subscribed  = false
 local current_exe   = nil
 local current_title = nil
 
+-- Tracks signal handlers we've connected so we can disconnect them before
+-- re-subscribing. Without this, every scene-collection / profile change
+-- doubles the callbacks on surviving sources, producing duplicate hook_log
+-- entries (2x → 3x → ...) over a session.
+-- Each entry is { source = obs_source, sh = signal_handler }.
+local connected_handlers = {}
+
 -- Persisted settings (test-mode dump folder for the diagnostic button)
 local settings_state = {
   test_dump_dir = ""
@@ -34,7 +41,17 @@ local function rec_offset(wall_iso, start_iso)
 end
 
 local function escape_str(s)
-  return (s:gsub('\\', '\\\\'):gsub('"', '\\"'))
+  -- Full JSON string escape. Game window titles can legally contain newlines
+  -- and tabs; without escaping them the watcher's JSON.parse rejects the
+  -- sidecar and the recording is left unrouted.
+  return (s
+    :gsub('\\', '\\\\')
+    :gsub('"', '\\"')
+    :gsub('\b', '\\b')
+    :gsub('\f', '\\f')
+    :gsub('\n', '\\n')
+    :gsub('\r', '\\r')
+    :gsub('\t', '\\t'))
 end
 
 local function event_to_json(ev)
@@ -99,7 +116,22 @@ local function on_unhooked(cd)
   print("[clip-prep] unhooked")
 end
 
+local function unsubscribe_all()
+  for _, h in ipairs(connected_handlers) do
+    if h.sh then
+      obs.signal_handler_disconnect(h.sh, "hooked", on_hooked)
+      obs.signal_handler_disconnect(h.sh, "unhooked", on_unhooked)
+    end
+  end
+  connected_handlers = {}
+  subscribed = false
+end
+
 local function subscribe_to_game_capture()
+  -- Always disconnect existing handlers first. On scene-collection /
+  -- profile change, the same source may already have callbacks attached;
+  -- reconnecting without disconnecting accumulates duplicates.
+  unsubscribe_all()
   local sources = obs.obs_enum_sources()
   if sources then
     for _, source in ipairs(sources) do
@@ -108,6 +140,7 @@ local function subscribe_to_game_capture()
         local sh = obs.obs_source_get_signal_handler(source)
         obs.signal_handler_connect(sh, "hooked", on_hooked)
         obs.signal_handler_connect(sh, "unhooked", on_unhooked)
+        table.insert(connected_handlers, { sh = sh })
         print("[clip-prep] subscribed to Game Capture: " .. obs.obs_source_get_name(source))
         subscribed = true
       end
@@ -138,7 +171,8 @@ local function on_event(event)
 
   elseif event == obs.OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED
       or event == obs.OBS_FRONTEND_EVENT_PROFILE_CHANGED then
-    subscribed = false
+    -- subscribe_to_game_capture() handles disconnecting existing handlers
+    -- before reconnecting, so this is safe to call repeatedly.
     subscribe_to_game_capture()
   end
 end
@@ -207,6 +241,14 @@ function script_load(_settings)
   if not subscribed then
     print("[clip-prep] no Game Capture source found at load. Will retry on scene/profile change.")
   end
+end
+
+function script_unload()
+  -- OBS calls script_unload when the user removes or reloads the script.
+  -- Without removing our callbacks, OBS calls into a torn-down Lua state on
+  -- the next frontend event or game-capture hook, which crashes OBS.
+  obs.obs_frontend_remove_event_callback(on_event)
+  unsubscribe_all()
 end
 
 function script_defaults(s)

@@ -8,6 +8,34 @@ import { splitMixFile } from '../split-mix.js';
 
 const execAsync = promisify(exec);
 
+// Run a PowerShell script with an explicit argv. Avoids any shell parsing of
+// the path arguments — the only correct way to pass user-supplied paths to a
+// child process. Returns { code, stdout, stderr }.
+function runPowerShell(scriptPath, args = [], { maxBuffer = 32 * 1024 * 1024, log } = {}) {
+  return new Promise((resolve) => {
+    const argv = [
+      '-NoProfile', '-ExecutionPolicy', 'Bypass',
+      '-File', scriptPath,
+      ...args,
+    ];
+    if (log) log.info(`spawn powershell ${argv.map(a => /\s/.test(a) ? `"${a}"` : a).join(' ')}`);
+    const child = spawn('powershell.exe', argv, { windowsHide: true });
+    let out = '';
+    let err = '';
+    let truncated = false;
+    child.stdout.on('data', (d) => {
+      if (out.length < maxBuffer) out += d.toString('utf8');
+      else truncated = true;
+    });
+    child.stderr.on('data', (d) => {
+      if (err.length < maxBuffer) err += d.toString('utf8');
+      else truncated = true;
+    });
+    child.on('error', (e) => resolve({ code: -1, stdout: out, stderr: (err + '\n' + e.message).trim(), truncated }));
+    child.on('exit', (code) => resolve({ code: code ?? -1, stdout: out, stderr: err, truncated }));
+  });
+}
+
 // Open File Explorer at the given path. Reliable from any process context.
 function openInExplorer(targetPath) {
   spawn('explorer.exe', [targetPath], { detached: true, stdio: 'ignore' }).unref();
@@ -73,10 +101,43 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   const app = express();
   app.use(express.json());
 
-  app.use((_req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS + CSRF protection.
+  //
+  // The dashboard is opened from file:// (via the Start Menu shortcut) or from
+  // the install dir directly, so the Origin header is "null" for file:// and
+  // we can't whitelist a real origin. Instead:
+  //   * Echo the requesting origin if it looks like a local dashboard
+  //     (file://, http://localhost, http://127.0.0.1) — that lets the dashboard
+  //     read responses while still blocking arbitrary public web pages from
+  //     reading our local data.
+  //   * Mutating methods (POST, PUT, DELETE) MUST include the X-Clip-Prep
+  //     header. Browsers do not auto-send custom headers cross-origin without
+  //     a successful CORS preflight, and our preflight only succeeds for the
+  //     local origins above. This blocks the classic "malicious page calls
+  //     localhost:6789/uninstall" CSRF.
+  function isLocalOrigin(origin) {
+    if (!origin || origin === 'null') return true; // file:// renders as null
+    try {
+      const u = new URL(origin);
+      return u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.protocol === 'file:';
+    } catch {
+      return false;
+    }
+  }
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (isLocalOrigin(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin || 'null');
+      res.setHeader('Vary', 'Origin');
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Clip-Prep');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    // Require the custom header on state-changing requests.
+    const mutating = req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE';
+    if (mutating && req.headers['x-clip-prep'] !== '1') {
+      return res.status(403).json({ error: 'missing X-Clip-Prep header (CSRF guard)' });
+    }
     next();
   });
 
@@ -381,10 +442,10 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     if (!existsSync(targetNorm)) return res.status(404).json({ error: 'file not found: ' + targetNorm });
     try {
       const psScript = path.join(installDir || '', 'scripts', 'recycle.ps1');
-      const cmdline = `powershell -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Files "${targetNorm}"`;
       log.info(`recycle-file: ${targetNorm}`);
-      const { stdout } = await execAsync(cmdline, { maxBuffer: 1024 * 1024 });
-      res.json({ ok: true, output: stdout.trim() });
+      const r = await runPowerShell(psScript, ['-Files', targetNorm], { maxBuffer: 1024 * 1024, log });
+      if (r.code !== 0) return res.status(500).json({ error: 'recycle.ps1 failed', stdout: r.stdout, stderr: r.stderr });
+      res.json({ ok: true, output: r.stdout.trim() });
     } catch (err) {
       log.error(`recycle-file failed: ${err.message}`);
       res.status(500).json({ error: err.message });
@@ -411,11 +472,14 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       await walk(root);
       if (found.length === 0) return res.json({ ok: true, recycled: 0, message: 'no .mkv files in targetRoot' });
       const psScript = path.join(installDir || '', 'scripts', 'recycle.ps1');
-      const cmdline = `powershell -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Files "${found.join(';')}"`;
       log.warn(`recycle-all-mkvs: sending ${found.length} files to Recycle Bin`);
-      const { stdout } = await execAsync(cmdline, { maxBuffer: 16 * 1024 * 1024 });
+      // recycle.ps1 splits its -Files argument on ';'; pass the joined list
+      // through the arg-array path so the outer process call doesn't get
+      // shell-parsed (an outer shell would mishandle a path containing ').
+      const r = await runPowerShell(psScript, ['-Files', found.join(';')], { maxBuffer: 16 * 1024 * 1024, log });
+      if (r.code !== 0) return res.status(500).json({ error: 'recycle.ps1 failed', stdout: r.stdout, stderr: r.stderr });
       log.info(`recycle-all-mkvs done`);
-      res.json({ ok: true, recycled: found.length, output: stdout.trim().split('\n').slice(0, 10).join('\n') });
+      res.json({ ok: true, recycled: found.length, output: r.stdout.trim().split('\n').slice(0, 10).join('\n') });
     } catch (err) {
       log.error(`recycle-all-mkvs failed: ${err.message}`);
       res.status(500).json({ error: err.message });
@@ -450,11 +514,11 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
     try {
       const psScript = path.join(installDir || '', 'scripts', 'recycle.ps1');
-      const cmdline = `powershell -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Files "${targets.join(';')}"`;
       log.info(`delete-mix: ${basename} → recycle bin (${targets.length} files)`);
-      const { stdout } = await execAsync(cmdline, { maxBuffer: 1024 * 1024 });
-      log.info(`delete-mix output: ${stdout.trim()}`);
-      res.json({ ok: true, recycled: targets.length, output: stdout.trim() });
+      const r = await runPowerShell(psScript, ['-Files', targets.join(';')], { maxBuffer: 1024 * 1024, log });
+      if (r.code !== 0) return res.status(500).json({ error: 'recycle.ps1 failed', stdout: r.stdout, stderr: r.stderr });
+      log.info(`delete-mix output: ${r.stdout.trim()}`);
+      res.json({ ok: true, recycled: targets.length, output: r.stdout.trim() });
     } catch (err) {
       log.error(`delete-mix failed: ${err.message}`);
       res.status(500).json({ error: err.message });
@@ -571,20 +635,19 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       return res.status(500).json({ error: 'export script not found at ' + exportScript });
     }
     try {
-      const cmdline = `powershell -NoProfile -ExecutionPolicy Bypass -File "${exportScript}" -OutputDir "${outputDir}"`;
       log.info(`export-obs-bundle: ${outputDir}`);
-      const { stdout, stderr } = await execAsync(cmdline, { maxBuffer: 32 * 1024 * 1024 });
-      const combined = (stdout + (stderr ? '\n--- stderr ---\n' + stderr : '')).trim();
-      const failed = /^ERROR:/m.test(combined);
+      const r = await runPowerShell(exportScript, ['-OutputDir', outputDir], { log });
+      const combined = (r.stdout + (r.stderr ? '\n--- stderr ---\n' + r.stderr : '')).trim();
+      const failed = r.code !== 0 || /^ERROR:/m.test(combined);
       if (failed) {
-        log.warn(`export-obs-bundle reported error`);
+        log.warn(`export-obs-bundle reported error (code=${r.code})`);
         return res.status(500).json({ ok: false, output: combined });
       }
       log.info(`export-obs-bundle done -> ${outputDir}`);
       res.json({ ok: true, outputDir: outputDir.replace(/\\/g, '/'), output: combined });
     } catch (err) {
       log.error(`export-obs-bundle failed: ${err.message}`);
-      res.status(500).json({ error: err.message, stdout: err.stdout, stderr: err.stderr });
+      res.status(500).json({ error: err.message });
     }
   });
 
@@ -600,20 +663,50 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       return res.status(500).json({ error: 'game-tracker.lua not found at ' + luaPath });
     }
     try {
-      const cmdline = `powershell -NoProfile -ExecutionPolicy Bypass -File "${importScript}" -BundlePath "${bundlePath}" -LuaPath "${luaPath}"`;
       log.info(`import-obs-bundle: from ${bundlePath}`);
-      const { stdout, stderr } = await execAsync(cmdline, { maxBuffer: 32 * 1024 * 1024 });
-      const combined = (stdout + (stderr ? '\n--- stderr ---\n' + stderr : '')).trim();
-      const failed = /^ERROR:/m.test(combined);
+      const r = await runPowerShell(importScript,
+        ['-BundlePath', bundlePath, '-LuaPath', luaPath], { log });
+      const combined = (r.stdout + (r.stderr ? '\n--- stderr ---\n' + r.stderr : '')).trim();
+      const failed = r.code !== 0 || /^ERROR:/m.test(combined);
       if (failed) {
-        log.warn(`import-obs-bundle reported error`);
+        log.warn(`import-obs-bundle reported error (code=${r.code})`);
         return res.status(500).json({ ok: false, output: combined });
       }
       log.info(`import-obs-bundle done`);
       res.json({ ok: true, output: combined });
     } catch (err) {
       log.error(`import-obs-bundle failed: ${err.message}`);
-      res.status(500).json({ error: err.message, stdout: err.stdout, stderr: err.stderr });
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /register-lua
+  // Walks every OBS scene-collection JSON in %APPDATA%\obs-studio\basic\scenes
+  // and ensures game-tracker.lua is registered under modules.scripts-tool.
+  // Idempotent — running it twice is a no-op. Mirrors what obs-import.ps1
+  // does at the end of a bundle restore, but standalone so the user doesn't
+  // need to import a bundle to get the script registered on a fresh install.
+  app.post('/register-lua', async (_req, res) => {
+    const registerScript = installDir ? path.join(installDir, 'scripts', 'register-lua.ps1') : '';
+    if (!registerScript || !existsSync(registerScript)) {
+      return res.status(500).json({ error: 'register-lua.ps1 not found at ' + registerScript });
+    }
+    if (!luaPath || !existsSync(luaPath)) {
+      return res.status(500).json({ error: 'game-tracker.lua not found at ' + luaPath });
+    }
+    try {
+      log.info('register-lua: registering game-tracker.lua in all scene collections');
+      const r = await runPowerShell(registerScript, ['-LuaPath', luaPath], { log });
+      const combined = (r.stdout + (r.stderr ? '\n--- stderr ---\n' + r.stderr : '')).trim();
+      if (r.code !== 0) {
+        log.warn(`register-lua reported error (code=${r.code})`);
+        return res.status(500).json({ ok: false, output: combined });
+      }
+      log.info('register-lua done');
+      res.json({ ok: true, output: combined });
+    } catch (err) {
+      log.error(`register-lua failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
     }
   });
 
@@ -657,12 +750,24 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
+  // Reject any backup name that's not a single, simple folder under obsRoot.
+  // The startsWith() prefix check alone is not enough: '_clip-prep-backup-/../foo'
+  // passes prefix but escapes obsRoot via path traversal.
+  function isSafeBackupName(name) {
+    if (!name || typeof name !== 'string') return false;
+    if (!name.startsWith('_clip-prep-backup-')) return false;
+    if (name.includes('/') || name.includes('\\')) return false;
+    if (name === '.' || name === '..' || name.includes('..')) return false;
+    if (/[\x00-\x1f]/.test(name)) return false; // no control chars
+    return true;
+  }
+
   // POST /restore-obs-backup  body: { name }
   // Copies leaves of the backup back into %APPDATA%\obs-studio\, after first
   // saving the current state to a new safety-backup folder. Reversible.
   app.post('/restore-obs-backup', async (req, res) => {
     const name = (req.body && req.body.name) ? String(req.body.name) : '';
-    if (!name || !name.startsWith('_clip-prep-backup-')) {
+    if (!isSafeBackupName(name)) {
       return res.status(400).json({ error: 'invalid backup name' });
     }
     const backupDir = path.join(obsRoot, name);
@@ -702,17 +807,17 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // Sends backup folder to Recycle Bin (recoverable, not permanent).
   app.post('/delete-obs-backup', async (req, res) => {
     const name = (req.body && req.body.name) ? String(req.body.name) : '';
-    if (!name || !name.startsWith('_clip-prep-backup-')) {
+    if (!isSafeBackupName(name)) {
       return res.status(400).json({ error: 'invalid backup name' });
     }
     const target = path.join(obsRoot, name);
     if (!existsSync(target)) return res.status(404).json({ error: 'backup not found' });
     try {
       const psScript = path.join(installDir || '', 'scripts', 'recycle.ps1');
-      const cmdline = `powershell -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Files "${target}"`;
       log.info(`delete-obs-backup: ${name} -> recycle bin`);
-      const { stdout } = await execAsync(cmdline, { maxBuffer: 1024 * 1024 });
-      res.json({ ok: true, output: stdout.trim() });
+      const r = await runPowerShell(psScript, ['-Files', target], { maxBuffer: 1024 * 1024, log });
+      if (r.code !== 0) return res.status(500).json({ error: 'recycle.ps1 failed', stdout: r.stdout, stderr: r.stderr });
+      res.json({ ok: true, output: r.stdout.trim() });
     } catch (err) {
       log.error(`delete-obs-backup failed: ${err.message}`);
       res.status(500).json({ error: err.message });
@@ -724,6 +829,95 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     res.json({ ok: true });
     log.warn('Stop requested via API; exiting (no auto-relaunch)');
     setTimeout(() => process.exit(0), 200);
+  });
+
+  // ===== SECRETS (sasi-studio v2 Keys tab) =====
+  // secrets.js lives in the install dir's sasi-overlays/ folder.
+  // Format: a JS file that assigns window.SASI_SECRETS = {...}.
+  // GET /secrets returns the parsed object; PUT /secrets writes it back.
+  // Plain text on disk (existing behavior). Reject non-localhost (existing CSRF guard already does).
+  const secretsPath = installDir ? path.join(installDir, 'sasi-overlays', 'secrets.js') : '';
+  const secretsExamplePath = installDir ? path.join(installDir, 'sasi-overlays', 'secrets.example.js') : '';
+
+  function defaultSecrets() {
+    return {
+      youtube: { apiKeys: [], channelId: '' },
+      twitch: { username: '', clientId: '', clientSecret: '' },
+      streamelements: { youtube: { jwt: '' }, twitch: { jwt: '' } },
+    };
+  }
+
+  // Parse secrets.js by extracting the assigned object. Tolerates either
+  // `window.SASI_SECRETS = {...}` or `const SASI_SECRETS = {...};`.
+  function parseSecretsFile(text) {
+    const m = text.match(/SASI_SECRETS\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
+    if (!m) return null;
+    try {
+      // eval-ish but safe: it's a JS literal we just wrote. Use Function so
+      // the {...} expression evaluates as an object (not a code block).
+      return new Function('return ' + m[1])();
+    } catch {
+      return null;
+    }
+  }
+
+  function serializeSecretsFile(obj) {
+    const json = JSON.stringify(obj, null, 2);
+    return `// AUTO-GENERATED by Sasi Studio dashboard. You can also edit by hand.
+// Loaded by every overlay scene before config.js. Never commit this file.
+window.SASI_SECRETS = ${json};
+`;
+  }
+
+  app.get('/secrets', async (_req, res) => {
+    if (!secretsPath) return res.status(500).json({ error: 'secretsPath not configured' });
+    try {
+      let parsed = null;
+      if (existsSync(secretsPath)) {
+        const text = await fs.readFile(secretsPath, 'utf8');
+        parsed = parseSecretsFile(text);
+      }
+      if (!parsed && existsSync(secretsExamplePath)) {
+        const text = await fs.readFile(secretsExamplePath, 'utf8');
+        parsed = parseSecretsFile(text);
+      }
+      res.json(parsed || defaultSecrets());
+    } catch (err) {
+      log.error(`GET /secrets failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put('/secrets', async (req, res) => {
+    if (!secretsPath) return res.status(500).json({ error: 'secretsPath not configured' });
+    const incoming = req.body || {};
+    // Validate shape — must have at least the top-level keys
+    if (typeof incoming !== 'object' || Array.isArray(incoming)) {
+      return res.status(400).json({ error: 'body must be an object' });
+    }
+    // Merge with defaults so missing sections don't blow away existing data
+    const merged = {
+      ...defaultSecrets(),
+      ...incoming,
+      youtube: { ...defaultSecrets().youtube, ...(incoming.youtube || {}) },
+      twitch: { ...defaultSecrets().twitch, ...(incoming.twitch || {}) },
+      streamelements: {
+        youtube: { ...(incoming.streamelements?.youtube || {}) },
+        twitch: { ...(incoming.streamelements?.twitch || {}) },
+      },
+    };
+    try {
+      const text = serializeSecretsFile(merged);
+      // Ensure parent dir exists
+      const dir = path.dirname(secretsPath);
+      if (!existsSync(dir)) await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(secretsPath, text, { encoding: 'utf8' });
+      log.info('secrets.js updated via API');
+      res.json({ ok: true });
+    } catch (err) {
+      log.error(`PUT /secrets failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   return app;

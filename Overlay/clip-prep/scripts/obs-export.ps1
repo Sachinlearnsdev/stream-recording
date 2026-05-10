@@ -64,11 +64,20 @@ function Test-ShouldSkip([System.IO.FileInfo]$file) {
   return $false
 }
 
+function Test-IsReparsePoint($item) {
+  return ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq [IO.FileAttributes]::ReparsePoint
+}
+
 function Copy-TreeFiltered([string]$src, [string]$dst) {
   if (-not (Test-Path $src)) { return @{ files = 0; bytes = 0; skipped = @() } }
   New-Item -ItemType Directory -Path $dst -Force | Out-Null
   $stats = @{ files = 0; bytes = 0; skipped = @() }
-  Get-ChildItem $src -Recurse -File | ForEach-Object {
+  # -Recurse follows directory junctions/symlinks by default. We don't want
+  # the export to silently vacuum up files from outside the OBS config tree
+  # (some plugin installers create junctions inside plugins/), so filter
+  # reparse points here and one level up via -Attributes.
+  Get-ChildItem $src -Recurse -File -Attributes !ReparsePoint -ErrorAction SilentlyContinue | ForEach-Object {
+    if (Test-IsReparsePoint $_) { return }
     if (Test-ShouldSkip $_) {
       $stats.skipped += $_.FullName.Substring($src.Length).TrimStart('\','/')
       return

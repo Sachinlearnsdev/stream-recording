@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sasi Streams — Name Tag</title>
+<script src="../config.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:480px; height:46px; overflow:hidden;
+  background:transparent;
+  font-family:'Arial Black', Impact, Arial, sans-serif;
+}
+.tag {
+  display:inline-flex; align-items:center;
+  padding:8px 22px;
+  background:#050005;
+  border:1px solid rgba(255,34,0,.3);
+  border-radius:6px;
+  position:relative;
+  overflow:hidden;
+}
+/* Shimmer sweep */
+.tag::after {
+  content:'';
+  position:absolute; top:0; left:-60%; width:35%; height:100%;
+  background:linear-gradient(105deg, transparent 0%, rgba(255,255,255,.04) 35%, rgba(255,255,255,.1) 50%, rgba(255,255,255,.04) 65%, transparent 100%);
+  animation:tagShimmer 4s ease-in-out 1s infinite;
+}
+@keyframes tagShimmer {
+  0%,70% { left:-60%; opacity:0; }
+  75%    { opacity:1; }
+  100%   { left:120%; opacity:0; }
+}
+.tag-name {
+  font-size:13px; font-weight:900; letter-spacing:6px; color:#fff;
+  /* animation applied by effects.css via config */
+  position:relative;
+}
+@keyframes tagGlitch {
+  0%,38%,100% { opacity:1; transform:translate(0,0); clip-path:none; filter:none; }
+  39%   { opacity:0; }
+  39.4% { opacity:1; }
+  39.8% { opacity:0; }
+  40.2% { opacity:1; }
+  41%   { transform:translate(-3px,0); clip-path:polygon(0 0,100% 0,100% 35%,0 35%); filter:brightness(1.5); }
+  41.4% { transform:translate(2px,0); clip-path:none; filter:none; }
+  42%   { transform:translate(-2px,0); clip-path:polygon(0 50%,100% 50%,100% 80%,0 80%); }
+  42.4% { transform:translate(0,0); clip-path:none; }
+}
+</style>
+</head>
+<body>
+<div class="tag">
+  <span class="tag-name" id="name"></span>
+</div>
+<script>
+document.getElementById('name').textContent = SASI_CONFIG.nametag.text || SASI_CONFIG.brand.name;
+</script>
+</body>
+</html>

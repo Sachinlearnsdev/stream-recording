@@ -130,11 +130,22 @@ if !ERRORLEVEL! GEQ 8 (
 rem  Copy dashboard.html and its logo asset (lives in sibling sasi-overlays/)
 if exist "!_DASH_DIR!\dashboard.html" (
   copy /Y "!_DASH_DIR!\dashboard.html" "!INSTALL_DIR!\dashboard.html" >nul
+  if exist "!_DASH_DIR!\dashboard-old.html" copy /Y "!_DASH_DIR!\dashboard-old.html" "!INSTALL_DIR!\dashboard-old.html" >nul
+  if exist "!_DASH_DIR!\dashboard-v2.html" copy /Y "!_DASH_DIR!\dashboard-v2.html" "!INSTALL_DIR!\dashboard-v2.html" >nul
+  if exist "!_DASH_DIR!\tokens.css" copy /Y "!_DASH_DIR!\tokens.css" "!INSTALL_DIR!\tokens.css" >nul
   if exist "!_DASH_DIR!\assets" (
     if not exist "!INSTALL_DIR!\assets" mkdir "!INSTALL_DIR!\assets"
     robocopy "!_DASH_DIR!\assets" "!INSTALL_DIR!\assets" /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
   )
-  echo   Dashboard copied to install dir.
+  rem  Copy overlay scenes/components/lib so dashboard can iframe-preview them
+  for %%D in (scenes components lib) do (
+    if exist "!_DASH_DIR!\%%D" (
+      if not exist "!INSTALL_DIR!\%%D" mkdir "!INSTALL_DIR!\%%D"
+      robocopy "!_DASH_DIR!\%%D" "!INSTALL_DIR!\%%D" /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
+    )
+  )
+  if exist "!_DASH_DIR!\secrets.example.js" copy /Y "!_DASH_DIR!\secrets.example.js" "!INSTALL_DIR!\secrets.example.js" >nul
+  echo   Dashboard + overlays copied to install dir.
 ) else (
   echo   WARNING: dashboard.html not found at !_DASH_DIR!
 )
@@ -160,20 +171,15 @@ echo   The watcher is running, dashboard is open in your browser.
 echo   Win key - "clip-prep" - Enter launches the watcher anytime.
 echo.
 echo ========================================
-echo   ONE-TIME OBS STEP - ADD THE LUA SCRIPT
+echo   OBS LUA SCRIPT - AUTO-REGISTERED
 echo ========================================
-echo   In OBS, do this ONCE per scene collection:
-echo     1. Tools -^> Scripts
-echo     2. Click the + button
-echo     3. In the file picker, paste this FOLDER path
-echo        into the address bar and press Enter:
+echo   The clip-prep Lua script was auto-registered in your existing OBS
+echo   scene collections. If OBS was open, restart it for the change to
+echo   take effect. You should see "[clip-prep] subscribed to Game Capture"
+echo   in the Script Log dock.
 echo.
-echo       !INSTALL_DIR!\obs
-echo.
-echo     4. Select game-tracker.lua and click Open
-echo.
-echo   You should see "[clip-prep] subscribed to Game Capture" in the Script Log.
-echo   That's it - clip-prep will now route your recordings automatically.
+echo   If you create a NEW scene collection later, click the "Register Lua"
+echo   button in the dashboard to wire it up too.
 echo ========================================
 echo.
 echo   Bundle ops are in the dashboard:

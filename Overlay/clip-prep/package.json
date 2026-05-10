@@ -6,7 +6,7 @@
   "main": "watcher.js",
   "scripts": {
     "start": "node watcher.js",
-    "test": "node --test test/"
+    "test": "node --test test/*.test.js"
   },
   "engines": { "node": ">=18" },
   "dependencies": {

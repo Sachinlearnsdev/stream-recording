@@ -18,7 +18,7 @@
     position: sticky; top: 0; height: 100vh;
     display: flex; flex-direction: column;
   }
-  .main { flex: 1; padding: var(--sp-6) var(--sp-7); max-width: 920px; }
+  .main { flex: 1; padding: var(--sp-6) var(--sp-7); max-width: 1200px; }
 
   /* Sidebar header */
   .sb-head { padding: 0 var(--sp-4) var(--sp-4); border-bottom: 1px solid var(--bg-divider); margin-bottom: var(--sp-3); }
@@ -30,15 +30,10 @@
     display: flex; align-items: center; justify-content: center;
     color: var(--bg-page); font-weight: 900; font-size: 13px;
   }
-  /* Note: the gradient on the brand mark is the ONLY allowed gradient — it's the logo, not chrome. */
   .sb-name { color: var(--text-primary); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
   .sb-ver  { color: var(--text-muted); font-size: 9px; letter-spacing: 0.12em; margin-top: 1px; }
   .sb-status { display: flex; align-items: center; gap: var(--sp-1); margin-top: var(--sp-3); }
-  .sb-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--text-muted);
-    transition: background var(--t-fast);
-  }
+  .sb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); transition: background var(--t-fast); }
   .sb-dot.online { background: var(--accent-online); box-shadow: 0 0 6px var(--accent-online); }
   .sb-dot.offline { background: var(--accent-rec); }
   .sb-status-text { color: var(--text-secondary); font-size: 10px; font-weight: 500; }
@@ -62,12 +57,6 @@
     border-left-color: var(--text-primary);
     font-weight: 600;
   }
-  .tab-badge {
-    background: var(--accent-rec); color: var(--text-primary);
-    font-size: 9px; font-weight: 700;
-    padding: 1px 5px; border-radius: var(--r-chip);
-    margin-left: var(--sp-1);
-  }
 
   /* Page header */
   .page-head { margin-bottom: var(--sp-6); }
@@ -78,204 +67,263 @@
   .panel { display: none; }
   .panel.active { display: block; }
 
-  /* Hero recording card */
-  .hero-card { padding: var(--sp-5); margin-bottom: var(--sp-3); }
+  /* Placeholder card (for unfinished tabs) */
+  .placeholder-card {
+    background: var(--bg-card); border: 1px dashed var(--bg-border);
+    border-radius: var(--r-card); padding: var(--sp-7); text-align: center;
+  }
+  .placeholder-title { font-size: var(--text-heading); font-weight: 600; margin-bottom: var(--sp-2); }
+  .placeholder-desc { color: var(--text-secondary); max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+  /* === OVERLAYS TAB === */
+  /* Scene grid */
+  .scene-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-6); }
+  .scene-card {
+    background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card);
+    overflow: hidden; cursor: pointer; transition: border-color var(--t-fast);
+  }
+  .scene-card:hover { border-color: var(--text-muted); }
+  .scene-card.active { border-color: var(--accent-online); }
+  .scene-thumb { position: relative; width: 100%; aspect-ratio: 16/9; overflow: hidden; background: #050005; }
+  .scene-thumb iframe {
+    width: 1920px; height: 1080px;
+    border: 0; transform-origin: 0 0; pointer-events: none;
+  }
+  .scene-label {
+    background: var(--bg-divider); padding: 6px 10px;
+    color: var(--text-secondary); font-size: 10px;
+    font-weight: 600; text-align: center;
+  }
+  .scene-card.active .scene-label { background: rgba(0,255,133,0.08); color: var(--accent-online); }
+
+  /* Scene editor */
+  .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-bottom: var(--sp-6); }
+  .editor-form { background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); padding: var(--sp-4); }
+  .editor-eyebrow { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); margin-bottom: var(--sp-3); text-transform: uppercase; }
+  .field { margin-bottom: var(--sp-3); }
+  .field label { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.08em; }
+  .field input[type=text], .field input[type=number] {
+    width: 100%; padding: 8px 10px;
+    background: var(--bg-page); border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button); color: var(--text-primary);
+    font-family: inherit; font-size: var(--text-body);
+    transition: border-color var(--t-fast);
+  }
+  .field input:focus { outline: none; border-color: var(--accent-online); }
+  .toggle-row {
+    display: flex; align-items: center; gap: var(--sp-2);
+    padding: 8px 10px; background: var(--bg-page);
+    border: 1px solid var(--bg-divider); border-radius: var(--r-button);
+    cursor: pointer; user-select: none;
+  }
+  .toggle-row input[type=checkbox] { margin: 0; cursor: pointer; }
+  .toggle-row span { font-size: var(--text-small); color: var(--text-secondary); }
+  .reload-tag { color: var(--accent-warn); text-transform: none; font-size: 9px; margin-left: 6px; }
+
+  /* Editor preview pane */
+  .editor-preview {
+    background: #050005; border: 1px solid var(--bg-divider);
+    border-radius: var(--r-card); overflow: hidden;
+    aspect-ratio: 16/9; position: relative;
+  }
+  .editor-preview iframe {
+    width: 1920px; height: 1080px; border: 0; transform-origin: 0 0;
+  }
+  .preview-toolbar {
+    position: absolute; top: var(--sp-2); right: var(--sp-2); z-index: 2;
+    display: flex; gap: var(--sp-1);
+  }
+  .preview-btn {
+    padding: 4px 10px; background: rgba(0,0,0,0.7);
+    border: 1px solid var(--bg-border); border-radius: var(--r-button);
+    color: var(--text-secondary); font-family: inherit; font-size: 10px;
+    font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .preview-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+  /* Common controls */
+  .common-section {
+    background: var(--bg-card); border: 1px solid var(--bg-divider);
+    border-radius: var(--r-card); padding: var(--sp-4); margin-bottom: var(--sp-6);
+  }
+  .common-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+  .common-tile {
+    background: var(--bg-page); border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button); padding: var(--sp-3);
+  }
+  .common-tile-label { color: var(--text-muted); font-size: 9px; letter-spacing: 0.15em; font-weight: 600; margin-bottom: var(--sp-2); text-transform: uppercase; }
+  .color-row { display: flex; gap: var(--sp-1); align-items: center; }
+  .color-row input[type=color] { width: 28px; height: 28px; padding: 2px; border: 1px solid var(--bg-divider); border-radius: var(--r-chip); background: transparent; cursor: pointer; }
+  .common-tile select, .common-tile input[type=text], .common-tile input[type=number] {
+    width: 100%; padding: 6px 8px; background: var(--bg-page);
+    border: 1px solid var(--bg-divider); border-radius: var(--r-button);
+    color: var(--text-primary); font-family: inherit; font-size: var(--text-body);
+  }
+
+  /* === STREAM TAB (recorder + bundle + games + system) === */
+  .hero-card { padding: var(--sp-5); margin-bottom: var(--sp-3); background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); }
   .hero-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-4); }
   .hero-label { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
   .hero-game { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
   .hero-sub { color: var(--text-secondary); font-size: var(--text-mono); margin-top: 2px; font-family: var(--font-mono); }
-  .rec-pill {
-    display: none; /* hidden by default — JS toggles when recording */
-    align-items: center; gap: var(--sp-2);
-    background: rgba(255,52,52,0.08); border: 1px solid rgba(255,52,52,0.4);
-    border-radius: var(--r-button); padding: 8px 12px;
-  }
+  .rec-pill { display: none; align-items: center; gap: var(--sp-2); background: rgba(255,52,52,0.08); border: 1px solid rgba(255,52,52,0.4); border-radius: var(--r-button); padding: 8px 12px; }
   .rec-pill.active { display: flex; }
   .rec-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-rec); }
   .rec-pill .label { color: var(--accent-rec); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; }
-
-  /* Stats grid */
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--bg-divider); border-radius: var(--r-button); overflow: hidden; }
   .stat { background: var(--bg-page); padding: 10px 12px; }
   .stat-label { color: var(--text-muted); font-size: 9px; font-weight: 600; letter-spacing: 0.15em; }
   .stat-value { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-body); margin-top: 2px; }
-
-  /* Action row */
   .actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-4); }
-  .btn {
-    padding: 10px var(--sp-4);
-    border-radius: var(--r-button);
-    font-family: inherit; font-size: 11px; font-weight: 600;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    cursor: pointer; border: 1px solid transparent;
-    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
-  }
+  .btn { padding: 10px var(--sp-4); border-radius: var(--r-button); font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; border: 1px solid transparent; transition: all var(--t-fast); }
   .btn-primary { background: var(--text-primary); color: var(--bg-page); border-color: var(--text-primary); flex: 1; }
   .btn-primary:hover { background: #ddd; border-color: #ddd; }
   .btn-secondary { background: transparent; color: var(--text-secondary); border-color: var(--bg-border); }
   .btn-secondary:hover { color: var(--text-primary); border-color: var(--text-secondary); }
-  .btn-destructive {
-    background: rgba(255,52,52,0.08); color: var(--accent-rec);
-    border-color: rgba(255,52,52,0.4);
-  }
+  .btn-destructive { background: rgba(255,52,52,0.08); color: var(--accent-rec); border-color: rgba(255,52,52,0.4); }
   .btn-destructive:hover { background: rgba(255,52,52,0.15); }
+  .btn-large { padding: 16px var(--sp-5); font-size: 13px; letter-spacing: 0.12em; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* Recent moves table */
-  .moves-card { padding: var(--sp-4) var(--sp-5); }
-  .moves-list { font-family: var(--font-mono); font-size: var(--text-mono); color: var(--text-secondary); margin-top: var(--sp-3); }
+  .moves-card { padding: var(--sp-4) var(--sp-5); background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); margin-bottom: var(--sp-3); }
+  .moves-list { font-family: var(--font-mono); font-size: var(--text-mono); color: var(--text-secondary); margin-top: var(--sp-3); max-height: 220px; overflow-y: auto; }
   .moves-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--bg-divider); }
   .moves-row:last-child { border-bottom: none; }
   .moves-row .target { color: var(--text-primary); }
   .moves-row .target.mix { color: var(--accent-warn); }
   .moves-empty { color: var(--text-muted); font-style: italic; padding: var(--sp-2) 0; }
 
-  /* Sections — used in OBS, Recordings, Settings */
   .section { margin-bottom: var(--sp-6); }
   .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
   .section-title { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
   .section-hint { color: var(--text-muted); font-size: var(--text-small); margin-bottom: var(--sp-3); line-height: 1.6; }
 
-  /* Output box for long-running script results */
-  .output-box {
-    background: var(--bg-page);
-    border: 1px solid var(--bg-divider);
-    border-radius: var(--r-button);
-    padding: var(--sp-3);
-    font-family: var(--font-mono); font-size: var(--text-mono);
-    color: var(--text-secondary);
-    white-space: pre-wrap;
-    max-height: 320px; overflow: auto;
-    display: none;
-  }
+  .output-box { background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); padding: var(--sp-3); font-family: var(--font-mono); font-size: var(--text-mono); color: var(--text-secondary); white-space: pre-wrap; max-height: 320px; overflow: auto; display: none; }
   .output-box.show { display: block; }
   .output-box.err { color: var(--accent-rec); }
   .output-box.ok { color: var(--accent-online); }
 
-  /* Backup list rows */
   .backup-list { display: flex; flex-direction: column; gap: var(--sp-1); }
-  .backup-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: var(--sp-3);
-    align-items: center;
-    padding: 10px 12px;
-    background: var(--bg-page);
-    border: 1px solid var(--bg-divider);
-    border-radius: var(--r-button);
-    font-size: var(--text-small);
-  }
+  .backup-row { display: grid; grid-template-columns: 1fr auto auto; gap: var(--sp-3); align-items: center; padding: 10px 12px; background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); font-size: var(--text-small); }
   .backup-name { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
   .backup-meta { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
   .backup-empty { color: var(--text-muted); padding: var(--sp-3); text-align: center; }
 
   .row { display: flex; gap: var(--sp-2); }
 
-  /* Per-game accordion */
-  .game-card {
-    background: var(--bg-card);
-    border: 1px solid var(--bg-divider);
-    border-radius: var(--r-card);
-    margin-bottom: var(--sp-2);
-    overflow: hidden;
-  }
-  .game-head {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: var(--sp-3);
-    align-items: center;
-    padding: var(--sp-3) var(--sp-4);
-    cursor: pointer;
-    user-select: none;
-    transition: background var(--t-fast);
-  }
+  .game-card-rec { background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); margin-bottom: var(--sp-2); overflow: hidden; }
+  .game-head { display: grid; grid-template-columns: 1fr auto auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-4); cursor: pointer; user-select: none; transition: background var(--t-fast); }
   .game-head:hover { background: rgba(255,255,255,0.02); }
   .game-name { color: var(--text-primary); font-weight: 600; font-size: var(--text-body); }
   .game-meta { color: var(--text-muted); font-size: 10px; font-family: var(--font-mono); }
   .game-caret { color: var(--text-muted); transition: transform var(--t-fast); font-size: 10px; }
-  .game-card.open .game-caret { transform: rotate(90deg); }
-
+  .game-card-rec.open .game-caret { transform: rotate(90deg); }
   .game-files { display: none; padding: 0 var(--sp-4) var(--sp-3); }
-  .game-card.open .game-files { display: block; }
-  .file-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: var(--sp-3);
-    align-items: center;
-    padding: 6px 0;
-    border-top: 1px solid var(--bg-divider);
-    font-family: var(--font-mono); font-size: var(--text-mono);
-    color: var(--text-secondary);
-  }
+  .game-card-rec.open .game-files { display: block; }
+  .file-row { display: grid; grid-template-columns: 1fr auto auto; gap: var(--sp-3); align-items: center; padding: 6px 0; border-top: 1px solid var(--bg-divider); font-family: var(--font-mono); font-size: var(--text-mono); color: var(--text-secondary); }
   .file-row .name { color: var(--text-primary); }
   .file-row .size { color: var(--text-muted); font-size: 10px; }
   .file-recycle { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px 6px; font-size: 11px; }
   .file-recycle:hover { color: var(--accent-rec); }
 
-  /* Mix list rows */
-  .mix-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: var(--sp-2);
-    align-items: center;
-    padding: var(--sp-3);
-    background: var(--bg-card);
-    border: 1px solid var(--bg-divider);
-    border-radius: var(--r-card);
-    margin-bottom: var(--sp-2);
-  }
+  .mix-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: var(--sp-2); align-items: center; padding: var(--sp-3); background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); margin-bottom: var(--sp-2); }
   .mix-name { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
   .mix-meta { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
-  .mix-status {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-    padding: 3px 6px; border-radius: var(--r-chip);
-  }
+  .mix-status { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; padding: 3px 6px; border-radius: var(--r-chip); }
   .mix-status.split { background: rgba(0,255,133,0.1); color: var(--accent-online); }
   .mix-status.unsplit { background: rgba(255,176,32,0.1); color: var(--accent-warn); }
   .mix-status.in-progress { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
 
-  /* Forms */
-  .field { margin-bottom: var(--sp-3); }
-  .field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
-  .field input, .field textarea {
-    width: 100%; padding: 10px 12px;
-    background: var(--bg-page);
-    border: 1px solid var(--bg-divider);
-    border-radius: var(--r-button);
-    color: var(--text-primary);
-    font-family: inherit; font-size: var(--text-body);
-    transition: border-color var(--t-fast);
-  }
-  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent-online); }
-  .field textarea { font-family: var(--font-mono); font-size: var(--text-mono); min-height: 200px; resize: vertical; }
+  .field-textarea { width: 100%; padding: 10px 12px; background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); min-height: 200px; resize: vertical; transition: border-color var(--t-fast); }
+  .field-textarea:focus { outline: none; border-color: var(--accent-online); }
   .field-hint { color: var(--text-muted); font-size: 10px; margin-top: var(--sp-1); }
-  .field-row { display: flex; gap: var(--sp-2); align-items: stretch; }
-  .field-row .field { flex: 1; }
-  .field-row input { flex: 1; }
 
-  /* Danger zone */
-  .danger-zone {
-    background: rgba(255,52,52,0.04);
-    border: 1px solid rgba(255,52,52,0.25);
-    border-radius: var(--r-card);
-    padding: var(--sp-4);
-  }
+  .danger-zone { background: rgba(255,52,52,0.04); border: 1px solid rgba(255,52,52,0.25); border-radius: var(--r-card); padding: var(--sp-4); }
   .danger-zone .section-title { color: var(--accent-rec); }
 
-  /* Placeholder card for upcoming features */
-  .placeholder-card {
-    background: var(--bg-card);
-    border: 1px dashed var(--bg-border);
-    border-radius: var(--r-card);
-    padding: var(--sp-7);
-    text-align: center;
-  }
-  .placeholder-icon { font-size: 32px; margin-bottom: var(--sp-3); opacity: 0.5; }
-  .placeholder-title { font-size: var(--text-heading); font-weight: 600; margin-bottom: var(--sp-2); }
-  .placeholder-desc { color: var(--text-secondary); max-width: 480px; margin: 0 auto var(--sp-4); line-height: 1.6; }
-  .placeholder-list { text-align: left; max-width: 320px; margin: 0 auto; color: var(--text-muted); font-size: var(--text-small); }
-  .placeholder-list li { padding: 4px 0; border-bottom: 1px solid var(--bg-divider); list-style: none; }
-  .placeholder-list li:last-child { border-bottom: none; }
-  .placeholder-list li::before { content: '·  '; color: var(--text-muted); }
+  /* Collapsible "Advanced/System" accordion */
+  .advanced-accordion { background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); margin-bottom: var(--sp-4); overflow: hidden; }
+  .advanced-head { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3) var(--sp-4); cursor: pointer; user-select: none; transition: background var(--t-fast); }
+  .advanced-head:hover { background: rgba(255,255,255,0.02); }
+  .advanced-head .title { color: var(--text-secondary); font-size: var(--text-small); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .advanced-head .caret { color: var(--text-muted); font-size: 10px; transition: transform var(--t-fast); }
+  .advanced-accordion.open .advanced-head .caret { transform: rotate(90deg); }
+  .advanced-body { display: none; padding: 0 var(--sp-4) var(--sp-4); border-top: 1px solid var(--bg-divider); }
+  .advanced-accordion.open .advanced-body { display: block; padding-top: var(--sp-4); }
+
+  .lua-panel { background: rgba(255,215,0,0.06); border: 1px solid rgba(255,215,0,0.3); border-radius: var(--r-card); padding: var(--sp-4); }
+  .lua-path { font-family: var(--font-mono); font-size: var(--text-mono); color: var(--accent-warn); background: var(--bg-page); border: 1px solid rgba(255,215,0,0.3); border-radius: var(--r-button); padding: 8px 10px; flex: 1; user-select: all; }
+
+  .log-pane { background: #000; color: #bbb; padding: var(--sp-3); max-height: 280px; overflow: auto; font-size: var(--text-mono); line-height: 1.5; font-family: var(--font-mono); border: 1px solid var(--bg-divider); border-radius: var(--r-button); margin: 0; white-space: pre-wrap; word-break: break-word; }
+
+  /* === GO LIVE === */
+  .platform-row { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+  .platform-btn { flex: 1; padding: 12px; background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-button); color: var(--text-secondary); font-family: inherit; font-size: var(--text-body); font-weight: 600; cursor: pointer; transition: all var(--t-fast); }
+  .platform-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
+  .platform-btn.active { background: rgba(0,255,133,0.06); border-color: var(--accent-online); color: var(--accent-online); }
+  .stream-action { display: grid; grid-template-columns: 2fr 1fr; gap: var(--sp-2); margin-top: var(--sp-3); }
+  .go-live-btn { padding: 18px; background: var(--accent-online); color: var(--bg-page); border: none; border-radius: var(--r-card); font-family: inherit; font-size: 14px; font-weight: 800; letter-spacing: 0.2em; cursor: pointer; transition: all var(--t-fast); }
+  .go-live-btn:hover { background: #00cc6a; }
+  .go-live-btn.live { background: var(--accent-rec); color: #fff; }
+  .go-live-btn.live:hover { background: #cc2929; }
+  .stop-stream-btn { padding: 18px; background: transparent; border: 1px solid var(--accent-rec); color: var(--accent-rec); border-radius: var(--r-card); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.15em; cursor: pointer; }
+  .stop-stream-btn:disabled { opacity: 0.3; }
+  .notif-item { background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); padding: var(--sp-3); margin-bottom: var(--sp-2); display: flex; gap: var(--sp-3); align-items: flex-start; }
+  .notif-icon { font-size: 20px; line-height: 1; }
+  .notif-body { flex: 1; }
+  .notif-title { color: var(--text-primary); font-weight: 600; font-size: var(--text-body); }
+  .notif-sub { color: var(--text-secondary); font-size: var(--text-small); margin-top: 2px; }
+  .notif-dismiss { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; }
+  .notif-dismiss:hover { color: var(--accent-rec); }
+
+  /* === ALERTS === */
+  .tier-card { background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); padding: var(--sp-4); margin-bottom: var(--sp-3); }
+  .tier-card.tier-1 { border-left: 3px solid #cc66ff; }
+  .tier-card.tier-2 { border-left: 3px solid var(--accent-warn); }
+  .tier-card.tier-3 { border-left: 3px solid #ff8844; }
+  .tier-card.tier-4 { border-left: 3px solid var(--accent-rec); box-shadow: inset 0 0 30px rgba(255,52,52,0.05); }
+  .tier-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-3); }
+  .tier-name { font-weight: 700; font-size: var(--text-body); color: var(--text-primary); }
+  .tier-range { color: var(--text-secondary); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .tier-desc { color: var(--text-secondary); font-size: var(--text-small); margin-bottom: var(--sp-3); line-height: 1.6; }
+  .tier-controls { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-3); align-items: center; }
+  .tier-input { display: flex; align-items: center; gap: var(--sp-2); }
+  .tier-input label { color: var(--text-muted); font-size: 10px; }
+  .tier-input input { width: 100px; padding: 6px 10px; background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); color: var(--text-primary); font-family: inherit; }
+
+  .duration-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .dur-tile { background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-button); padding: var(--sp-3); }
+  .dur-label { color: var(--text-secondary); font-size: var(--text-small); margin-bottom: var(--sp-1); }
+  .dur-hint { color: var(--text-muted); font-size: 10px; margin-bottom: var(--sp-2); line-height: 1.5; }
+  .dur-row { display: flex; gap: var(--sp-2); align-items: center; }
+  .dur-row input[type=range] { flex: 1; }
+  .dur-row .val { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); min-width: 60px; text-align: right; }
+
+  /* === GAMES === */
+  .game-editor { background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); padding: var(--sp-4); margin-bottom: var(--sp-3); }
+  .game-editor-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+  .game-editor-name { font-weight: 700; color: var(--text-primary); font-size: var(--text-body); display: flex; align-items: center; gap: var(--sp-2); }
+  .game-editor-icon { font-size: 18px; }
+  .reward-table { width: 100%; border-collapse: collapse; margin-top: var(--sp-2); }
+  .reward-table th { color: var(--text-muted); font-size: 9px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 6px 4px; text-align: left; border-bottom: 1px solid var(--bg-divider); }
+  .reward-table td { padding: 4px; border-bottom: 1px solid var(--bg-divider); }
+  .reward-table input { width: 100%; padding: 5px 8px; background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-chip); color: var(--text-primary); font-family: inherit; font-size: var(--text-small); }
+  .reward-table .pct { color: var(--text-secondary); font-family: var(--font-mono); font-size: var(--text-mono); text-align: right; padding: 4px 8px; }
+  .reward-table .del { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; }
+  .reward-table .del:hover { color: var(--accent-rec); }
+
+  /* === KEYS === */
+  .key-section { background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card); padding: var(--sp-4); margin-bottom: var(--sp-3); }
+  .key-row { display: grid; grid-template-columns: 1fr auto auto; gap: var(--sp-3); align-items: center; padding: 8px 10px; background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); margin-bottom: var(--sp-1); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .key-status { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 6px; border-radius: var(--r-chip); }
+  .key-status.ok { background: rgba(0,255,133,0.1); color: var(--accent-online); }
+  .key-status.bad { background: rgba(255,52,52,0.1); color: var(--accent-rec); }
+  .key-input-row { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+  .key-input-row input { flex: 1; padding: 8px 10px; background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .quota-counter { background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); padding: var(--sp-3); margin-bottom: var(--sp-3); display: flex; justify-content: space-between; align-items: center; }
+  .quota-num { color: var(--accent-online); font-family: var(--font-mono); font-size: 18px; font-weight: 600; }
+  .quota-label { color: var(--text-secondary); font-size: var(--text-small); }
 </style>
 </head>
 <body>
@@ -286,7 +334,7 @@
         <div class="sb-mark">S</div>
         <div>
           <div class="sb-name">Sasi Studio</div>
-          <div class="sb-ver">v0.2.0</div>
+          <div class="sb-ver">v2 · Phase 1</div>
         </div>
       </div>
       <div class="sb-status">
@@ -295,32 +343,340 @@
       </div>
     </div>
     <nav class="tabs">
-      <button class="tab-btn active" data-tab="now">● Now</button>
-      <button class="tab-btn" data-tab="overlays">Overlays</button>
-      <button class="tab-btn" data-tab="recordings">Recordings</button>
-      <button class="tab-btn" data-tab="obs">OBS</button>
+      <button class="tab-btn" data-tab="golive">● Go Live</button>
+      <button class="tab-btn active" data-tab="overlays">Overlays</button>
+      <button class="tab-btn" data-tab="alerts">Alerts</button>
+      <button class="tab-btn" data-tab="games">Games</button>
+      <button class="tab-btn" data-tab="stream">Recording</button>
       <button class="tab-btn" data-tab="keys">Keys</button>
-      <button class="tab-btn" data-tab="settings">Settings</button>
     </nav>
   </aside>
 
   <main class="main">
-    <section class="panel active" data-panel="now">
-      <div class="page-head">
-        <div class="page-eyebrow">Dashboard</div>
-        <div class="page-title">Now</div>
+    <section class="panel" data-panel="golive">
+      <div class="page-head"><div class="page-eyebrow">Stream</div><div class="page-title">Go Live</div></div>
+
+      <div class="section">
+        <div class="section-title">Platform</div>
+        <div class="platform-row">
+          <button class="platform-btn" id="gl-platform-yt" data-platform="youtube">YouTube</button>
+          <button class="platform-btn" id="gl-platform-tw" data-platform="twitch">Twitch</button>
+        </div>
+        <div class="field" id="gl-yt-fields">
+          <label>YouTube Video ID or URL</label>
+          <input type="text" id="gl-video-id" placeholder="Paste URL or video ID (e.g. OAD6b2k10Ys)" style="width:100%;padding:10px 12px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit">
+          <div class="field-hint">Saves 100x API quota vs auto-search.</div>
+        </div>
+        <div class="field" id="gl-tw-fields" style="display:none">
+          <label>Twitch Channel (read-only — set in Keys tab)</label>
+          <input type="text" id="gl-twitch-channel" readonly style="width:100%;padding:10px 12px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-secondary);font-family:'JetBrains Mono',monospace">
+          <div class="field-hint">IRC WebSocket — free, no quota.</div>
+        </div>
       </div>
 
-      <div class="surface-card hero-card">
+      <div class="section">
+        <div class="section-title">Stream Control</div>
+        <div class="stream-action">
+          <button class="go-live-btn" id="gl-toggle">▶ GO LIVE</button>
+          <button class="stop-stream-btn" id="gl-stop" disabled>STOP</button>
+        </div>
+        <div class="field-hint" id="gl-control-hint" style="margin-top:var(--sp-2)">Click GO LIVE to start chat polling + alerts.</div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Notifications queue</div>
+          <span class="t-small" style="color:var(--text-muted)">Pending: <span id="gl-notif-count">0</span></span>
+        </div>
+        <div class="section-hint">Wheel/Mystery/Highlight redemption results show here while they're active on stream.</div>
+        <div id="gl-notif-list"><div class="backup-empty">No pending notifications.</div></div>
+        <div class="actions" style="margin-top:var(--sp-3)">
+          <button class="btn btn-destructive" id="gl-notif-clear" style="flex:0">Clear all</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Quick settings</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Countdown (min)</label>
+            <input type="number" id="gl-countdown" min="1" max="60" value="5" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit">
+          </div>
+          <div class="field">
+            <label>Today's topic</label>
+            <input type="text" id="gl-today" placeholder="REACT VIDEOS" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit">
+          </div>
+        </div>
+        <label class="toggle-row" style="margin-top:var(--sp-3)">
+          <input type="checkbox" id="gl-fake">
+          <span><strong>Test mode</strong> — fake chat + alerts + game triggers fire on a loop. Use to test the dashboard without going live.</span>
+        </label>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Status</div>
+        <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+          <div class="stat"><div class="stat-label">PLATFORM</div><div class="stat-value" id="gl-s-plat">—</div></div>
+          <div class="stat"><div class="stat-label">CHAT SOURCE</div><div class="stat-value" id="gl-s-chat">—</div></div>
+          <div class="stat"><div class="stat-label">VIDEO ID</div><div class="stat-value" id="gl-s-vid">—</div></div>
+          <div class="stat"><div class="stat-label">SE JWT</div><div class="stat-value" id="gl-s-jwt">—</div></div>
+          <div class="stat"><div class="stat-label">API KEYS</div><div class="stat-value" id="gl-s-keys">—</div></div>
+          <div class="stat"><div class="stat-label">TEST MODE</div><div class="stat-value" id="gl-s-fake">—</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel active" data-panel="overlays">
+      <div class="page-head"><div class="page-eyebrow">Stream</div><div class="page-title">Overlays</div></div>
+
+      <div class="scene-grid" id="scene-grid">
+        <div class="scene-card active" data-scene="starting-soon">
+          <div class="scene-thumb"><iframe data-src="scenes/starting-soon.html"></iframe></div>
+          <div class="scene-label">Starting Soon</div>
+        </div>
+        <div class="scene-card" data-scene="brb">
+          <div class="scene-thumb"><iframe data-src="scenes/brb.html"></iframe></div>
+          <div class="scene-label">BRB</div>
+        </div>
+        <div class="scene-card" data-scene="stream-ending">
+          <div class="scene-thumb"><iframe data-src="scenes/stream-ending.html"></iframe></div>
+          <div class="scene-label">Stream Ending</div>
+        </div>
+        <div class="scene-card" data-scene="overlay">
+          <div class="scene-thumb"><iframe data-src="scenes/overlay.html"></iframe></div>
+          <div class="scene-label">In-Game</div>
+        </div>
+        <div class="scene-card" data-scene="just-chatting">
+          <div class="scene-thumb"><iframe data-src="scenes/just-chatting.html"></iframe></div>
+          <div class="scene-label">Just Chatting</div>
+        </div>
+      </div>
+
+      <div class="editor-row">
+        <div class="editor-form">
+          <div class="editor-eyebrow" id="editor-title">SELECTED · STARTING SOON</div>
+          <div id="editor-fields"></div>
+        </div>
+        <div class="editor-preview">
+          <div class="preview-toolbar">
+            <button class="preview-btn" id="preview-reload" title="Reload preview (needed for color/theme/font changes)">↻ Reload</button>
+          </div>
+          <iframe id="editor-preview-iframe" src="scenes/starting-soon.html"></iframe>
+        </div>
+      </div>
+
+      <div class="common-section">
+        <div class="editor-eyebrow">Common · applies to all scenes</div>
+        <div class="common-grid">
+          <div class="common-tile">
+            <div class="common-tile-label">Colors (red · orange · gold)</div>
+            <div class="color-row">
+              <input type="color" data-key="cRed"    value="#FF2200" title="Red (primary)">
+              <input type="color" data-key="cOrange" value="#FF7700" title="Orange (secondary)">
+              <input type="color" data-key="cGold"   value="#FFD700" title="Gold (accent)">
+            </div>
+          </div>
+          <div class="common-tile">
+            <div class="common-tile-label">Background <span class="reload-tag">reload to apply</span></div>
+            <select data-key="background" data-reload="1">
+              <option value="hexgrid">hexgrid</option>
+              <option value="particles">particles</option>
+              <option value="ember">ember</option>
+              <option value="matrix">matrix</option>
+              <option value="minimal">minimal</option>
+              <option value="random" selected>random</option>
+            </select>
+          </div>
+          <div class="common-tile">
+            <div class="common-tile-label">Glitch effect <span class="reload-tag">reload to apply</span></div>
+            <label class="toggle-row" style="padding:4px 8px"><input type="checkbox" data-key="glitchToggle" data-reload="1"><span>Enabled</span></label>
+          </div>
+          <div class="common-tile">
+            <div class="common-tile-label">Ticker speed (sec) <span class="reload-tag">reload to apply</span></div>
+            <input type="number" data-key="tickerSpeed" min="10" max="60" value="28" data-reload="1">
+          </div>
+        </div>
+      </div>
+
+      <div class="common-section">
+        <div class="editor-eyebrow">Brand</div>
+        <div class="common-grid" style="grid-template-columns: 1fr 1fr">
+          <div class="common-tile">
+            <div class="common-tile-label">Channel name</div>
+            <input type="text" data-key="brand_name" placeholder="SASI STREAMS">
+          </div>
+          <div class="common-tile">
+            <div class="common-tile-label">Tagline</div>
+            <input type="text" data-key="brand_tagline" placeholder="LIVE STREAM">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="alerts">
+      <div class="page-head"><div class="page-eyebrow">Stream</div><div class="page-title">Alerts</div></div>
+
+      <div class="section">
+        <div class="section-title">Super Chat tiers</div>
+        <div class="section-hint">Each Super Chat amount range gets a different visual tier on stream. Set the ₹ thresholds where each tier kicks in. Click "Test" to fire a fake alert at the midpoint into the In-Game overlay preview.</div>
+
+        <div class="tier-card tier-1">
+          <div class="tier-head">
+            <div><div class="tier-name">Tier 1 · Neon card</div><div class="tier-range" id="alert-r1">₹0 to ₹99</div></div>
+            <button class="btn btn-secondary" data-test-tier="1" style="font-size:10px;padding:6px 12px">Test</button>
+          </div>
+          <div class="tier-desc">Small tip — neon-colored card, color cycles per alert.</div>
+        </div>
+
+        <div class="tier-card tier-2">
+          <div class="tier-head">
+            <div><div class="tier-name">Tier 2 · Gold card</div><div class="tier-range" id="alert-r2">₹100 to ₹499</div></div>
+            <button class="btn btn-secondary" data-test-tier="2" style="font-size:10px;padding:6px 12px">Test</button>
+          </div>
+          <div class="tier-desc">Gold card with shimmer sweep + floating sparkles.</div>
+          <div class="tier-controls">
+            <div class="tier-input"><label>Starts at ₹</label><input type="number" id="alert-t2-min" min="1" value="100"></div>
+          </div>
+        </div>
+
+        <div class="tier-card tier-3">
+          <div class="tier-head">
+            <div><div class="tier-name">Tier 3 · Premium</div><div class="tier-range" id="alert-r3">₹500 to ₹1,999</div></div>
+            <button class="btn btn-secondary" data-test-tier="3" style="font-size:10px;padding:6px 12px">Test</button>
+          </div>
+          <div class="tier-desc">Orange card, falling coin rain animation.</div>
+          <div class="tier-controls">
+            <div class="tier-input"><label>Starts at ₹</label><input type="number" id="alert-t3-min" min="1" value="500"></div>
+          </div>
+        </div>
+
+        <div class="tier-card tier-4">
+          <div class="tier-head">
+            <div><div class="tier-name">Tier 4 · Hero card</div><div class="tier-range" id="alert-r4">₹2,000 and up</div></div>
+            <button class="btn btn-secondary" data-test-tier="4" style="font-size:10px;padding:6px 12px">Test</button>
+          </div>
+          <div class="tier-desc">Cinematic 3-stage hero card — amount blooms center, divider beam slides in, info reveals right.</div>
+          <div class="tier-controls">
+            <div class="tier-input"><label>Starts at ₹</label><input type="number" id="alert-t4-min" min="1" value="2000"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Durations</div>
+        <div class="section-hint">How long each alert type stays on screen. Super Chat duration scales with amount (logarithmic).</div>
+        <div class="duration-grid">
+          <div class="dur-tile">
+            <div class="dur-label">Super Chat base</div>
+            <div class="dur-hint">Smallest tip duration.</div>
+            <div class="dur-row"><input type="range" id="alert-baseDur" min="1000" max="10000" step="500" value="2500"><span class="val" id="alert-baseDur-v">2500ms</span></div>
+          </div>
+          <div class="dur-tile">
+            <div class="dur-label">Super Chat max</div>
+            <div class="dur-hint">Cap for the biggest Super Chats.</div>
+            <div class="dur-row"><input type="range" id="alert-maxDur" min="3000" max="15000" step="500" value="7000"><span class="val" id="alert-maxDur-v">7000ms</span></div>
+          </div>
+          <div class="dur-tile">
+            <div class="dur-label">Membership</div>
+            <div class="dur-hint">New member alert hold time.</div>
+            <div class="dur-row"><input type="range" id="alert-memberDur" min="1000" max="15000" step="500" value="6000"><span class="val" id="alert-memberDur-v">6000ms</span></div>
+          </div>
+          <div class="dur-tile">
+            <div class="dur-label">Gift base + per-unit</div>
+            <div class="dur-hint">Base + (per-gift extension × N gifts).</div>
+            <div class="dur-row"><input type="range" id="alert-giftBaseDur" min="1000" max="10000" step="500" value="3000"><span class="val" id="alert-giftBaseDur-v">3000ms</span></div>
+            <div class="dur-row" style="margin-top:6px"><input type="range" id="alert-giftPerUnit" min="100" max="1000" step="50" value="400"><span class="val" id="alert-giftPerUnit-v">400ms</span></div>
+          </div>
+          <div class="dur-tile">
+            <div class="dur-label">Redemption / game</div>
+            <div class="dur-hint">Wheel / Mystery / Highlight alert hold.</div>
+            <div class="dur-row"><input type="range" id="alert-redeemDur" min="1000" max="10000" step="500" value="5000"><span class="val" id="alert-redeemDur-v">5000ms</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="games">
+      <div class="page-head"><div class="page-eyebrow">Stream</div><div class="page-title">Games</div></div>
+
+      <div class="section">
+        <div class="section-hint">Loyalty-point redemptions in StreamElements (named exactly: <strong>"Wheel of Fortune"</strong>, <strong>"Mystery Box"</strong>, <strong>"Highlight Message"</strong>) trigger these. The dashboard's bug-fix wires the SE redemption event → wheel-spin animation in the just-chatting scene + a notification on the Go Live tab.</div>
+      </div>
+
+      <div class="game-editor">
+        <div class="game-editor-head">
+          <div class="game-editor-name"><span class="game-editor-icon">🎰</span> Wheel of Fortune</div>
+          <button class="btn btn-secondary" id="game-test-wheel" style="font-size:10px;padding:6px 12px">Test spin</button>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Cost (loyalty pts)</label><input type="number" id="game-wheel-cost" min="0" value="1000000" style="width:100%;padding:6px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit"></div>
+          <div class="field"><label>Spin duration (sec)</label><input type="number" id="game-wheel-dur" min="2" max="20" value="6" style="width:100%;padding:6px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit"></div>
+        </div>
+        <div class="section-title" style="margin-top:var(--sp-3)">Rewards · weight</div>
+        <table class="reward-table" id="game-wheel-rewards">
+          <thead><tr><th>Reward name</th><th style="width:90px">Weight</th><th style="width:70px">Chance</th><th style="width:30px"></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="btn btn-secondary" id="game-wheel-add" style="font-size:10px;padding:6px 12px;margin-top:var(--sp-2)">+ Add reward</button>
+      </div>
+
+      <div class="game-editor">
+        <div class="game-editor-head">
+          <div class="game-editor-name"><span class="game-editor-icon">📦</span> Mystery Box</div>
+          <button class="btn btn-secondary" id="game-test-mystery" style="font-size:10px;padding:6px 12px">Test open</button>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Cost (loyalty pts)</label><input type="number" id="game-mystery-cost" min="0" value="500000" style="width:100%;padding:6px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit"></div>
+          <div class="field"><label>Reveal duration (sec)</label><input type="number" id="game-mystery-dur" min="2" max="15" value="4" style="width:100%;padding:6px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit"></div>
+        </div>
+        <div class="section-title" style="margin-top:var(--sp-3)">Rewards · weight</div>
+        <table class="reward-table" id="game-mystery-rewards">
+          <thead><tr><th>Reward name</th><th style="width:90px">Weight</th><th style="width:70px">Chance</th><th style="width:30px"></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="btn btn-secondary" id="game-mystery-add" style="font-size:10px;padding:6px 12px;margin-top:var(--sp-2)">+ Add reward</button>
+      </div>
+
+      <div class="game-editor">
+        <div class="game-editor-head">
+          <div class="game-editor-name"><span class="game-editor-icon">💬</span> Highlight Message</div>
+          <button class="btn btn-secondary" id="game-test-highlight" style="font-size:10px;padding:6px 12px">Test highlight</button>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Cost (loyalty pts)</label><input type="number" id="game-highlight-cost" min="0" value="100000" style="width:100%;padding:6px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit"></div>
+        </div>
+        <div class="section-hint" style="margin-top:var(--sp-2)">No reward weights — just shows the viewer's chat message highlighted on stream for a few seconds.</div>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="stream">
+      <div class="page-head"><div class="page-eyebrow">Watcher</div><div class="page-title">Recording</div></div>
+
+      <!-- USER-FACING (top) -->
+      <div class="hero-card">
+        <!-- Top status strip: service state + REC pill + Keep MKV toggle -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-3);padding-bottom:var(--sp-3);border-bottom:1px solid var(--bg-divider);gap:var(--sp-3);flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:var(--sp-3)">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="sb-dot" id="hero-dot" style="width:8px;height:8px"></div>
+              <span class="hero-label" id="hero-status-text" style="margin-bottom:0">Connecting...</span>
+            </div>
+            <div class="rec-pill" id="now-rec-pill">
+              <div class="dot"></div>
+              <div class="label">REC</div>
+            </div>
+          </div>
+          <label class="toggle-row" style="cursor:pointer;padding:6px 10px;font-size:11px">
+            <input type="checkbox" id="cfg-keep-mkv" style="margin:0;cursor:pointer">
+            <span><strong>Keep MKV</strong> · <span id="cfg-keep-mkv-label" style="color:var(--text-muted)">…</span></span>
+          </label>
+        </div>
+
         <div class="hero-row">
           <div>
             <div class="hero-label">Recording</div>
             <div class="hero-game" id="now-game">—</div>
             <div class="hero-sub" id="now-sub">Watcher offline</div>
-          </div>
-          <div class="rec-pill" id="now-rec-pill">
-            <div class="dot"></div>
-            <div class="label">REC</div>
           </div>
         </div>
         <div class="stats">
@@ -328,673 +684,1377 @@
           <div class="stat"><div class="stat-label">QUEUE</div><div class="stat-value" id="now-queue">—</div></div>
           <div class="stat"><div class="stat-label">UPTIME</div><div class="stat-value" id="now-uptime">—</div></div>
         </div>
-        <div class="actions">
-          <button class="btn btn-primary" id="now-open-dump">Open Dump Folder</button>
-          <button class="btn btn-secondary" id="now-restart">Restart</button>
+        <div class="actions" style="flex-wrap:wrap">
+          <a class="btn btn-primary" id="now-start" href="clip-prep://start" style="display:none;text-decoration:none;text-align:center">▶ Start watcher</a>
+          <button class="btn btn-destructive" id="now-stop" style="display:none">■ Stop watcher</button>
+          <button class="btn btn-secondary" id="now-restart">↻ Restart</button>
+          <button class="btn btn-secondary" id="now-open-dump">Open Dump</button>
+          <button class="btn btn-secondary" id="now-open-target">Open Recordings</button>
         </div>
       </div>
 
-      <div class="surface-card moves-card">
+      <div class="moves-card">
         <div class="hero-label">Recent moves</div>
-        <div class="moves-list" id="now-moves">
-          <div class="moves-empty">No recent moves</div>
-        </div>
-      </div>
-    </section>
-    <section class="panel" data-panel="overlays">
-      <div class="page-head">
-        <div class="page-eyebrow">Stream</div>
-        <div class="page-title">Overlays</div>
-      </div>
-      <div class="placeholder-card">
-        <div class="placeholder-title">Live overlay editor — coming soon</div>
-        <div class="placeholder-desc">Click any overlay to preview it as it'll look in OBS, then edit screen-specific content (text, animation, timer, image swap). Theme is locked — colors and fonts come from the design system.</div>
-        <ul class="placeholder-list">
-          <li>Starting Soon</li>
-          <li>Be Right Back</li>
-          <li>Ending Screen</li>
-          <li>Lower Thirds</li>
-        </ul>
-      </div>
-    </section>
-    <section class="panel" data-panel="recordings">
-      <div class="page-head">
-        <div class="page-eyebrow">Library</div>
-        <div class="page-title">Recordings</div>
+        <div class="moves-list" id="now-moves"><div class="moves-empty">No recent moves</div></div>
       </div>
 
       <div class="section">
         <div class="section-head">
-          <div class="section-title">By game</div>
-          <button class="btn btn-secondary" id="rec-refresh" style="font-size: 10px; padding: 6px 12px">Refresh</button>
+          <div class="section-title">Mix recordings</div>
+          <button class="btn btn-secondary" id="rec-refresh" style="font-size:10px;padding:6px 12px">Refresh</button>
         </div>
-        <div id="rec-games"><div class="backup-empty">Loading...</div></div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Mix recordings</div>
-        <div class="section-hint">Multi-game sessions land here. Split into per-game segments via ffmpeg — original is preserved until you delete it.</div>
+        <div class="section-hint">Multi-game sessions land in <code>recording/_mix/</code>. Split into per-game segments via ffmpeg. For browsing single-game recordings, click <strong>Open Recordings</strong> in the hero card above to open Explorer.</div>
         <div id="rec-mix"><div class="backup-empty">Loading...</div></div>
       </div>
-    </section>
-    <section class="panel" data-panel="obs">
-      <div class="page-head">
-        <div class="page-eyebrow">Studio</div>
-        <div class="page-title">OBS</div>
+
+      <!-- SYSTEM / ADVANCED (collapsed accordion) -->
+      <div class="advanced-accordion" id="adv-folders">
+        <div class="advanced-head"><div class="title">▶ Folders + paths</div><div class="caret">▶</div></div>
+        <div class="advanced-body">
+          <div class="field" style="background:var(--bg-page);padding:var(--sp-3);border-radius:var(--r-button);border:1px solid var(--bg-divider);margin-bottom:var(--sp-4)">
+            <label style="font-weight:700">OBS Recording Folder <span class="reload-tag" style="color:var(--accent-online);text-transform:uppercase">recommended</span></label>
+            <div class="field-hint" style="margin:6px 0 10px;line-height:1.6">
+              Pick one parent folder. We'll create <code>_dump/</code> (where OBS writes raw files) and <code>recording/</code> (organized output, per-game subfolders) inside it. You can also paste a path manually if the picker dialog doesn't appear (sometimes hidden behind OBS).
+            </div>
+            <div class="field-row" style="margin-bottom:8px">
+              <input type="text" id="cfg-recroot-input" placeholder="Paste folder path (e.g. E:\OBS Recording)" style="flex:1;padding:8px 10px;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--bg-divider);border-radius:var(--r-button);font-family:var(--font-mono);font-size:var(--text-mono)">
+              <button class="btn btn-secondary" id="cfg-recroot-pick">📁 Browse</button>
+            </div>
+            <div class="row">
+              <button class="btn btn-primary" id="cfg-recroot-save" style="flex:1">Save + Restart Watcher</button>
+              <button class="btn btn-secondary" id="cfg-recroot-open" disabled>Open in Explorer</button>
+            </div>
+            <div id="cfg-recroot-status" style="margin-top:8px;font-size:11px;min-height:1.2em;color:var(--text-muted)"></div>
+          </div>
+
+          <details style="margin-top:var(--sp-3)">
+            <summary style="cursor:pointer;color:var(--text-muted);font-size:11px;padding:4px 0;letter-spacing:0.05em;text-transform:uppercase">Advanced — set dump and target separately</summary>
+            <div class="field" style="margin-top:var(--sp-3)">
+              <label>Dump folder</label>
+              <div class="field-row">
+                <input type="text" id="cfg-dump" placeholder="C:\Users\…\Videos\_dump">
+                <button class="btn btn-secondary" id="cfg-dump-pick">Pick</button>
+              </div>
+              <div class="field-hint">Where OBS writes raw recordings.</div>
+            </div>
+            <div class="field">
+              <label>Target root</label>
+              <div class="field-row">
+                <input type="text" id="cfg-target" placeholder="C:\Users\…\Videos">
+                <button class="btn btn-secondary" id="cfg-target-pick">Pick</button>
+              </div>
+              <div class="field-hint">Per-game folders + <code>_mix/</code> get created here.</div>
+            </div>
+            <div class="actions">
+              <button class="btn btn-primary" id="cfg-save">Save advanced + Restart</button>
+              <span class="t-small" id="cfg-status" style="color:var(--text-muted);align-self:center"></span>
+            </div>
+          </details>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">Bundle</div>
-        <div class="section-hint"><strong>Close OBS</strong> before either operation — it locks browser-source state.</div>
-        <div class="row" style="margin-bottom: var(--sp-3)">
-          <button class="btn btn-secondary" id="obs-export" style="flex:1">Export Bundle</button>
-          <button class="btn btn-secondary" id="obs-import" style="flex:1">Import Bundle</button>
+      <div class="advanced-accordion" id="adv-games-map">
+        <div class="advanced-head"><div class="title">▶ Game folders <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">(map exe → folder name)</span></div><div class="caret">▶</div></div>
+        <div class="advanced-body">
+          <div class="section-hint">Each line maps an OBS Game Capture exe name (left) to a folder name (right). When that game is recorded, the file lands in <code>recording/&lt;folder name&gt;/</code>. Watcher hot-reloads on save — no restart needed.</div>
+
+          <div class="games-toolbar" style="display:flex;gap:var(--sp-2);align-items:center;margin-bottom:var(--sp-3);flex-wrap:wrap">
+            <input type="text" id="games-filter" placeholder="filter by exe or folder…" style="flex:1;min-width:200px;padding:6px 10px;font-size:var(--text-small);background:var(--bg-page);color:var(--text-primary);border:1px solid var(--bg-divider);border-radius:var(--r-button);font-family:inherit">
+            <button class="btn btn-secondary" id="games-add-toggle" style="font-size:10px;padding:6px 12px">+ Add entry</button>
+            <button class="btn btn-secondary" id="games-export-btn" style="font-size:10px;padding:6px 12px">↓ Export</button>
+            <button class="btn btn-secondary" id="games-import-btn" style="font-size:10px;padding:6px 12px">↑ Import</button>
+            <input type="file" id="games-import-file" accept=".json,application/json" style="display:none">
+            <button class="btn btn-secondary" id="games-toggle-raw" style="font-size:10px;padding:6px 12px">RAW JSON</button>
+          </div>
+
+          <div id="games-add-panel" style="display:none;background:rgba(0,255,133,0.04);border:1px dashed rgba(0,255,133,0.3);border-radius:var(--r-button);padding:var(--sp-3);margin-bottom:var(--sp-2)">
+            <div class="field-hint" style="margin-bottom:6px">Both fields required.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;align-items:center">
+              <input type="text" id="games-add-exe" placeholder="exe name (no .exe)" style="font-family:var(--font-mono);background:var(--bg-page);color:var(--text-primary);border:1px solid var(--bg-divider);padding:6px 10px;border-radius:var(--r-button);font-size:var(--text-small)">
+              <input type="text" id="games-add-folder" placeholder="folder name" style="background:var(--bg-page);color:var(--text-primary);border:1px solid var(--bg-divider);padding:6px 10px;border-radius:var(--r-button);font-size:var(--text-small)">
+              <button class="btn btn-primary" id="games-add-confirm" style="font-size:10px;padding:6px 12px">Add</button>
+              <button class="btn btn-secondary" id="games-add-cancel" style="font-size:10px;padding:6px 12px">Cancel</button>
+            </div>
+          </div>
+
+          <div id="games-table" style="border:1px solid var(--bg-divider);border-radius:var(--r-button);max-height:380px;overflow:auto;background:var(--bg-page)"></div>
+
+          <div id="games-raw-panel" style="display:none;margin-top:var(--sp-3)">
+            <textarea class="field-textarea" id="games-text" spellcheck="false"></textarea>
+            <div class="actions">
+              <button class="btn btn-primary" id="games-raw-save">Save raw JSON</button>
+              <span class="field-hint" id="games-status"></span>
+            </div>
+          </div>
+
+          <div class="field-hint" id="games-feedback" style="margin-top:var(--sp-2);min-height:1.2em"></div>
+
+          <details style="margin-top:var(--sp-3)">
+            <summary style="cursor:pointer;color:var(--text-muted);font-size:11px;padding:4px 0">JSON format reference (for advanced rules)</summary>
+            <pre style="background:var(--bg-page);padding:var(--sp-3);border-radius:var(--r-button);font-size:var(--text-mono);font-family:var(--font-mono);line-height:1.5;margin-top:6px;overflow:auto;color:var(--text-secondary);border:1px solid var(--bg-divider)">{
+  "&lt;exe-name&gt;": "&lt;Folder Name&gt;",
+  "GTA5": {
+    "default": "GTA 5",
+    "if_running": [
+      { "process": "FiveM.exe", "name": "GTA 5 RP" }
+    ]
+  }
+}</pre>
+          </details>
         </div>
-        <div class="row" style="margin-bottom: var(--sp-3); align-items: center">
-          <button class="btn btn-secondary" id="obs-register-lua">Register Lua in OBS</button>
-          <span class="t-small" style="color: var(--text-muted)">Wires game-tracker.lua into every scene collection. Re-run after creating a new collection.</span>
-        </div>
-        <div class="output-box" id="obs-output"></div>
       </div>
 
-      <div class="section">
-        <div class="section-head">
-          <div class="section-title">Auto-backups</div>
-          <button class="btn btn-secondary" id="obs-refresh-backups" style="font-size: 10px; padding: 6px 12px">Refresh</button>
+      <div class="advanced-accordion" id="adv-log">
+        <div class="advanced-head"><div class="title">▶ Live log (last 30 entries)</div><div class="caret">▶</div></div>
+        <div class="advanced-body">
+          <div class="section-hint">Refreshes every 3s while open. <button class="btn btn-secondary" id="open-log-btn" style="font-size:10px;padding:4px 10px;margin-left:8px">Open log file</button></div>
+          <pre class="log-pane" id="log-pane">connecting…</pre>
         </div>
-        <div class="section-hint">Each Import auto-saves your current OBS state here first. Restore to undo a previous import.</div>
-        <div class="backup-list" id="obs-backups">
-          <div class="backup-empty">Loading...</div>
+      </div>
+
+      <div class="advanced-accordion" id="adv-bundle">
+        <div class="advanced-head"><div class="title">▶ OBS Bundle (export · import · backups)</div><div class="caret">▶</div></div>
+        <div class="advanced-body">
+          <div class="section-hint">A bundle is a portable folder with all your OBS state — scenes, profiles, plugin settings, plugin DLLs. Export to backup, Import to restore on a new PC.<br><strong style="color:var(--accent-warn)">Close OBS</strong> before either operation — it locks browser-source state.</div>
+          <div class="row" style="margin-bottom:var(--sp-3)">
+            <button class="btn btn-secondary" id="obs-export" style="flex:1">📤 Export Bundle</button>
+            <button class="btn btn-secondary" id="obs-import" style="flex:1">📥 Import Bundle</button>
+          </div>
+          <div class="row" style="margin-bottom:var(--sp-3);align-items:center">
+            <button class="btn btn-secondary" id="obs-register-lua">🔗 Re-register Lua in OBS</button>
+            <span class="t-small" style="color:var(--text-muted)">Already done during install. Run again if you create a new scene collection.</span>
+          </div>
+          <div class="output-box" id="obs-output"></div>
+
+          <div class="section-head" style="margin-top:var(--sp-5)">
+            <div class="section-title">Auto-backups (rollback safety)</div>
+            <button class="btn btn-secondary" id="obs-refresh-backups" style="font-size:10px;padding:6px 12px">Refresh</button>
+          </div>
+          <div class="section-hint">
+            Every time you click <strong>Import Bundle</strong>, your current OBS state gets copied to <code>%APPDATA%\obs-studio\_clip-prep-backup-&lt;timestamp&gt;\</code> <em>before</em> the new bundle is unpacked. If the import breaks something, click <strong>Restore</strong> on a backup below to roll back to exactly how OBS was before that import.
+          </div>
+          <div class="backup-list" id="obs-backups"><div class="backup-empty">Loading...</div></div>
+        </div>
+      </div>
+
+      <div class="advanced-accordion" id="adv-danger">
+        <div class="advanced-head"><div class="title" style="color:var(--accent-rec)">▶ Danger zone</div><div class="caret">▶</div></div>
+        <div class="advanced-body">
+          <div class="danger-zone" style="border:none;padding:0;background:transparent">
+            <div class="section-hint">Removes auto-start entirely (Win login + Start Menu shortcut + clip-prep:// URL protocol). Files in the install dir stay on disk. Re-run bootstrap to reinstall.</div>
+            <div class="row">
+              <button class="btn btn-destructive" id="cfg-uninstall">Uninstall clip-prep</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
+
     <section class="panel" data-panel="keys">
-      <div class="page-head">
-        <div class="page-eyebrow">Stream</div>
-        <div class="page-title">Keys</div>
-      </div>
-      <div class="placeholder-card">
-        <div class="placeholder-title">API key vault — coming soon</div>
-        <div class="placeholder-desc">Stream keys and tokens will be encrypted via Windows DPAPI — only your user account can decrypt them. Push-to-OBS button writes the key directly into your stream profile.</div>
-        <ul class="placeholder-list">
-          <li>Twitch stream key</li>
-          <li>YouTube stream key</li>
-          <li>StreamElements / StreamLabs tokens</li>
-          <li>RTMP custom-server credentials</li>
-        </ul>
-      </div>
-    </section>
-    <section class="panel" data-panel="settings">
-      <div class="page-head">
-        <div class="page-eyebrow">System</div>
-        <div class="page-title">Settings</div>
-      </div>
+      <div class="page-head"><div class="page-eyebrow">System</div><div class="page-title">Keys</div></div>
 
       <div class="section">
-        <div class="section-title">Folders</div>
-        <div class="field">
-          <label>Dump folder</label>
-          <div class="field-row">
-            <input type="text" id="cfg-dump" placeholder="C:\Users\…\Videos\_dump" readonly>
-            <button class="btn btn-secondary" id="cfg-dump-pick">Pick</button>
-          </div>
-          <div class="field-hint">OBS writes recordings here. The watcher moves them out into per-game folders under the target root.</div>
-        </div>
-        <div class="field">
-          <label>Target root</label>
-          <div class="field-row">
-            <input type="text" id="cfg-target" placeholder="C:\Users\…\Videos" readonly>
-            <button class="btn btn-secondary" id="cfg-target-pick">Pick</button>
-          </div>
-          <div class="field-hint">Per-game folders (Valorant/, GTA 5/, _mix/) get created here.</div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-primary" id="cfg-save">Save</button>
-          <span class="t-small" id="cfg-status" style="color: var(--text-muted); align-self: center"></span>
-        </div>
+        <div class="section-hint">All keys stored locally in <code>secrets.js</code> (your install dir, never committed). Plain-text on disk — only your Windows user can access.</div>
       </div>
 
-      <div class="section">
-        <div class="section-title">Keep MKV</div>
-        <div class="section-hint">When OFF, the watcher discards the .mkv after auto-remux to .mp4 to save disk space. ON keeps both.</div>
-        <label class="field-row" style="align-items: center; cursor: pointer">
-          <input type="checkbox" id="cfg-keep-mkv" style="width: auto; flex: 0">
-          <span class="t-body" id="cfg-keep-mkv-label">Loading...</span>
-        </label>
-      </div>
-
-      <div class="section">
+      <div class="key-section">
         <div class="section-head">
-          <div class="section-title">Games</div>
-          <button class="btn btn-secondary" id="games-save" style="font-size: 10px; padding: 6px 12px">Save</button>
+          <div class="section-title">YouTube API Keys</div>
+          <div class="quota-counter" style="margin:0;padding:4px 10px"><span class="quota-num" id="key-yt-count">0</span><span class="quota-label">keys · ~<span id="key-yt-hours">0</span>h coverage</span></div>
         </div>
-        <div class="section-hint">Maps OBS Game Capture exe names → per-game folder name. Edit JSON directly. Watcher hot-reloads on save.</div>
-        <div class="field">
-          <textarea id="games-text" spellcheck="false"></textarea>
-          <div class="field-hint" id="games-status"></div>
+        <div class="section-hint">Used for chat polling. Each key gives ~10,000 units/day (~12h coverage at 720 polls/day). Multiple keys auto-rotate when one hits quota. Get from Google Cloud Console → enable YouTube Data API v3.</div>
+        <div id="key-yt-list"></div>
+        <div class="key-input-row">
+          <input type="text" id="key-yt-add" placeholder="Paste new YouTube API key">
+          <button class="btn btn-primary" id="key-yt-add-btn" style="flex:0">Add key</button>
+        </div>
+        <div class="field" style="margin-top:var(--sp-3)">
+          <label>Channel ID</label>
+          <input type="text" id="key-yt-channel" placeholder="UCxxxxxxxxxxx" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
         </div>
       </div>
 
-      <div class="section">
-        <div class="danger-zone">
-          <div class="section-title">Danger zone</div>
-          <div class="section-hint">Stop / restart the watcher, or remove auto-start entirely.</div>
+      <div class="key-section">
+        <div class="section-title">Twitch IRC username</div>
+        <div class="section-hint">Anonymous IRC connection — only your username is needed. <code>clientId</code>/<code>clientSecret</code> aren't used by the current chat code.</div>
+        <input type="text" id="key-twitch-username" placeholder="your_twitch_username" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono);margin-top:var(--sp-2)">
+      </div>
+
+      <div class="key-section">
+        <div class="section-title">StreamElements JWTs</div>
+        <div class="section-hint">JWT tokens from StreamElements account dashboard. Powers all alerts (super chats, members, gifts, redemptions).</div>
+        <div class="field" style="margin-top:var(--sp-3)">
+          <label>YouTube account JWT</label>
           <div class="row">
-            <button class="btn btn-secondary" id="cfg-restart">Restart</button>
-            <button class="btn btn-secondary" id="cfg-stop">Stop</button>
-            <button class="btn btn-destructive" id="cfg-uninstall">Uninstall</button>
+            <input type="password" id="key-se-yt" placeholder="eyJhbGciOiJIUzI1NiIs..." style="flex:1;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
+            <button class="btn btn-secondary" id="key-se-yt-show" style="font-size:10px;padding:6px 12px">Show</button>
+            <button class="btn btn-secondary" id="key-se-yt-test" style="font-size:10px;padding:6px 12px">Test</button>
           </div>
+          <div class="field-hint" id="key-se-yt-status"></div>
         </div>
+        <div class="field" style="margin-top:var(--sp-3)">
+          <label>Twitch account JWT</label>
+          <div class="row">
+            <input type="password" id="key-se-tw" placeholder="eyJhbGciOiJIUzI1NiIs..." style="flex:1;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
+            <button class="btn btn-secondary" id="key-se-tw-show" style="font-size:10px;padding:6px 12px">Show</button>
+            <button class="btn btn-secondary" id="key-se-tw-test" style="font-size:10px;padding:6px 12px">Test</button>
+          </div>
+          <div class="field-hint" id="key-se-tw-status"></div>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:var(--sp-4)">
+        <button class="btn btn-primary" id="key-save">Save all keys</button>
+        <span class="t-small" id="key-save-status" style="color:var(--text-muted);align-self:center"></span>
       </div>
     </section>
   </main>
 </div>
 
 <script>
-  const API = 'http://127.0.0.1:6789';
+const API = 'http://127.0.0.1:6789';
 
-  // CSRF wrapper — required for POST/PUT/DELETE to the watcher.
-  // The watcher rejects mutating requests without X-Clip-Prep: 1.
-  if (!window.__sasiFetchWrapped) {
-    const orig = window.fetch.bind(window);
-    window.fetch = (input, init) => {
-      const url = typeof input === 'string' ? input : (input && input.url) || '';
-      const isLocal = url.startsWith(API);
-      const method = ((init && init.method) || 'GET').toUpperCase();
-      const mutating = method === 'POST' || method === 'PUT' || method === 'DELETE';
-      if (isLocal && mutating) {
-        const merged = { ...(init || {}) };
-        merged.headers = { ...(merged.headers || {}), 'X-Clip-Prep': '1' };
-        return orig(input, merged);
-      }
-      return orig(input, init);
-    };
-    window.__sasiFetchWrapped = true;
-  }
-
-  // Tab switching
-  function activateTab(name) {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.tab === name);
-    });
-    document.querySelectorAll('.panel').forEach(p => {
-      p.classList.toggle('active', p.dataset.panel === name);
-    });
-    if (history.replaceState) history.replaceState(null, '', '#' + name);
-  }
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    b.addEventListener('click', () => activateTab(b.dataset.tab));
-  });
-  // Honor #hash on load
-  const hashTab = (location.hash || '').replace('#', '');
-  if (hashTab && document.querySelector(`[data-tab="${hashTab}"]`)) activateTab(hashTab);
-
-  // Status poller — drives the sidebar online dot + uptime
-  const sbDot = document.getElementById('sb-dot');
-  const sbStatusText = document.getElementById('sb-status-text');
-  function fmtUptime(startedAt) {
-    if (!startedAt) return '';
-    const ms = Date.now() - new Date(startedAt).getTime();
-    const m = Math.floor(ms / 60000);
-    if (m < 60) return `${m}m`;
-    const h = Math.floor(m / 60);
-    return `${h}h ${m % 60}m`;
-  }
-  let pollStatus = async function() {
-    try {
-      const r = await fetch(API + '/status');
-      if (!r.ok) throw new Error('http ' + r.status);
-      const s = await r.json();
-      sbDot.className = 'sb-dot online';
-      sbStatusText.textContent = `Online · ${fmtUptime(s.startedAt)}`;
-      window.__sasiStatus = s;
-    } catch (e) {
-      sbDot.className = 'sb-dot offline';
-      sbStatusText.textContent = 'Offline';
-      window.__sasiStatus = null;
+// CSRF wrapper — adds X-Clip-Prep:1 to mutating requests.
+// The deployed api.js requires this header; matching CORS config allows it.
+if (!window.__sasiFetchWrapped) {
+  const orig = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    const isLocal = url.startsWith(API);
+    const method = ((init && init.method) || 'GET').toUpperCase();
+    const mutating = method === 'POST' || method === 'PUT' || method === 'DELETE';
+    if (isLocal && mutating) {
+      const merged = { ...(init || {}) };
+      merged.headers = { ...(merged.headers || {}), 'X-Clip-Prep': '1' };
+      return orig(input, merged);
     }
+    return orig(input, init);
   };
-  pollStatus();
-  setInterval(pollStatus, 3000);
+  window.__sasiFetchWrapped = true;
+}
 
-  // === Now tab rendering ===
-  const $ = (id) => document.getElementById(id);
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Tab switching
+function activateTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+  if (history.replaceState) history.replaceState(null, '', '#' + name);
+}
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => activateTab(b.dataset.tab)));
+const hashTab = (location.hash || '').replace('#', '');
+if (hashTab && document.querySelector(`[data-tab="${hashTab}"]`)) activateTab(hashTab);
+
+// Status poller
+const sbDot = document.getElementById('sb-dot');
+const sbStatusText = document.getElementById('sb-status-text');
+function fmtUptime(startedAt) {
+  if (!startedAt) return '';
+  const ms = Date.now() - new Date(startedAt).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+async function pollStatus() {
+  try {
+    const r = await fetch(API + '/status');
+    if (!r.ok) throw new Error('http ' + r.status);
+    const s = await r.json();
+    sbDot.className = 'sb-dot online';
+    sbStatusText.textContent = `Online · ${fmtUptime(s.startedAt)}`;
+    window.__sasiStatus = s;
+  } catch {
+    sbDot.className = 'sb-dot offline';
+    sbStatusText.textContent = 'Offline';
+    window.__sasiStatus = null;
   }
-  function renderNow(s) {
-    if (!s) {
-      $('now-game').textContent = '—';
-      $('now-sub').textContent = 'Watcher offline';
-      $('now-dump').textContent = '—';
-      $('now-queue').textContent = '—';
-      $('now-uptime').textContent = '—';
-      $('now-rec-pill').classList.remove('active');
+}
+pollStatus();
+// Arrow wrapper so the LATEST reassignment of pollStatus (via tab-specific
+// render wraps below) gets called, not the original reference captured at
+// setInterval-time.
+setInterval(() => pollStatus(), 3000);
+
+// =========================================================
+// OVERLAYS TAB
+// =========================================================
+
+// Scale grid thumbnails to fit container
+function scaleSceneThumbs() {
+  document.querySelectorAll('.scene-thumb').forEach(thumb => {
+    const iframe = thumb.querySelector('iframe');
+    if (!iframe) return;
+    const w = thumb.clientWidth;
+    iframe.style.transform = `scale(${w / 1920})`;
+    if (!iframe.src && iframe.dataset.src) iframe.src = iframe.dataset.src;
+  });
+}
+function scaleEditorPreview() {
+  const container = document.querySelector('.editor-preview');
+  const iframe = document.getElementById('editor-preview-iframe');
+  if (!container || !iframe) return;
+  iframe.style.transform = `scale(${container.clientWidth / 1920})`;
+}
+requestAnimationFrame(() => { scaleSceneThumbs(); scaleEditorPreview(); });
+window.addEventListener('resize', () => { scaleSceneThumbs(); scaleEditorPreview(); });
+
+// Active scene state + click handler
+window.__activeScene = 'starting-soon';
+document.querySelectorAll('.scene-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    window.__activeScene = card.dataset.scene;
+    window.dispatchEvent(new CustomEvent('sasi-scene-change', { detail: card.dataset.scene }));
+  });
+});
+
+// Per-scene field definitions
+const SCENE_FIELDS = {
+  'starting-soon': [
+    { key: 'ss_badge',     type: 'text',   label: 'Badge',           placeholder: 'STARTING SOON' },
+    { key: 'ss_topText',   type: 'text',   label: 'Top text',        placeholder: 'Stream' },
+    { key: 'ss_mainText',  type: 'text',   label: 'Main text',       placeholder: 'STARTING' },
+    { key: 'ss_countdown', type: 'number', label: 'Countdown (min)', placeholder: '5', requiresReload: true },
+    { key: 'ss_nextStream',type: 'text',   label: 'Next stream',     placeholder: 'FRIDAY · 8PM' },
+    { key: 'ss_clock',     type: 'toggle', label: 'Show clock' },
+    { key: 'ss_ticker',    type: 'toggle', label: 'Show ticker' },
+  ],
+  'brb': [
+    { key: 'brb_badge',    type: 'text',   label: 'Badge',                       placeholder: 'BRB' },
+    { key: 'brb_mainText', type: 'text',   label: 'Main text (\\n for line break)', placeholder: 'BE RIGHT\\nBACK', requiresReload: true },
+    { key: 'brb_subtext',  type: 'text',   label: 'Subtext',                     placeholder: 'grabbing something, back in a moment' },
+    { key: 'brb_tagline',  type: 'text',   label: 'Tagline',                     placeholder: 'BE RIGHT BACK' },
+    { key: 'brb_clock',    type: 'toggle', label: 'Show clock' },
+    { key: 'brb_ticker',   type: 'toggle', label: 'Show ticker' },
+  ],
+  'stream-ending': [
+    { key: 'end_badge',   type: 'text',   label: 'Badge',     placeholder: 'OFFLINE' },
+    { key: 'end_tagline', type: 'text',   label: 'Tagline',   placeholder: 'SEE YOU NEXT TIME' },
+    { key: 'end_thanks',  type: 'text',   label: 'Thanks',    placeholder: 'Thanks for' },
+    { key: 'end_main',    type: 'text',   label: 'Main text', placeholder: 'WATCHING' },
+    { key: 'end_sub',     type: 'text',   label: 'Sub text',  placeholder: 'SEE YOU SOON' },
+    { key: 'end_ticker',  type: 'toggle', label: 'Show ticker' },
+  ],
+  'overlay': [
+    { key: 'brand_name',    type: 'text', label: 'Channel name (also brand)', placeholder: 'SASI STREAMS' },
+    { key: 'brand_tagline', type: 'text', label: 'Tagline',                   placeholder: 'LIVE STREAM' },
+  ],
+  'just-chatting': [
+    { key: 'brand_name', type: 'text', label: 'Channel name', placeholder: 'SASI STREAMS' },
+  ],
+};
+
+// Broadcast a localStorage change to all overlay iframes (they don't get
+// storage events from the same window — we manually dispatch).
+function broadcastChange(key, value) {
+  localStorage.setItem('sasi_' + key, value);
+  const ev = (k, v) => new StorageEvent('storage', { key: 'sasi_' + k, newValue: v, storageArea: localStorage });
+  // Editor preview
+  const editor = document.getElementById('editor-preview-iframe');
+  if (editor && editor.contentWindow) {
+    try { editor.contentWindow.dispatchEvent(ev(key, value)); } catch {}
+  }
+  // Grid thumbs
+  document.querySelectorAll('.scene-thumb iframe').forEach(iframe => {
+    if (iframe.contentWindow) {
+      try { iframe.contentWindow.dispatchEvent(ev(key, value)); } catch {}
+    }
+  });
+}
+
+function renderEditor(sceneName) {
+  const fields = SCENE_FIELDS[sceneName] || [];
+  const container = document.getElementById('editor-fields');
+  document.getElementById('editor-title').textContent = 'SELECTED · ' + sceneName.toUpperCase().replace('-', ' ');
+
+  container.innerHTML = fields.map(f => {
+    const stored = localStorage.getItem('sasi_' + f.key) || '';
+    if (f.type === 'toggle') {
+      const checked = stored === 'true' ? 'checked' : '';
+      return `<div class="field"><label class="toggle-row">
+        <input type="checkbox" data-key="${f.key}" ${checked}>
+        <span>${f.label}</span>
+      </label></div>`;
+    }
+    const inputType = f.type === 'number' ? 'number' : 'text';
+    const reloadTag = f.requiresReload ? '<span class="reload-tag">reload to apply</span>' : '';
+    const reloadAttr = f.requiresReload ? ' data-reload="1"' : '';
+    return `<div class="field">
+      <label>${f.label} ${reloadTag}</label>
+      <input type="${inputType}" data-key="${f.key}"${reloadAttr} value="${stored.replace(/"/g, '&quot;')}" placeholder="${f.placeholder.replace(/"/g, '&quot;')}">
+    </div>`;
+  }).join('');
+
+  // Wire each input
+  container.querySelectorAll('[data-key]').forEach(input => {
+    const key = input.dataset.key;
+    const isToggle = input.type === 'checkbox';
+    const debounceMs = isToggle ? 0 : 200;
+    let t;
+    const fire = () => {
+      const value = isToggle ? String(input.checked) : input.value;
+      broadcastChange(key, value);
+    };
+    input.addEventListener(isToggle ? 'change' : 'input', () => {
+      clearTimeout(t);
+      t = setTimeout(fire, debounceMs);
+    });
+  });
+}
+
+// Initial render + scene-change handler
+renderEditor(window.__activeScene);
+window.addEventListener('sasi-scene-change', (e) => {
+  renderEditor(e.detail);
+  document.getElementById('editor-preview-iframe').src = 'scenes/' + e.detail + '.html';
+  // Re-scale once the new iframe loads
+  setTimeout(scaleEditorPreview, 200);
+});
+
+// Reload preview button — useful for color/theme/font changes
+document.getElementById('preview-reload').addEventListener('click', () => {
+  const iframe = document.getElementById('editor-preview-iframe');
+  iframe.src = iframe.src;
+  // Also reload all grid thumbs so they pick up theme/color changes
+  document.querySelectorAll('.scene-thumb iframe').forEach(f => { f.src = f.src; });
+  setTimeout(() => { scaleSceneThumbs(); scaleEditorPreview(); }, 200);
+});
+
+// Common controls + brand inputs
+document.querySelectorAll('.common-section [data-key]').forEach(input => {
+  const key = input.dataset.key;
+  const stored = localStorage.getItem('sasi_' + key);
+  if (stored !== null) {
+    if (input.type === 'checkbox') input.checked = stored === 'true';
+    else input.value = stored;
+  }
+  const isToggle = input.type === 'checkbox';
+  const isColor = input.type === 'color';
+  const debounceMs = isColor ? 50 : (isToggle ? 0 : 200);
+  let t;
+  const fire = () => {
+    const value = isToggle ? String(input.checked) : input.value;
+    broadcastChange(key, value);
+  };
+  input.addEventListener(isToggle ? 'change' : 'input', () => {
+    clearTimeout(t);
+    t = setTimeout(fire, debounceMs);
+  });
+});
+
+// =========================================================
+// STREAM TAB (recorder + bundle + system)
+// =========================================================
+
+const $ = (id) => document.getElementById(id);
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtBytes(n) {
+  if (!n) return '0 B';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
+  return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
+// --- Now hero card + recent moves ---
+function renderNow(s) {
+  if (!s) {
+    $('now-game').textContent = '—';
+    $('now-sub').textContent = 'Watcher offline';
+    $('now-dump').textContent = '—';
+    $('now-queue').textContent = '—';
+    $('now-uptime').textContent = '—';
+    $('now-rec-pill').classList.remove('active');
+    return;
+  }
+  const queueLen = (s.queue || []).length;
+  const lastMove = (s.recentMoves || [])[0];
+  $('now-game').textContent = lastMove ? lastMove.target : 'Idle';
+  $('now-sub').textContent = lastMove
+    ? `Last route ${(lastMove.ts || '').slice(11,19)} → ${lastMove.kind === 'mix' ? '_mix/' : (lastMove.target || '') + '/'}`
+    : 'No recordings yet';
+  $('now-dump').textContent = queueLen + ' files';
+  $('now-queue').textContent = queueLen;
+  $('now-uptime').textContent = fmtUptime(s.startedAt);
+  $('now-rec-pill').classList.toggle('active', queueLen > 0);
+
+  const moves = (s.recentMoves || []).slice(0, 8);
+  const movesEl = $('now-moves');
+  if (moves.length === 0) {
+    movesEl.innerHTML = '<div class="moves-empty">No recent moves</div>';
+  } else {
+    movesEl.innerHTML = moves.map(m => {
+      const ts = escapeHtml(String(m.ts || '').slice(11, 19));
+      const base = escapeHtml(m.basename || '');
+      const targetText = m.kind === 'mix' ? '_mix/' : escapeHtml(m.target || '') + '/';
+      const targetClass = m.kind === 'mix' ? 'target mix' : 'target';
+      return `<div class="moves-row"><span>${ts} · ${base}</span><span class="${targetClass}">${targetText}</span></div>`;
+    }).join('');
+  }
+}
+
+// Hook into existing pollStatus (chain wraps)
+const _origPoll1 = pollStatus;
+pollStatus = async function() { await _origPoll1(); try { renderNow(window.__sasiStatus); } catch (e) { console.warn('[renderNow]', e); } };
+
+// Action handlers — Start/Stop visibility + hero status pill
+function renderHeroButtons(s) {
+  const online = !!s;
+  $('now-start').style.display = online ? 'none' : '';
+  $('now-stop').style.display  = online ? '' : 'none';
+  $('now-restart').disabled = !online;
+  $('now-open-dump').disabled = !online;
+  $('now-open-target').disabled = !online;
+  // Hero status pill (mirrors the sidebar)
+  const dot = $('hero-dot');
+  const txt = $('hero-status-text');
+  if (online) {
+    dot.className = 'sb-dot online';
+    txt.textContent = 'WATCHER ONLINE · ' + fmtUptime(s.startedAt);
+    txt.style.color = 'var(--accent-online)';
+  } else {
+    dot.className = 'sb-dot offline';
+    txt.textContent = 'WATCHER OFFLINE';
+    txt.style.color = 'var(--accent-rec)';
+  }
+}
+const _origPollHero = pollStatus;
+pollStatus = async function() { await _origPollHero(); try { renderHeroButtons(window.__sasiStatus); } catch (e) { console.warn('[renderHeroButtons]', e); } };
+
+$('now-start').addEventListener('click', (e) => {
+  // The clip-prep:// URL was registered by install.bat. Browser will prompt
+  // "Open clip-prep?" — user clicks Open, the launcher VBS runs, watcher boots.
+  // After ~2 seconds the status poller picks up the new instance.
+  // Default href handles the click; nothing else needed here.
+});
+$('now-stop').addEventListener('click', async () => {
+  if (!confirm('Stop the watcher? It will not auto-restart until you launch it again.')) return;
+  try { await fetch(API + '/stop', { method:'POST' }); } catch {}
+});
+$('now-open-dump').addEventListener('click', async () => {
+  const dump = window.__sasiStatus?.config?.dumpDir;
+  if (!dump) return;
+  try { await fetch(API + '/open-folder', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path:dump}) }); } catch {}
+});
+$('now-open-target').addEventListener('click', async () => {
+  const t = window.__sasiStatus?.config?.targetRoot;
+  if (!t) return;
+  try { await fetch(API + '/open-folder', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path:t}) }); } catch {}
+});
+$('now-restart').addEventListener('click', async () => {
+  if (!confirm('Restart the watcher?')) return;
+  try { await fetch(API + '/restart', { method:'POST' }); } catch {}
+});
+
+// --- Mix list (per-game accordion was removed; use Open Recordings button instead) ---
+async function refreshMix() {
+  const target = $('rec-mix');
+  try {
+    const r = await fetch(API + '/list-mix');
+    const j = await r.json();
+    const files = j.files || [];
+    if (files.length === 0) { target.innerHTML = '<div class="backup-empty">No mix recordings.</div>'; return; }
+    target.innerHTML = files.map(f => {
+      const safeBase = escapeHtml(f.basename);
+      const dur = Math.round(f.duration_sec || 0);
+      const mins = Math.floor(dur / 60); const secs = dur % 60;
+      const games = (f.games || []).map(escapeHtml).join(', ');
+      let badge;
+      if (f.in_progress) badge = '<span class="mix-status in-progress">SPLITTING</span>';
+      else if (f.split) badge = '<span class="mix-status split">SPLIT</span>';
+      else badge = '<span class="mix-status unsplit">UNSPLIT</span>';
+      return `<div class="mix-row">
+        <div><div class="mix-name">${safeBase}</div><div class="mix-meta">${mins}m ${secs}s · ${games || '—'} · ${escapeHtml(fmtBytes(f.size_bytes))}</div></div>
+        ${badge}
+        <button class="btn btn-secondary" data-split="${safeBase}" style="font-size:10px;padding:6px 12px" ${f.split || f.in_progress ? 'disabled' : ''}>Split</button>
+        <button class="btn btn-destructive" data-delmix="${safeBase}" data-split-state="${f.split ? 'split' : 'unsplit'}" style="font-size:10px;padding:6px 12px" ${f.split ? '' : 'disabled'}>Delete</button>
+      </div>`;
+    }).join('');
+    target.querySelectorAll('[data-split]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        btn.disabled = true; btn.textContent = '...';
+        try {
+          const r = await fetch(API + '/split-mix', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({basename:btn.dataset.split}) });
+          if (!r.ok) { const j = await r.json().catch(()=>({})); alert('Split failed: ' + (j.error || 'unknown')); }
+        } catch (e) { alert('Split failed: ' + e.message); }
+        refreshMix();
+      });
+    });
+    target.querySelectorAll('[data-delmix]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (btn.disabled || btn.dataset.splitState !== 'split') return;
+        if (!confirm('Send original mix file to Recycle Bin?')) return;
+        try {
+          const r = await fetch(API + '/delete-mix', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({basename:btn.dataset.delmix}) });
+          if (!r.ok) { const j = await r.json().catch(()=>({})); alert('Delete failed: ' + (j.error || 'http '+r.status)); }
+        } catch (err) { alert('Delete failed: ' + err.message); }
+        refreshMix();
+      });
+    });
+  } catch (e) { target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`; }
+}
+$('rec-refresh').addEventListener('click', refreshMix);
+refreshMix();
+setInterval(refreshMix, 8000);
+
+// --- Advanced accordions ---
+document.querySelectorAll('.advanced-head').forEach(h => h.addEventListener('click', () => h.parentElement.classList.toggle('open')));
+
+// --- Folders + Save ---
+function setCfgStatus(text, kind) {
+  const el = $('cfg-status'); el.textContent = text;
+  el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+}
+function renderSettings(s) {
+  if (!s) return;
+  $('cfg-dump').value = s.config?.dumpDir || '';
+  $('cfg-target').value = s.config?.targetRoot || '';
+}
+const _origPoll2 = pollStatus;
+pollStatus = async function() { await _origPoll2(); try { renderSettings(window.__sasiStatus); } catch (e) { console.warn('[renderSettings]', e); } };
+// Single-folder OBS Recording picker (the recommended path)
+function renderRecRoot(s) {
+  const dump = s?.config?.dumpDir || '';
+  const target = s?.config?.targetRoot || '';
+  if (!dump || !target) return;
+  const dumpParent = dump.replace(/[/\\]_dump[/\\]?$/, '');
+  const targetParent = target.replace(/[/\\]recording[/\\]?$/, '');
+  const recroot = (dumpParent === targetParent) ? dumpParent : '';
+  if (recroot && document.activeElement !== $('cfg-recroot-input')) {
+    $('cfg-recroot-input').value = recroot;
+  }
+  $('cfg-recroot-open').disabled = !recroot;
+}
+const _origPollRec = pollStatus;
+pollStatus = async function() { await _origPollRec(); try { renderRecRoot(window.__sasiStatus); } catch (e) { console.warn('[renderRecRoot]', e); } };
+
+function setRecStatus(text, kind) {
+  $('cfg-recroot-status').textContent = text;
+  $('cfg-recroot-status').style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+}
+$('cfg-recroot-pick').addEventListener('click', async () => {
+  setRecStatus('Opening folder picker — if you don\'t see it, check behind your browser/OBS window. Or paste the path manually.', null);
+  try {
+    const root = await pickFolder('recording-root');
+    if (root) { $('cfg-recroot-input').value = root; setRecStatus('✓ Path picked. Click Save + Restart to apply.', 'ok'); }
+    else setRecStatus('No folder picked. You can also paste the path manually above.', null);
+  } catch (e) {
+    setRecStatus('Picker failed: ' + e.message + '. Paste the path manually above.', 'err');
+  }
+});
+$('cfg-recroot-save').addEventListener('click', async () => {
+  const root = $('cfg-recroot-input').value.trim();
+  if (!root) { setRecStatus('Path required (paste or use Browse).', 'err'); return; }
+  setRecStatus('Setting up _dump/ and recording/ in ' + root + '...', null);
+  try {
+    const r = await fetch(API + '/set-recording-root', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({root}) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { setRecStatus('Failed: ' + (j.error || 'http ' + r.status), 'err'); return; }
+    setRecStatus('✓ Saved. Restarting watcher to apply...', 'ok');
+    try { await fetch(API + '/restart', { method:'POST' }); } catch {}
+  } catch (e) {
+    setRecStatus('Failed: ' + e.message, 'err');
+  }
+});
+$('cfg-recroot-open').addEventListener('click', async () => {
+  const p = $('cfg-recroot-input').value.trim();
+  if (!p) return;
+  try { await fetch(API + '/open-folder', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path:p}) }); } catch {}
+});
+
+$('cfg-dump-pick').addEventListener('click', async () => { const p = await pickFolder('dump'); if (p) $('cfg-dump').value = p; });
+$('cfg-target-pick').addEventListener('click', async () => { const p = await pickFolder('target'); if (p) $('cfg-target').value = p; });
+$('cfg-save').addEventListener('click', async () => {
+  const dump = $('cfg-dump').value.trim(); const target = $('cfg-target').value.trim();
+  if (!dump || !target) { setCfgStatus('Both folders required', 'err'); return; }
+  setCfgStatus('Saving...', null);
+  try {
+    const r = await fetch(API + '/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({dumpDir:dump, targetRoot:target}) });
+    const j = await r.json();
+    if (!r.ok) { setCfgStatus(j.error || 'Save failed', 'err'); return; }
+    setCfgStatus('Saved. Restarting watcher...', 'ok');
+    try { await fetch(API + '/restart', { method:'POST' }); } catch {}
+  } catch (e) { setCfgStatus('Save failed: ' + e.message, 'err'); }
+});
+
+// --- Keep-MKV toggle ---
+function renderKeepMkv(s) {
+  if (!s) return;
+  const cb = $('cfg-keep-mkv');
+  if (document.activeElement !== cb) cb.checked = s.config?.keepMkv !== false;
+  $('cfg-keep-mkv-label').textContent = cb.checked ? 'Keep .mkv after .mp4 (more disk)' : 'Discard .mkv after .mp4 (saves disk)';
+}
+const _origPoll3 = pollStatus;
+pollStatus = async function() { await _origPoll3(); try { renderKeepMkv(window.__sasiStatus); } catch (e) { console.warn('[renderKeepMkv]', e); } };
+$('cfg-keep-mkv').addEventListener('change', async (e) => {
+  const checked = e.target.checked;
+  $('cfg-keep-mkv-label').textContent = 'Saving...';
+  try {
+    const r = await fetch(API + '/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({keepMkv:checked}) });
+    if (!r.ok) { e.target.checked = !checked; alert('Save failed'); return; }
+    $('cfg-keep-mkv-label').textContent = checked ? 'Keep .mkv after .mp4 (more disk)' : 'Discard .mkv after .mp4 (saves disk)';
+  } catch (err) { e.target.checked = !checked; alert('Save failed: ' + err.message); }
+});
+
+// --- Game folders editor (full v1-style: filter / add / export / import / raw json toggle / table) ---
+let gamesMap = {}; // canonical state — { exe: "Folder Name" | { default, if_running:[] } }
+
+const isComplexEntry = (e) => e !== null && typeof e === 'object' && !Array.isArray(e);
+const folderText = (e) => typeof e === 'string' ? e : (isComplexEntry(e) ? (e.default || '') : '');
+
+function setGamesFeedback(text, kind) {
+  const el = $('games-feedback');
+  el.textContent = text;
+  el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+}
+
+function renderGamesTable() {
+  const filter = $('games-filter').value.trim().toLowerCase();
+  const entries = Object.entries(gamesMap)
+    .filter(([exe, val]) => !filter || exe.toLowerCase().includes(filter) || folderText(val).toLowerCase().includes(filter))
+    .sort((a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase()));
+  const target = $('games-table');
+  if (entries.length === 0) {
+    target.innerHTML = `<div class="backup-empty">${Object.keys(gamesMap).length === 0 ? 'No games mapped yet. Click + Add entry.' : 'No matches for filter.'}</div>`;
+    return;
+  }
+  target.innerHTML = entries.map(([exe, val]) => {
+    const folder = folderText(val);
+    const complex = isComplexEntry(val);
+    return `<div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;padding:8px 10px;border-bottom:1px solid var(--bg-divider);align-items:center">
+      <code style="color:var(--text-secondary);font-size:var(--text-mono);font-family:var(--font-mono);word-break:break-all">${escapeHtml(exe)}</code>
+      <input type="text" data-edit-exe="${escapeHtml(exe)}" value="${escapeHtml(folder)}" ${complex ? 'readonly title="Complex entry — edit via RAW JSON"' : ''} style="width:100%;padding:5px 8px;font-size:var(--text-small);background:var(--bg-card);color:var(--text-primary);border:1px solid var(--bg-divider);border-radius:var(--r-chip);font-family:inherit">
+      ${complex ? '<span style="font-size:9px;color:var(--accent-warn);padding:2px 6px;border:1px solid rgba(255,176,32,0.3);border-radius:var(--r-chip)">RULES</span>' : '<span></span>'}
+      <button class="btn btn-destructive" data-del-exe="${escapeHtml(exe)}" style="font-size:9px;padding:4px 8px">×</button>
+    </div>`;
+  }).join('');
+
+  target.querySelectorAll('[data-edit-exe]').forEach(input => {
+    input.addEventListener('input', () => {
+      const exe = input.dataset.editExe;
+      gamesMap[exe] = input.value;
+      setGamesFeedback('● Unsaved changes — auto-save on blur.', 'warn');
+    });
+    input.addEventListener('blur', saveGames);
+  });
+  target.querySelectorAll('[data-del-exe]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Delete mapping for "' + btn.dataset.delExe + '"?')) return;
+      delete gamesMap[btn.dataset.delExe];
+      renderGamesTable();
+      saveGames();
+    });
+  });
+}
+
+async function loadGames() {
+  try {
+    const r = await fetch(API + '/games');
+    const text = await r.text();
+    gamesMap = JSON.parse(text);
+    $('games-text').value = text;
+    setGamesFeedback('', null);
+    renderGamesTable();
+  } catch (e) {
+    setGamesFeedback('Failed to load: ' + e.message, 'err');
+  }
+}
+
+async function saveGames() {
+  try {
+    const r = await fetch(API + '/games', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(gamesMap) });
+    if (!r.ok) throw new Error('http ' + r.status);
+    setGamesFeedback('✓ Saved (watcher hot-reloaded).', 'ok');
+    $('games-text').value = JSON.stringify(gamesMap, null, 2);
+    setTimeout(() => setGamesFeedback('', null), 3000);
+  } catch (e) {
+    setGamesFeedback('Save failed: ' + e.message, 'err');
+  }
+}
+
+$('games-filter').addEventListener('input', renderGamesTable);
+
+// + Add entry
+$('games-add-toggle').addEventListener('click', () => {
+  $('games-add-panel').style.display = $('games-add-panel').style.display === 'none' ? 'block' : 'none';
+  $('games-add-exe').focus();
+});
+$('games-add-cancel').addEventListener('click', () => {
+  $('games-add-panel').style.display = 'none';
+  $('games-add-exe').value = '';
+  $('games-add-folder').value = '';
+});
+$('games-add-confirm').addEventListener('click', () => {
+  const exe = $('games-add-exe').value.trim();
+  const folder = $('games-add-folder').value.trim();
+  if (!exe || !folder) { setGamesFeedback('Both exe + folder name required.', 'err'); return; }
+  if (gamesMap[exe]) { setGamesFeedback('"' + exe + '" already mapped. Edit the existing row instead.', 'err'); return; }
+  gamesMap[exe] = folder;
+  $('games-add-exe').value = '';
+  $('games-add-folder').value = '';
+  $('games-add-panel').style.display = 'none';
+  renderGamesTable();
+  saveGames();
+});
+
+// Export
+$('games-export-btn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(gamesMap, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'games-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setGamesFeedback('Exported.', 'ok');
+});
+
+// Import
+$('games-import-btn').addEventListener('click', () => $('games-import-file').click());
+$('games-import-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('JSON must be an object');
+    const confirmMsg = `Import will MERGE ${Object.keys(parsed).length} entries into your existing ${Object.keys(gamesMap).length} entries (incoming wins on conflicts). Continue?`;
+    if (!confirm(confirmMsg)) { e.target.value = ''; return; }
+    gamesMap = { ...gamesMap, ...parsed };
+    renderGamesTable();
+    saveGames();
+    setGamesFeedback('Imported ' + Object.keys(parsed).length + ' entries.', 'ok');
+  } catch (err) {
+    setGamesFeedback('Import failed: ' + err.message, 'err');
+  }
+  e.target.value = '';
+});
+
+// RAW JSON toggle
+$('games-toggle-raw').addEventListener('click', () => {
+  const raw = $('games-raw-panel');
+  const open = raw.style.display === 'none';
+  raw.style.display = open ? 'block' : 'none';
+  if (open) $('games-text').value = JSON.stringify(gamesMap, null, 2);
+});
+$('games-raw-save').addEventListener('click', async () => {
+  let parsed;
+  try { parsed = JSON.parse($('games-text').value); }
+  catch (e) { setGamesFeedback('Invalid JSON: ' + e.message, 'err'); return; }
+  gamesMap = parsed;
+  renderGamesTable();
+  await saveGames();
+});
+
+loadGames();
+
+// --- Live log poller ---
+let logPollTimer = null;
+async function refreshLog() {
+  try {
+    const r = await fetch(API + '/log?limit=30');
+    if (!r.ok) return;
+    const entries = await r.json();
+    const text = entries.map(e => `${(e.ts||'').slice(11,19)} [${e.level||'?'}] ${e.msg||''}`).join('\n');
+    $('log-pane').textContent = text || '(no log entries)';
+  } catch {
+    $('log-pane').textContent = '(watcher offline)';
+  }
+}
+$('adv-log').addEventListener('click', () => {
+  setTimeout(() => {
+    if ($('adv-log').classList.contains('open')) {
+      refreshLog();
+      if (!logPollTimer) logPollTimer = setInterval(refreshLog, 3000);
+    } else {
+      if (logPollTimer) { clearInterval(logPollTimer); logPollTimer = null; }
+    }
+  }, 50);
+});
+$('open-log-btn').addEventListener('click', async (e) => {
+  e.stopPropagation();
+  try { await fetch(API + '/open-log', { method:'POST' }); } catch {}
+});
+
+// --- OBS Bundle ---
+const obsOutput = $('obs-output');
+function setObsOutput(text, kind) {
+  obsOutput.classList.remove('err','ok');
+  if (kind) obsOutput.classList.add(kind);
+  obsOutput.textContent = text; obsOutput.classList.add('show');
+}
+async function pickFolder(kind) {
+  try {
+    const r = await fetch(API + '/pick-folder?kind=' + kind, { method:'POST' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.cancelled ? null : j.path;
+  } catch { return null; }
+}
+$('obs-export').addEventListener('click', async () => {
+  const out = await pickFolder('output'); if (!out) return;
+  setObsOutput('Exporting bundle to ' + out + '...', null);
+  try {
+    const r = await fetch(API + '/export-obs-bundle', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({outputDir:out}) });
+    const j = await r.json().catch(()=>({}));
+    if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Export failed', 'err');
+    else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
+  } catch (e) { setObsOutput('Export failed: ' + e.message, 'err'); }
+});
+$('obs-import').addEventListener('click', async () => {
+  const bundle = await pickFolder('bundle'); if (!bundle) return;
+  setObsOutput('Importing bundle from ' + bundle + '...', null);
+  try {
+    const r = await fetch(API + '/import-obs-bundle', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({bundlePath:bundle}) });
+    const j = await r.json().catch(()=>({}));
+    if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Import failed', 'err');
+    else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
+  } catch (e) { setObsOutput('Import failed: ' + e.message, 'err'); }
+});
+$('obs-register-lua').addEventListener('click', async () => {
+  setObsOutput('Registering game-tracker.lua...', null);
+  try {
+    const r = await fetch(API + '/register-lua', { method:'POST' });
+    if (r.status === 404) {
+      setObsOutput(
+        'This endpoint is not on your installed watcher yet.\n\n' +
+        'The /register-lua endpoint was added recently. To use it, redeploy:\n' +
+        '  1. Re-run bootstrap.bat from the dev repo, or\n' +
+        '  2. Re-run the iex one-liner.\n\n' +
+        'Bootstrap will copy the updated api.js + restart the watcher.\n' +
+        'Until then, your existing Lua registration still works (done at install).',
+        'err');
       return;
     }
-    const queueLen = (s.queue || []).length;
-    const lastMove = (s.recentMoves || [])[0];
-    const game = lastMove ? lastMove.target : null;
+    const j = await r.json().catch(()=>({}));
+    if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Register failed', 'err');
+    else setObsOutput(j.output || 'Done.', 'ok');
+  } catch (e) { setObsOutput('Register failed: ' + e.message, 'err'); }
+});
+async function refreshBackups() {
+  const target = $('obs-backups');
+  try {
+    const r = await fetch(API + '/list-obs-backups');
+    const j = await r.json();
+    const backups = j.backups || [];
+    if (backups.length === 0) { target.innerHTML = '<div class="backup-empty">No auto-backups yet.</div>'; return; }
+    target.innerHTML = backups.map(b => {
+      const ts = escapeHtml(String(b.modified || '').replace('T',' ').replace(/\..+/,''));
+      const safeName = escapeHtml(b.name || '');
+      return `<div class="backup-row">
+        <div><div class="backup-name">${safeName}</div><div class="backup-meta">${ts} · ${b.fileCount || 0} files · ${escapeHtml(fmtBytes(b.sizeBytes))}</div></div>
+        <button class="btn btn-secondary" data-restore="${safeName}" style="font-size:10px;padding:6px 12px">Restore</button>
+        <button class="btn btn-destructive" data-recycle="${safeName}" style="font-size:10px;padding:6px 12px">Delete</button>
+      </div>`;
+    }).join('');
+    target.querySelectorAll('[data-restore]').forEach(btn => btn.addEventListener('click', async () => {
+      const name = btn.dataset.restore;
+      if (!confirm('Restore from ' + name + '?')) return;
+      setObsOutput('Restoring from ' + name + '...', null);
+      try {
+        const r = await fetch(API + '/restore-obs-backup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}) });
+        const j = await r.json();
+        if (!r.ok) setObsOutput('Restore failed: ' + (j.error || 'unknown'), 'err');
+        else { setObsOutput('Restored. Safety backup: ' + j.safetyBackup, 'ok'); refreshBackups(); }
+      } catch (e) { setObsOutput('Restore failed: ' + e.message, 'err'); }
+    }));
+    target.querySelectorAll('[data-recycle]').forEach(btn => btn.addEventListener('click', async () => {
+      const name = btn.dataset.recycle;
+      if (!confirm('Send ' + name + ' to Recycle Bin?')) return;
+      try {
+        const r = await fetch(API + '/delete-obs-backup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}) });
+        if (!r.ok) { const j = await r.json(); setObsOutput('Delete failed: ' + (j.error || 'unknown'), 'err'); }
+        else refreshBackups();
+      } catch (e) { setObsOutput('Delete failed: ' + e.message, 'err'); }
+    }));
+  } catch (e) { target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`; }
+}
+$('obs-refresh-backups').addEventListener('click', refreshBackups);
+refreshBackups();
 
-    $('now-game').textContent = game || 'Idle';
-    $('now-sub').textContent = lastMove
-      ? `Last route ${(lastMove.ts || '').slice(11,19)} → ${lastMove.kind === 'mix' ? '_mix/' : (lastMove.target || '') + '/'}`
-      : 'No recordings yet';
-    $('now-dump').textContent = queueLen + ' files';
-    $('now-queue').textContent = queueLen;
-    $('now-uptime').textContent = fmtUptime(s.startedAt);
-    $('now-rec-pill').classList.toggle('active', queueLen > 0);
+// --- Danger zone ---
+// (cfg-restart / cfg-stop moved to hero card buttons — see now-restart / now-stop above)
+$('cfg-uninstall').addEventListener('click', async () => {
+  if (!confirm('Remove auto-start entirely? Files stay; only the Win-login auto-start is removed.')) return;
+  try {
+    const r = await fetch(API + '/uninstall', { method:'POST' });
+    if (r.ok) alert('Uninstalled. Watcher will not auto-start on next login.');
+  } catch (e) { alert('Uninstall failed: ' + e.message); }
+});
 
-    // Recent moves
-    const moves = (s.recentMoves || []).slice(0, 5);
-    const movesEl = $('now-moves');
-    if (moves.length === 0) {
-      movesEl.innerHTML = '<div class="moves-empty">No recent moves</div>';
+// =========================================================
+// GO LIVE TAB
+// =========================================================
+
+function readPlatform() { return localStorage.getItem('sasi_activePlatform') || 'youtube'; }
+function setPlatform(p) {
+  localStorage.setItem('sasi_activePlatform', p);
+  $('gl-platform-yt').classList.toggle('active', p === 'youtube');
+  $('gl-platform-tw').classList.toggle('active', p === 'twitch');
+  $('gl-yt-fields').style.display = p === 'youtube' ? 'block' : 'none';
+  $('gl-tw-fields').style.display = p === 'twitch' ? 'block' : 'none';
+  renderGoLiveStatus();
+}
+$('gl-platform-yt').addEventListener('click', () => setPlatform('youtube'));
+$('gl-platform-tw').addEventListener('click', () => setPlatform('twitch'));
+setPlatform(readPlatform());
+
+// Video ID
+$('gl-video-id').value = localStorage.getItem('sasi_liveVideoId') || '';
+$('gl-video-id').addEventListener('input', (e) => {
+  // Extract video ID from full URL if pasted
+  const v = e.target.value.trim();
+  const m = v.match(/[?&]v=([^&]+)|youtu\.be\/([^?&]+)|^([a-zA-Z0-9_-]{11})$/);
+  const id = m ? (m[1] || m[2] || m[3]) : v;
+  localStorage.setItem('sasi_liveVideoId', id);
+  renderGoLiveStatus();
+});
+
+// GO LIVE button
+function isLive() { return localStorage.getItem('sasi_streamLive') === 'true'; }
+function renderGoLiveBtn() {
+  const live = isLive();
+  const btn = $('gl-toggle');
+  btn.textContent = live ? '● LIVE' : '▶ GO LIVE';
+  btn.classList.toggle('live', live);
+  $('gl-stop').disabled = !live;
+  $('gl-control-hint').textContent = live ? 'Stream is live. Chat polling + alerts active.' : 'Click GO LIVE to start chat polling + alerts.';
+}
+$('gl-toggle').addEventListener('click', () => {
+  const newState = !isLive();
+  localStorage.setItem('sasi_streamLive', String(newState));
+  renderGoLiveBtn();
+});
+$('gl-stop').addEventListener('click', () => {
+  localStorage.setItem('sasi_streamLive', 'false');
+  renderGoLiveBtn();
+});
+renderGoLiveBtn();
+
+// Notifications queue
+function readNotifQueue() {
+  try { return JSON.parse(localStorage.getItem('sasi_notifications_queue') || '[]'); } catch { return []; }
+}
+function renderNotifs() {
+  const queue = readNotifQueue();
+  $('gl-notif-count').textContent = queue.length;
+  const target = $('gl-notif-list');
+  if (queue.length === 0) { target.innerHTML = '<div class="backup-empty">No pending notifications.</div>'; return; }
+  target.innerHTML = queue.map(n => {
+    const icon = n.type === 'wheel' ? '🎰' : n.type === 'mystery' ? '📦' : n.type === 'highlight' ? '💬' : '✨';
+    return `<div class="notif-item">
+      <div class="notif-icon">${icon}</div>
+      <div class="notif-body">
+        <div class="notif-title">${escapeHtml(n.title || n.user || '')}</div>
+        <div class="notif-sub">${escapeHtml(n.body || '')}</div>
+      </div>
+      <button class="notif-dismiss" data-dismiss="${escapeHtml(n.id || '')}">×</button>
+    </div>`;
+  }).join('');
+  target.querySelectorAll('[data-dismiss]').forEach(btn => btn.addEventListener('click', () => {
+    const newQueue = readNotifQueue().filter(n => n.id !== btn.dataset.dismiss);
+    localStorage.setItem('sasi_notifications_queue', JSON.stringify(newQueue));
+    renderNotifs();
+  }));
+}
+$('gl-notif-clear').addEventListener('click', () => {
+  if (!confirm('Clear all notifications?')) return;
+  localStorage.removeItem('sasi_notifications_queue');
+  renderNotifs();
+});
+renderNotifs();
+setInterval(renderNotifs, 2000);
+
+// Quick settings
+['gl-countdown','gl-today','gl-fake'].forEach(id => {
+  const el = $(id);
+  const key = id === 'gl-countdown' ? 'countdown' : id === 'gl-today' ? 'today' : 'fakeAlerts';
+  const stored = localStorage.getItem('sasi_' + key);
+  if (stored !== null) {
+    if (el.type === 'checkbox') el.checked = stored === 'true';
+    else el.value = stored;
+  }
+  el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', () => {
+    const v = el.type === 'checkbox' ? String(el.checked) : el.value;
+    localStorage.setItem('sasi_' + key, v);
+    renderGoLiveStatus();
+  });
+});
+
+// Status panel
+function renderGoLiveStatus() {
+  $('gl-s-plat').textContent = readPlatform().toUpperCase();
+  $('gl-s-chat').textContent = readPlatform() === 'youtube' ? 'YT Data API' : 'IRC';
+  const vid = localStorage.getItem('sasi_liveVideoId') || '';
+  $('gl-s-vid').textContent = vid ? vid : '(auto-search)';
+  $('gl-s-jwt').textContent = '(check Keys tab)';
+  $('gl-s-keys').textContent = '(check Keys tab)';
+  $('gl-s-fake').textContent = (localStorage.getItem('sasi_fakeAlerts') === 'true') ? 'ON' : 'off';
+}
+renderGoLiveStatus();
+
+// =========================================================
+// ALERTS TAB
+// =========================================================
+
+function fmtRange(min, max) {
+  const f = (n) => '₹' + n.toLocaleString('en-IN');
+  if (max === Infinity) return f(min) + ' and up';
+  return f(min) + ' to ' + f(max);
+}
+function renderAlertRanges() {
+  const t2 = parseInt($('alert-t2-min').value) || 100;
+  const t3 = parseInt($('alert-t3-min').value) || 500;
+  const t4 = parseInt($('alert-t4-min').value) || 2000;
+  $('alert-r1').textContent = fmtRange(0, t2 - 1);
+  $('alert-r2').textContent = fmtRange(t2, t3 - 1);
+  $('alert-r3').textContent = fmtRange(t3, t4 - 1);
+  $('alert-r4').textContent = fmtRange(t4, Infinity);
+}
+['alert-t2-min','alert-t3-min','alert-t4-min'].forEach(id => {
+  const el = $(id);
+  const key = 'alert_' + id.split('-')[1] + '_min';
+  const stored = localStorage.getItem('sasi_' + key);
+  if (stored) el.value = stored;
+  el.addEventListener('input', () => {
+    localStorage.setItem('sasi_' + key, el.value);
+    renderAlertRanges();
+  });
+});
+renderAlertRanges();
+
+// Duration sliders
+['baseDur','maxDur','memberDur','giftBaseDur','giftPerUnit','redeemDur'].forEach(suffix => {
+  const el = $('alert-' + suffix);
+  const valEl = $('alert-' + suffix + '-v');
+  const key = 'alert_' + suffix;
+  const stored = localStorage.getItem('sasi_' + key);
+  if (stored) el.value = stored;
+  const update = () => { valEl.textContent = el.value + 'ms'; };
+  update();
+  el.addEventListener('input', () => {
+    update();
+    localStorage.setItem('sasi_' + key, el.value);
+  });
+});
+
+// Test buttons — fire fake alert into editor preview iframe
+document.querySelectorAll('[data-test-tier]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tier = parseInt(btn.dataset.testTier);
+    const ranges = [50, 250, 1000, 3000];
+    const amount = ranges[tier - 1];
+    activateTab('overlays'); // switch to overlays so the user sees the alert fire
+    setTimeout(() => {
+      const iframe = $('editor-preview-iframe');
+      if (iframe && iframe.contentWindow && iframe.contentWindow.SASI_ALERTS_TEST) {
+        iframe.contentWindow.SASI_ALERTS_TEST.fireFakeTip(amount);
+      } else {
+        alert('Test fired (₹' + amount + '). Open the In-Game scene in Overlays to see the alert.');
+      }
+    }, 300);
+  });
+});
+
+// =========================================================
+// GAMES TAB
+// =========================================================
+
+const DEFAULT_REWARDS = {
+  wheel: [
+    { name: '500K Points',  weight: 40 },
+    { name: 'VIP Badge',    weight: 20 },
+    { name: 'Custom Emote', weight: 15 },
+    { name: 'Shoutout',     weight: 15 },
+    { name: '1M Points',    weight: 8 },
+    { name: 'Nothing 💀',   weight: 2 },
+  ],
+  mystery: [
+    { name: 'Rare Emote Pack',     weight: 30 },
+    { name: '200K Points',         weight: 30 },
+    { name: 'Secret Role',         weight: 15 },
+    { name: 'Nothing 💀',          weight: 15 },
+    { name: '1M Points Jackpot',   weight: 10 },
+  ],
+};
+function loadRewards(game) {
+  const stored = localStorage.getItem('sasi_game_' + game + '_rewards');
+  if (stored) { try { return JSON.parse(stored); } catch {} }
+  return DEFAULT_REWARDS[game] || [];
+}
+function saveRewards(game, rewards) {
+  localStorage.setItem('sasi_game_' + game + '_rewards', JSON.stringify(rewards));
+}
+function renderRewardTable(game) {
+  const rewards = loadRewards(game);
+  const totalWeight = rewards.reduce((sum, r) => sum + (Number(r.weight) || 0), 0) || 1;
+  const tbody = $('game-' + game + '-rewards').querySelector('tbody');
+  tbody.innerHTML = rewards.map((r, i) => `
+    <tr>
+      <td><input type="text" value="${escapeHtml(r.name)}" data-game="${game}" data-i="${i}" data-field="name"></td>
+      <td><input type="number" value="${r.weight}" min="0" data-game="${game}" data-i="${i}" data-field="weight"></td>
+      <td class="pct">${((r.weight / totalWeight) * 100).toFixed(1)}%</td>
+      <td><button class="del" data-del-game="${game}" data-del-i="${i}">×</button></td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const list = loadRewards(inp.dataset.game);
+      const idx = parseInt(inp.dataset.i);
+      list[idx][inp.dataset.field] = inp.dataset.field === 'weight' ? (Number(inp.value) || 0) : inp.value;
+      saveRewards(inp.dataset.game, list);
+      // Re-render the chance percentages
+      const total = list.reduce((s, r) => s + (Number(r.weight) || 0), 0) || 1;
+      tbody.querySelectorAll('.pct').forEach((td, i) => { td.textContent = ((list[i].weight / total) * 100).toFixed(1) + '%'; });
+    });
+  });
+  tbody.querySelectorAll('[data-del-game]').forEach(btn => btn.addEventListener('click', () => {
+    const list = loadRewards(btn.dataset.delGame);
+    list.splice(parseInt(btn.dataset.delI), 1);
+    saveRewards(btn.dataset.delGame, list);
+    renderRewardTable(btn.dataset.delGame);
+  }));
+}
+['wheel','mystery'].forEach(g => {
+  renderRewardTable(g);
+  $('game-' + g + '-add').addEventListener('click', () => {
+    const list = loadRewards(g);
+    list.push({ name: 'New reward', weight: 10 });
+    saveRewards(g, list);
+    renderRewardTable(g);
+  });
+});
+
+// Game cost + duration inputs
+['wheel-cost','wheel-dur','mystery-cost','mystery-dur','highlight-cost'].forEach(id => {
+  const el = $('game-' + id);
+  if (!el) return;
+  const key = 'game_' + id.replace('-', '_');
+  const stored = localStorage.getItem('sasi_' + key);
+  if (stored) el.value = stored;
+  el.addEventListener('input', () => localStorage.setItem('sasi_' + key, el.value));
+});
+
+// Test buttons — fire fake game trigger via SASI_NOTIFY in just-chatting iframe
+function fireGameTest(type) {
+  activateTab('overlays');
+  document.querySelectorAll('.scene-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.scene === 'just-chatting');
+  });
+  window.__activeScene = 'just-chatting';
+  $('editor-preview-iframe').src = 'scenes/just-chatting.html';
+  // Fire SASI_NOTIFY into the iframe after it loads
+  setTimeout(() => {
+    const iframe = $('editor-preview-iframe');
+    const cw = iframe && iframe.contentWindow;
+    if (!cw) { alert('Iframe not ready.'); return; }
+    // Call the visual-animation globals directly (defined in just-chatting.html).
+    // SASI_NOTIFY.add() doesn't trigger the animation in the same window because
+    // storage events are cross-window only.
+    const fn = type === 'wheel' ? cw.SPIN_WHEEL : type === 'mystery' ? cw.OPEN_MYSTERY : cw.HIGHLIGHT_MSG;
+    if (typeof fn === 'function') {
+      if (type === 'highlight') fn('TestViewer', 'Test highlight from dashboard');
+      else fn('TestViewer');
+      // Also feed the dashboard's notifications panel
+      if (cw.SASI_NOTIFY) cw.SASI_NOTIFY.add({
+        type, user: 'TestViewer',
+        title: type === 'wheel' ? '🎰 Spinning the Wheel' : type === 'mystery' ? '📦 Opening Mystery Box' : '💬 Highlight Message',
+        body: 'Test from dashboard', duration: 6000,
+      });
     } else {
-      movesEl.innerHTML = moves.map(m => {
-        const ts = escapeHtml(String(m.ts || '').slice(11, 19));
-        const base = escapeHtml(m.basename || '');
-        const targetText = m.kind === 'mix' ? '_mix/' : escapeHtml(m.target || '') + '/';
-        const targetClass = m.kind === 'mix' ? 'target mix' : 'target';
-        return `<div class="moves-row"><span>${ts} · ${base}</span><span class="${targetClass}">${targetText}</span></div>`;
-      }).join('');
+      alert('Test fired but ' + type + ' trigger not loaded yet (iframe still loading?). Try again in 2 seconds.');
     }
+  }, 1500);
+}
+$('game-test-wheel').addEventListener('click', () => fireGameTest('wheel'));
+$('game-test-mystery').addEventListener('click', () => fireGameTest('mystery'));
+$('game-test-highlight').addEventListener('click', () => fireGameTest('highlight'));
+
+// =========================================================
+// KEYS TAB
+// =========================================================
+
+let keysState = { youtube: { apiKeys: [], channelId: '' }, twitch: { username: '' }, streamelements: { youtube: { jwt: '' }, twitch: { jwt: '' } } };
+function maskKey(k) {
+  if (!k || k.length < 8) return '(empty)';
+  return '…' + k.slice(-4);
+}
+function renderKeysList() {
+  $('key-yt-count').textContent = keysState.youtube.apiKeys.length;
+  $('key-yt-hours').textContent = keysState.youtube.apiKeys.length * 12;
+  const list = $('key-yt-list');
+  if (keysState.youtube.apiKeys.length === 0) {
+    list.innerHTML = '<div class="backup-empty">No YouTube API keys yet.</div>';
+  } else {
+    list.innerHTML = keysState.youtube.apiKeys.map((k, i) => `
+      <div class="key-row">
+        <span>${maskKey(k)}</span>
+        <span class="key-status ok">ACTIVE</span>
+        <button class="btn btn-destructive" data-del-key="${i}" style="font-size:9px;padding:4px 8px">Remove</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-del-key]').forEach(btn => btn.addEventListener('click', () => {
+      keysState.youtube.apiKeys.splice(parseInt(btn.dataset.delKey), 1);
+      renderKeysList();
+    }));
   }
-
-  // Hook renderNow into the existing pollStatus
-  const _origPoll = pollStatus;
-  pollStatus = async function() {
-    await _origPoll();
-    renderNow(window.__sasiStatus);
-  };
-
-  // Action handlers
-  $('now-open-dump').addEventListener('click', async () => {
-    const dump = window.__sasiStatus?.config?.dumpDir;
-    if (!dump) return;
-    try {
-      const r = await fetch(API + '/open-folder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: dump }),
-      });
-      if (!r.ok) console.warn('open-folder failed:', r.status);
-    } catch (e) {
-      console.warn('open-folder error:', e);
+  $('key-yt-channel').value = keysState.youtube.channelId || '';
+  $('key-twitch-username').value = keysState.twitch.username || '';
+  $('key-se-yt').value = keysState.streamelements.youtube.jwt || '';
+  $('key-se-tw').value = keysState.streamelements.twitch.jwt || '';
+}
+async function loadKeys() {
+  try {
+    const r = await fetch(API + '/secrets');
+    if (!r.ok) {
+      $('key-save-status').textContent = '/secrets endpoint not available yet (Phase 6 backend pending). Edit secrets.js manually.';
+      $('key-save-status').style.color = 'var(--accent-warn)';
+      return;
     }
-  });
-  $('now-restart').addEventListener('click', async () => {
-    if (!confirm('Restart the watcher?')) return;
-    try { await fetch(API + '/restart', { method: 'POST' }); }
-    catch (e) { console.warn('restart error (expected if watcher already exiting):', e); }
-  });
-
-  // === OBS tab ===
-  const obsOutput = $('obs-output');
-  function setObsOutput(text, kind) {
-    obsOutput.classList.remove('err', 'ok');
-    if (kind) obsOutput.classList.add(kind);
-    obsOutput.textContent = text;
-    obsOutput.classList.add('show');
+    keysState = await r.json();
+    renderKeysList();
+  } catch (e) {
+    $('key-save-status').textContent = 'Watcher offline.';
+    $('key-save-status').style.color = 'var(--accent-rec)';
   }
-  async function pickFolder(kind) {
-    try {
-      const r = await fetch(API + '/pick-folder?kind=' + kind, { method: 'POST' });
-      if (!r.ok) { console.warn('pick-folder failed:', r.status); return null; }
-      const j = await r.json();
-      return j.cancelled ? null : j.path;
-    } catch (e) {
-      console.warn('pick-folder error:', e);
-      return null;
-    }
+}
+$('key-yt-add-btn').addEventListener('click', () => {
+  const v = $('key-yt-add').value.trim();
+  if (!v) return;
+  keysState.youtube.apiKeys.push(v);
+  $('key-yt-add').value = '';
+  renderKeysList();
+});
+['key-yt-channel','key-twitch-username','key-se-yt','key-se-tw'].forEach(id => {
+  $(id).addEventListener('input', (e) => {
+    const v = e.target.value;
+    if (id === 'key-yt-channel') keysState.youtube.channelId = v;
+    else if (id === 'key-twitch-username') keysState.twitch.username = v;
+    else if (id === 'key-se-yt') keysState.streamelements.youtube.jwt = v;
+    else if (id === 'key-se-tw') keysState.streamelements.twitch.jwt = v;
+  });
+});
+$('key-se-yt-show').addEventListener('click', () => {
+  const inp = $('key-se-yt'); inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+$('key-se-tw-show').addEventListener('click', () => {
+  const inp = $('key-se-tw'); inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+$('key-save').addEventListener('click', async () => {
+  $('key-save-status').textContent = 'Saving...';
+  $('key-save-status').style.color = 'var(--text-muted)';
+  try {
+    const r = await fetch(API + '/secrets', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(keysState) });
+    if (!r.ok) { $('key-save-status').textContent = 'Save failed: ' + r.status; $('key-save-status').style.color = 'var(--accent-rec)'; return; }
+    $('key-save-status').textContent = 'Saved. Refresh OBS browser sources to apply.';
+    $('key-save-status').style.color = 'var(--accent-online)';
+  } catch (e) {
+    $('key-save-status').textContent = 'Save failed: ' + e.message;
+    $('key-save-status').style.color = 'var(--accent-rec)';
   }
-  $('obs-export').addEventListener('click', async () => {
-    const out = await pickFolder('output');
-    if (!out) return;
-    setObsOutput('Exporting bundle to ' + out + '...', null);
-    try {
-      const r = await fetch(API + '/export-obs-bundle', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outputDir: out }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Export failed', 'err');
-      else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
-    } catch (e) { setObsOutput('Export failed: ' + e.message, 'err'); }
-  });
-  $('obs-import').addEventListener('click', async () => {
-    const bundle = await pickFolder('bundle');
-    if (!bundle) return;
-    setObsOutput('Importing bundle from ' + bundle + '...', null);
-    try {
-      const r = await fetch(API + '/import-obs-bundle', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bundlePath: bundle }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Import failed', 'err');
-      else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
-    } catch (e) { setObsOutput('Import failed: ' + e.message, 'err'); }
-  });
-  $('obs-register-lua').addEventListener('click', async () => {
-    setObsOutput('Registering game-tracker.lua...', null);
-    try {
-      const r = await fetch(API + '/register-lua', { method: 'POST' });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Register failed', 'err');
-      else setObsOutput(j.output || 'Done.', 'ok');
-    } catch (e) { setObsOutput('Register failed: ' + e.message, 'err'); }
-  });
-
-  function fmtBytes(n) {
-    if (!n) return '0 B';
-    if (n < 1024) return n + ' B';
-    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
-    if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
-    return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-  }
-  async function refreshBackups() {
-    const target = $('obs-backups');
-    try {
-      const r = await fetch(API + '/list-obs-backups');
-      const j = await r.json();
-      const backups = j.backups || [];
-      if (backups.length === 0) {
-        target.innerHTML = '<div class="backup-empty">No auto-backups yet. They appear after each Import.</div>';
-        return;
-      }
-      target.innerHTML = backups.map(b => {
-        const ts = escapeHtml(String(b.modified || '').replace('T', ' ').replace(/\..+/, ''));
-        const safeName = escapeHtml(b.name || '');
-        return `<div class="backup-row">
-          <div>
-            <div class="backup-name">${safeName}</div>
-            <div class="backup-meta">${ts} · ${b.fileCount || 0} files · ${escapeHtml(fmtBytes(b.sizeBytes))}</div>
-          </div>
-          <button class="btn btn-secondary" data-restore="${safeName}" style="font-size: 10px; padding: 6px 12px">Restore</button>
-          <button class="btn btn-destructive" data-recycle="${safeName}" style="font-size: 10px; padding: 6px 12px">Delete</button>
-        </div>`;
-      }).join('');
-      target.querySelectorAll('[data-restore]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const name = btn.dataset.restore;
-          if (!confirm('Restore from ' + name + '?\n\nYour current OBS state will be saved as a new pre-restore backup first.')) return;
-          setObsOutput('Restoring from ' + name + '...', null);
-          try {
-            const r = await fetch(API + '/restore-obs-backup', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name }),
-            });
-            const j = await r.json();
-            if (!r.ok) setObsOutput('Restore failed: ' + (j.error || 'unknown'), 'err');
-            else { setObsOutput('Restored. Safety backup: ' + j.safetyBackup, 'ok'); refreshBackups(); }
-          } catch (e) { setObsOutput('Restore failed: ' + e.message, 'err'); }
-        });
-      });
-      target.querySelectorAll('[data-recycle]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const name = btn.dataset.recycle;
-          if (!confirm('Send ' + name + ' to the Recycle Bin?')) return;
-          try {
-            const r = await fetch(API + '/delete-obs-backup', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name }),
-            });
-            const j = await r.json();
-            if (!r.ok) setObsOutput('Delete failed: ' + (j.error || 'unknown'), 'err');
-            else refreshBackups();
-          } catch (e) { setObsOutput('Delete failed: ' + e.message, 'err'); }
-        });
-      });
-    } catch (e) {
-      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
-    }
-  }
-  $('obs-refresh-backups').addEventListener('click', refreshBackups);
-  refreshBackups();
-
-  // === Recordings tab ===
-  async function refreshRecordings() {
-    const target = $('rec-games');
-    try {
-      const r = await fetch(API + '/list-recordings');
-      const j = await r.json();
-      const games = j.games || [];
-      if (games.length === 0) {
-        target.innerHTML = '<div class="backup-empty">No recordings yet.</div>';
-        return;
-      }
-      target.innerHTML = games.map(g => {
-        const safeName = escapeHtml(g.name);
-        return `<div class="game-card" data-game="${safeName}">
-          <div class="game-head">
-            <div>
-              <div class="game-name">${safeName}</div>
-              <div class="game-meta">${g.fileCount} files · ${escapeHtml(fmtBytes(g.totalSize))}</div>
-            </div>
-            <div class="game-caret">▶</div>
-          </div>
-          <div class="game-files">
-            ${(g.files || []).map(f => `
-              <div class="file-row">
-                <span class="name">${escapeHtml(f.name)}</span>
-                <span class="size">${escapeHtml(fmtBytes(f.size))}</span>
-                <button class="file-recycle" data-recycle="${escapeHtml(f.path)}" title="Recycle">Del</button>
-              </div>
-            `).join('')}
-          </div>
-        </div>`;
-      }).join('');
-      target.querySelectorAll('.game-head').forEach(h => {
-        h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
-      });
-      target.querySelectorAll('[data-recycle]').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (!confirm('Send to Recycle Bin?\n' + btn.dataset.recycle)) return;
-          try {
-            const r = await fetch(API + '/recycle-file', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ path: btn.dataset.recycle }),
-            });
-            if (!r.ok) { const j = await r.json().catch(() => ({})); alert('Recycle failed: ' + (j.error || 'http ' + r.status)); }
-          } catch (err) { alert('Recycle failed: ' + err.message); }
-          refreshRecordings();
-        });
-      });
-    } catch (e) {
-      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
-    }
-  }
-
-  async function refreshMix() {
-    const target = $('rec-mix');
-    try {
-      const r = await fetch(API + '/list-mix');
-      const j = await r.json();
-      const files = j.files || [];
-      if (files.length === 0) {
-        target.innerHTML = '<div class="backup-empty">No mix recordings.</div>';
-        return;
-      }
-      target.innerHTML = files.map(f => {
-        const safeBase = escapeHtml(f.basename);
-        const dur = Math.round(f.duration_sec || 0);
-        const mins = Math.floor(dur / 60);
-        const secs = dur % 60;
-        const games = (f.games || []).map(escapeHtml).join(', ');
-        let statusBadge;
-        if (f.in_progress) statusBadge = '<span class="mix-status in-progress">SPLITTING</span>';
-        else if (f.split) statusBadge = '<span class="mix-status split">SPLIT</span>';
-        else statusBadge = '<span class="mix-status unsplit">UNSPLIT</span>';
-        return `<div class="mix-row">
-          <div>
-            <div class="mix-name">${safeBase}</div>
-            <div class="mix-meta">${mins}m ${secs}s · ${games || '—'} · ${escapeHtml(fmtBytes(f.size_bytes))}</div>
-          </div>
-          ${statusBadge}
-          <button class="btn btn-secondary" data-split="${safeBase}" style="font-size: 10px; padding: 6px 12px" ${f.split || f.in_progress ? 'disabled' : ''}>Split</button>
-          <button class="btn btn-destructive" data-delmix="${safeBase}" data-split-state="${f.split ? 'split' : 'unsplit'}" style="font-size: 10px; padding: 6px 12px" ${f.split ? '' : 'disabled'}>Delete</button>
-        </div>`;
-      }).join('');
-      target.querySelectorAll('[data-split]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (btn.disabled) return;
-          btn.disabled = true; btn.textContent = '...';
-          try {
-            const r = await fetch(API + '/split-mix', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ basename: btn.dataset.split }),
-            });
-            const j = await r.json();
-            if (!r.ok) alert('Split failed: ' + (j.error || 'unknown'));
-          } catch (e) { alert('Split failed: ' + e.message); }
-          refreshMix();
-        });
-      });
-      target.querySelectorAll('[data-delmix]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (btn.disabled) return;
-          if (btn.dataset.splitState !== 'split') return; // defense: only delete after split
-          if (!confirm('Send original mix file to Recycle Bin?')) return;
-          try {
-            const r = await fetch(API + '/delete-mix', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ basename: btn.dataset.delmix }),
-            });
-            if (!r.ok) { const j = await r.json().catch(() => ({})); alert('Delete failed: ' + (j.error || 'http ' + r.status)); }
-          } catch (err) { alert('Delete failed: ' + err.message); }
-          refreshMix();
-        });
-      });
-    } catch (e) {
-      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
-    }
-  }
-
-  $('rec-refresh').addEventListener('click', () => { refreshRecordings(); refreshMix(); });
-  refreshRecordings();
-  refreshMix();
-  setInterval(refreshMix, 8000); // mix list updates faster — splits resolve mid-session
-
-  // === Settings tab ===
-  function setCfgStatus(text, kind) {
-    const el = $('cfg-status');
-    el.textContent = text;
-    el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
-  }
-  // Populate paths from poll results
-  function renderSettings(s) {
-    if (!s) return;
-    $('cfg-dump').value = s.config?.dumpDir || '';
-    $('cfg-target').value = s.config?.targetRoot || '';
-  }
-  // Hook into poll
-  const _origPoll2 = pollStatus;
-  pollStatus = async function() {
-    await _origPoll2();
-    renderSettings(window.__sasiStatus);
-  };
-
-  $('cfg-dump-pick').addEventListener('click', async () => {
-    const p = await pickFolder('dump');
-    if (p) $('cfg-dump').value = p;
-  });
-  $('cfg-target-pick').addEventListener('click', async () => {
-    const p = await pickFolder('target');
-    if (p) $('cfg-target').value = p;
-  });
-  $('cfg-save').addEventListener('click', async () => {
-    const dump = $('cfg-dump').value.trim();
-    const target = $('cfg-target').value.trim();
-    if (!dump || !target) { setCfgStatus('Both folders required', 'err'); return; }
-    setCfgStatus('Saving...', null);
-    try {
-      const r = await fetch(API + '/config', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dumpDir: dump, targetRoot: target }),
-      });
-      const j = await r.json();
-      if (!r.ok) { setCfgStatus(j.error || 'Save failed', 'err'); return; }
-      setCfgStatus('Saved. Restarting watcher to apply...', 'ok');
-      try { await fetch(API + '/restart', { method: 'POST' }); }
-      catch (e) { /* expected — watcher exits before response drains */ }
-    } catch (e) { setCfgStatus('Save failed: ' + e.message, 'err'); }
-  });
-
-  // Games editor
-  async function loadGames() {
-    try {
-      const r = await fetch(API + '/games');
-      $('games-text').value = await r.text();
-      $('games-status').textContent = '';
-      $('games-status').style.color = '';
-    } catch (e) {
-      $('games-status').textContent = 'Failed to load: ' + e.message;
-      $('games-status').style.color = 'var(--accent-rec)';
-    }
-  }
-  $('games-save').addEventListener('click', async () => {
-    let parsed;
-    try { parsed = JSON.parse($('games-text').value); }
-    catch (e) { $('games-status').textContent = 'Invalid JSON: ' + e.message; $('games-status').style.color = 'var(--accent-rec)'; return; }
-    try {
-      const r = await fetch(API + '/games', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed),
-      });
-      if (!r.ok) throw new Error('http ' + r.status);
-      $('games-status').textContent = 'Saved.';
-      $('games-status').style.color = 'var(--accent-online)';
-    } catch (e) {
-      $('games-status').textContent = 'Save failed: ' + e.message;
-      $('games-status').style.color = 'var(--accent-rec)';
-    }
-  });
-  loadGames();
-
-  // Keep-MKV toggle
-  function renderKeepMkv(s) {
-    if (!s) return;
-    const checkbox = $('cfg-keep-mkv');
-    if (document.activeElement !== checkbox) checkbox.checked = s.config?.keepMkv !== false;
-    $('cfg-keep-mkv-label').textContent = checkbox.checked ? 'Keep .mkv (slower, more disk)' : 'Discard .mkv after .mp4 is ready';
-  }
-  // Hook into poll (third wrap)
-  const _origPoll3 = pollStatus;
-  pollStatus = async function() {
-    await _origPoll3();
-    renderKeepMkv(window.__sasiStatus);
-  };
-  $('cfg-keep-mkv').addEventListener('change', async (e) => {
-    const checked = e.target.checked;
-    $('cfg-keep-mkv-label').textContent = 'Saving...';
-    try {
-      const r = await fetch(API + '/config', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keepMkv: checked }),
-      });
-      if (!r.ok) { e.target.checked = !checked; alert('Save failed'); return; }
-      $('cfg-keep-mkv-label').textContent = checked ? 'Keep .mkv (slower, more disk)' : 'Discard .mkv after .mp4 is ready';
-    } catch (err) { e.target.checked = !checked; alert('Save failed: ' + err.message); }
-  });
-
-  // Danger zone
-  $('cfg-restart').addEventListener('click', async () => {
-    if (!confirm('Restart the watcher?')) return;
-    try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
-  });
-  $('cfg-stop').addEventListener('click', async () => {
-    if (!confirm('Stop the watcher? It will not auto-restart until you launch it again.')) return;
-    try { await fetch(API + '/stop', { method: 'POST' }); } catch {}
-  });
-  $('cfg-uninstall').addEventListener('click', async () => {
-    if (!confirm('Remove auto-start entirely? Files stay; only the Windows login auto-start is removed.')) return;
-    try {
-      const r = await fetch(API + '/uninstall', { method: 'POST' });
-      if (r.ok) alert('Uninstalled. The watcher will not auto-start on next login.');
-    } catch (e) { alert('Uninstall failed: ' + e.message); }
-  });
+});
+loadKeys();
 </script>
 </body>
 </html>

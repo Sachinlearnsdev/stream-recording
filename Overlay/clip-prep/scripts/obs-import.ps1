@@ -88,7 +88,7 @@ if (Test-Path $srcBasic) {
   Write-Output "Restoring basic/ ..."
   if (-not (Test-Path $obsBasic)) { New-Item -ItemType Directory -Path $obsBasic | Out-Null }
   $count = 0
-  Get-ChildItem $srcBasic -Recurse -File | ForEach-Object {
+  Get-ChildItem $srcBasic -Recurse -File -Attributes !ReparsePoint -ErrorAction SilentlyContinue | ForEach-Object {
     $rel = $_.FullName.Substring($srcBasic.Length).TrimStart('\','/')
     $tgt = [System.IO.Path]::Combine($obsBasic, $rel)
     $tgtDir = Split-Path $tgt -Parent
@@ -106,7 +106,7 @@ if (Test-Path $srcPlugs) {
   Write-Output "Restoring user plugins ..."
   if (-not (Test-Path $obsPlugs)) { New-Item -ItemType Directory -Path $obsPlugs | Out-Null }
   $count = 0
-  Get-ChildItem $srcPlugs -Recurse -File | ForEach-Object {
+  Get-ChildItem $srcPlugs -Recurse -File -Attributes !ReparsePoint -ErrorAction SilentlyContinue | ForEach-Object {
     $rel = $_.FullName.Substring($srcPlugs.Length).TrimStart('\','/')
     $tgt = [System.IO.Path]::Combine($obsPlugs, $rel)
     $tgtDir = Split-Path $tgt -Parent
@@ -142,7 +142,7 @@ if (Test-Path $srcPluginCfg) {
   $dstPluginCfg = Join-Path $obsRoot 'plugin_config'
   if (-not (Test-Path $dstPluginCfg)) { New-Item -ItemType Directory -Path $dstPluginCfg | Out-Null }
   $count = 0
-  Get-ChildItem $srcPluginCfg -Recurse -File | ForEach-Object {
+  Get-ChildItem $srcPluginCfg -Recurse -File -Attributes !ReparsePoint -ErrorAction SilentlyContinue | ForEach-Object {
     $rel = $_.FullName.Substring($srcPluginCfg.Length).TrimStart('\','/')
     $tgt = [System.IO.Path]::Combine($dstPluginCfg, $rel)
     $tgtDir = Split-Path $tgt -Parent

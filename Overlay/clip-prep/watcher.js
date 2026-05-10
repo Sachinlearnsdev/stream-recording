@@ -75,18 +75,36 @@ async function getRunningProcesses() {
   }
 }
 
+// "Quiet" means: size hasn't changed across the sample window AND we can open
+// the file with a shared-but-not-exclusive write handle. The latter is what
+// catches a still-recording MKV — OBS holds an exclusive write lock until it
+// stops. Size-stability alone is unreliable for constant-bitrate recordings
+// where two snapshots may happen to be equal mid-write.
 async function isFileQuiet(p, seconds) {
   try {
     const a = (await fs.stat(p)).size;
     await new Promise((r) => setTimeout(r, seconds * 1000));
     const b = (await fs.stat(p)).size;
-    return a === b && a > 0;
+    if (a !== b || a === 0) return false;
+    // Try to open for writing — fails with EBUSY/EPERM on Windows if another
+    // process holds an exclusive lock (which is exactly what OBS does).
+    let handle;
+    try {
+      handle = await fs.open(p, 'r+');
+    } catch {
+      return false;
+    }
+    await handle.close();
+    return true;
   } catch {
     return false;
   }
 }
 
 const tripleSeen = new Map();
+// Per-basename in-flight set so concurrent 'add' events for the same basename
+// (mkv/mp4/json) don't all fire executeRoute in parallel and race on rename.
+const processing = new Set();
 
 function noteFile(basename, ext, fullPath) {
   const entry = tripleSeen.get(basename) ?? { firstSeen: Date.now() };
@@ -96,55 +114,65 @@ function noteFile(basename, ext, fullPath) {
 }
 
 async function tryProcess(basename) {
+  // Guard against concurrent invocations for the same basename. The watcher
+  // fires one 'add' event per file (mkv, mp4, json), and tryProcess is called
+  // unawaited from the handler — without this guard, all three can pass the
+  // "all files present" check and race on rename.
+  if (processing.has(basename)) return;
   const entry = tripleSeen.get(basename);
   if (!entry || !entry.mkv || !entry.mp4 || !entry.json) return;
 
-  const quiet = await Promise.all([
-    isFileQuiet(entry.mkv, config.fileQuietSeconds),
-    isFileQuiet(entry.mp4, config.fileQuietSeconds),
-  ]);
-  if (!quiet.every(Boolean)) {
-    log.info(`${basename}: still being written, will retry`);
-    return;
-  }
-
-  let sidecarText;
+  processing.add(basename);
   try {
-    sidecarText = await fs.readFile(entry.json, 'utf8');
-  } catch (e) {
-    log.error(`${basename}: cannot read sidecar: ${e.message}`);
-    return;
-  }
-  const sidecar = parseSidecar(sidecarText);
-  if (!sidecar) {
-    log.error(`${basename}: invalid sidecar JSON`);
-    return;
-  }
+    const quiet = await Promise.all([
+      isFileQuiet(entry.mkv, config.fileQuietSeconds),
+      isFileQuiet(entry.mp4, config.fileQuietSeconds),
+    ]);
+    if (!quiet.every(Boolean)) {
+      log.info(`${basename}: still being written, will retry`);
+      return;
+    }
 
-  const running = await getRunningProcesses();
-  const plan = decideRoute({
-    basename,
-    sidecar,
-    gamesMap,
-    runningProcesses: running,
-    targetRoot: config.targetRoot,
-    dominantThreshold: config.dominantGameThreshold,
-  });
-  plan.sources = { mkv: entry.mkv, mp4: entry.mp4, sidecar: entry.json };
+    let sidecarText;
+    try {
+      sidecarText = await fs.readFile(entry.json, 'utf8');
+    } catch (e) {
+      log.error(`${basename}: cannot read sidecar: ${e.message}`);
+      return;
+    }
+    const sidecar = parseSidecar(sidecarText);
+    if (!sidecar) {
+      log.error(`${basename}: invalid sidecar JSON`);
+      return;
+    }
 
-  if (plan.kind === 'orphan') {
-    log.warn(`${basename}: orphan (no game events)`);
-    return;
-  }
+    const running = await getRunningProcesses();
+    const plan = decideRoute({
+      basename,
+      sidecar,
+      gamesMap,
+      runningProcesses: running,
+      targetRoot: config.targetRoot,
+      dominantThreshold: config.dominantGameThreshold,
+    });
+    plan.sources = { mkv: entry.mkv, mp4: entry.mp4, sidecar: entry.json };
 
-  try {
-    await executeRoute(plan, { keepMkv: config.keepMkv !== false });
-    log.info(`${basename}: routed to ${plan.kind === 'mix' ? '_mix/' : plan.gameFolder + '/'}${config.keepMkv === false ? ' (MKV discarded)' : ''}`);
-    addRecentMove(state, { basename, kind: plan.kind, target: plan.gameFolder });
-    tripleSeen.delete(basename);
-    state.queue = [...tripleSeen.keys()];
-  } catch (e) {
-    log.error(`${basename}: move failed: ${e.message}`);
+    if (plan.kind === 'orphan') {
+      log.warn(`${basename}: orphan (no game events)`);
+      return;
+    }
+
+    try {
+      await executeRoute(plan, { keepMkv: config.keepMkv !== false });
+      log.info(`${basename}: routed to ${plan.kind === 'mix' ? '_mix/' : plan.gameFolder + '/'}${config.keepMkv === false ? ' (MKV discarded)' : ''}`);
+      addRecentMove(state, { basename, kind: plan.kind, target: plan.gameFolder });
+      tripleSeen.delete(basename);
+      state.queue = [...tripleSeen.keys()];
+    } catch (e) {
+      log.error(`${basename}: move failed: ${e.message}`);
+    }
+  } finally {
+    processing.delete(basename);
   }
 }
 

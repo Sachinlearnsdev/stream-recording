@@ -76,6 +76,17 @@ if errorlevel 1 (
   echo Setup page's START button will now launch the watcher directly.
 )
 
+rem ---------- Step 4c: Auto-register game-tracker.lua in OBS scenes ----------
+rem  Best-effort: if OBS has been opened at least once, scene-collection JSONs
+rem  exist and we can register the script automatically. If not (fresh OBS),
+rem  the script prints a "no scenes yet" message and exits 0.
+echo.
+echo [4c/5] Registering game-tracker.lua in existing OBS scene collections...
+powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\register-lua.ps1" -LuaPath "!SCRIPT_DIR!obs\game-tracker.lua"
+if errorlevel 1 (
+  echo Note: register-lua.ps1 failed ^(non-fatal^). Use the dashboard's "Register Lua" button after opening OBS once.
+)
+
 rem ---------- Step 5: Start it now + open dashboard ----------
 echo.
 echo [5/5] Starting watcher (hidden) and opening dashboard...
@@ -98,9 +109,10 @@ echo   - If it crashes or gets stopped: Win key -^> type "clip-prep" -^> Enter.
 echo   - Setup/Dashboard pages let you change paths and edit game folders.
 echo   - To see live logs at any time, run start.bat in a cmd window.
 echo.
-echo   ONE-TIME OBS STEP: in OBS, Tools -^> Scripts -^> + -^>
-echo     paste this FOLDER into address bar, select game-tracker.lua:
-echo     !SCRIPT_DIR!obs
+echo   The clip-prep Lua script was auto-registered in your OBS scene
+echo   collections. If OBS was open during install, restart it for the
+echo   change to take effect. If you add a new scene collection later,
+echo   use the dashboard's "Register Lua" button to wire it up.
 echo ========================================
 echo.
 pause

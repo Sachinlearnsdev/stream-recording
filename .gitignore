@@ -3,3 +3,16 @@ config.json
 games.json
 clip-prep.log
 *.bak
+
+# Visual brainstorming workspace (transient mockups)
+.superpowers/
+
+# OBS bundles — exported user config, never commit (may contain personal paths/settings)
+New folder/
+obs-export/
+obs-export-*/
+*-bundle/
+
+# Overlay secrets (API keys) — never commit
+Overlay/sasi-overlays/secrets.js
+Overlay/sasi-overlays/lib/secrets.js

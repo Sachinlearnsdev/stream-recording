@@ -1053,6 +1053,11 @@ Nothing 💀 : 15
     <div class="hint" style="margin-bottom:8px">
       <strong>Close OBS</strong> before either operation — it locks browser-source state.
     </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:10px;align-items:center">
+      <button class="btn sm" id="cp-bundle-register-lua" style="font-size:.8em">🔗 REGISTER LUA IN OBS</button>
+      <span class="hint" style="font-size:.8em">Wires game-tracker.lua into every scene collection. Re-run after creating a new collection in OBS.</span>
+    </div>
     <div id="cp-bundle-status" style="font-size:.85em;color:#888;min-height:1.2em;margin:8px 0;white-space:pre-wrap;font-family:monospace;background:#0a0a0a;padding:8px;border-radius:4px;display:none;max-height:300px;overflow:auto"></div>
 
     <div style="margin-top:16px;border-top:1px solid #1a1a1a;padding-top:12px">
@@ -1228,7 +1233,15 @@ function updateNotifCount() {
 }
 
 function escapeHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Escape ALL five HTML-significant characters. The '"' and "'" are
+  // load-bearing whenever the result is interpolated into an attribute value
+  // — without them, a value like `" onerror="alert(1)` breaks out of value="".
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Update queue count every 2s
@@ -1763,6 +1776,28 @@ load();
   const API = 'http://127.0.0.1:6789';
   const $ = (id) => document.getElementById(id);
 
+  // Wrap window.fetch ONCE so every call to the local watcher API automatically
+  // carries the X-Clip-Prep header on mutating verbs. The watcher rejects POST/
+  // PUT/DELETE without this header — a CSRF guard against malicious public web
+  // pages calling our localhost endpoints. Custom headers can't be set
+  // cross-origin without a successful preflight, so this is sufficient.
+  if (!window.__clipPrepFetchWrapped) {
+    const origFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const isLocal = url.startsWith(API);
+      const method = ((init && init.method) || 'GET').toUpperCase();
+      const mutating = method === 'POST' || method === 'PUT' || method === 'DELETE';
+      if (isLocal && mutating) {
+        const merged = { ...(init || {}) };
+        merged.headers = { ...(merged.headers || {}), 'X-Clip-Prep': '1' };
+        return origFetch(input, merged);
+      }
+      return origFetch(input, init);
+    };
+    window.__clipPrepFetchWrapped = true;
+  }
+
   // ── Folders: dirty tracking so polling never clobbers user typing ──────
   const dirty = { dump: false, root: false };
   function setFeedback(id, text, kind) {
@@ -1840,8 +1875,8 @@ load();
       ['cp-dump-pick','cp-dump-save','cp-dump-open','cp-root-pick','cp-root-save','cp-root-open','cp-recroot-pick','cp-recroot-open','cp-uninstall','cp-open-log','cp-keep-mkv'].forEach(id => $(id).disabled = false);
       $('cp-moves').innerHTML = s.recentMoves.length
         ? s.recentMoves.map((m) =>
-            '<li>' + m.ts.slice(11, 19) + ' — <strong>' + m.basename + '</strong> → ' +
-            (m.kind === 'mix' ? '_mix/' : m.target + '/') + '</li>'
+            '<li>' + escapeHtml(String(m.ts || '').slice(11, 19)) + ' — <strong>' + escapeHtml(m.basename || '') + '</strong> → ' +
+            (m.kind === 'mix' ? '_mix/' : escapeHtml(m.target || '') + '/') + '</li>'
           ).join('')
         : '<li style="color:#666;list-style:none;margin-left:-1.2rem">No recent moves</li>';
     } catch {
@@ -2664,14 +2699,16 @@ load();
         return;
       }
       target.innerHTML = backups.map(b => {
-        const ts = b.modified.replace('T', ' ').replace(/\..+/, '');
-        const isPreRestore = b.name.endsWith('-pre-restore');
+        const ts = String(b.modified || '').replace('T', ' ').replace(/\..+/, '');
+        const isPreRestore = String(b.name || '').endsWith('-pre-restore');
+        const safeName = escapeHtml(b.name || '');
+        const fileCount = Number(b.fileCount) || 0;
         return '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;padding:6px 8px;border-bottom:1px solid #1a1a1a;align-items:center;font-size:.85em">'
-          + '<div><code style="color:#aaa">' + b.name + '</code>'
+          + '<div><code style="color:#aaa">' + safeName + '</code>'
           + (isPreRestore ? ' <span style="color:#FFD700;font-size:.85em">(pre-restore)</span>' : '')
-          + '<br><span style="color:#666;font-size:.85em">' + ts + ' · ' + b.fileCount + ' files · ' + fmtBytes(b.sizeBytes) + '</span></div>'
-          + '<button class="btn sm" data-restore="' + b.name + '" style="font-size:.75em">RESTORE</button>'
-          + '<button class="btn sm" data-recycle="' + b.name + '" style="font-size:.75em;background:rgba(255,68,68,.1);border-color:#553;color:#d66">DELETE</button>'
+          + '<br><span style="color:#666;font-size:.85em">' + escapeHtml(ts) + ' · ' + fileCount + ' files · ' + escapeHtml(fmtBytes(b.sizeBytes)) + '</span></div>'
+          + '<button class="btn sm" data-restore="' + safeName + '" style="font-size:.75em">RESTORE</button>'
+          + '<button class="btn sm" data-recycle="' + safeName + '" style="font-size:.75em;background:rgba(255,68,68,.1);border-color:#553;color:#d66">DELETE</button>'
           + '</div>';
       }).join('');
       target.querySelectorAll('[data-restore]').forEach(btn => {
@@ -2716,10 +2753,29 @@ load();
         });
       });
     } catch (e) {
-      target.innerHTML = '<div style="padding:6px;color:#ff5555;font-size:.85em">Failed to load backups: ' + e.message + '</div>';
+      target.innerHTML = '<div style="padding:6px;color:#ff5555;font-size:.85em">Failed to load backups: ' + escapeHtml(e.message || String(e)) + '</div>';
     }
   }
   $('cp-bundle-refresh-backups').addEventListener('click', refreshBackupsList);
+
+  $('cp-bundle-register-lua').addEventListener('click', async () => {
+    const btn = $('cp-bundle-register-lua');
+    btn.disabled = true;
+    setBundleStatus('Registering game-tracker.lua in OBS scene collections...', 'work');
+    try {
+      const r = await fetch(API + '/register-lua', { method: 'POST' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) {
+        setBundleStatus('Register failed:\n' + (j.output || j.error || ('http ' + r.status)), 'err');
+      } else {
+        setBundleStatus(j.output || 'Done.', 'ok');
+      }
+    } catch (e) {
+      setBundleStatus('Register failed: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   poll();
   pollLog();

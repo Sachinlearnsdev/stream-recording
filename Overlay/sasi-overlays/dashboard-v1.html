@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sasi Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  /* Layout */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--bg-divider);
+    padding: var(--sp-5) 0;
+    position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  .main { flex: 1; padding: var(--sp-6) var(--sp-7); max-width: 920px; }
+
+  /* Sidebar header */
+  .sb-head { padding: 0 var(--sp-4) var(--sp-4); border-bottom: 1px solid var(--bg-divider); margin-bottom: var(--sp-3); }
+  .sb-brand { display: flex; align-items: center; gap: var(--sp-2); }
+  .sb-mark {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent-rec), var(--accent-warn));
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--bg-page); font-weight: 900; font-size: 13px;
+  }
+  /* Note: the gradient on the brand mark is the ONLY allowed gradient — it's the logo, not chrome. */
+  .sb-name { color: var(--text-primary); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
+  .sb-ver  { color: var(--text-muted); font-size: 9px; letter-spacing: 0.12em; margin-top: 1px; }
+  .sb-status { display: flex; align-items: center; gap: var(--sp-1); margin-top: var(--sp-3); }
+  .sb-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-muted);
+    transition: background var(--t-fast);
+  }
+  .sb-dot.online { background: var(--accent-online); box-shadow: 0 0 6px var(--accent-online); }
+  .sb-dot.offline { background: var(--accent-rec); }
+  .sb-status-text { color: var(--text-secondary); font-size: 10px; font-weight: 500; }
+
+  /* Sidebar tabs */
+  .tabs { flex: 1; }
+  .tab-btn {
+    display: block; width: 100%;
+    padding: 10px var(--sp-4);
+    background: transparent; border: none;
+    color: var(--text-secondary);
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    letter-spacing: 0.04em; text-align: left; cursor: pointer;
+    transition: color var(--t-fast), background var(--t-fast);
+    border-left: 2px solid transparent;
+  }
+  .tab-btn:hover { color: var(--text-primary); }
+  .tab-btn.active {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.03);
+    border-left-color: var(--text-primary);
+    font-weight: 600;
+  }
+  .tab-badge {
+    background: var(--accent-rec); color: var(--text-primary);
+    font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: var(--r-chip);
+    margin-left: var(--sp-1);
+  }
+
+  /* Page header */
+  .page-head { margin-bottom: var(--sp-6); }
+  .page-eyebrow { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .page-title { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.02em; }
+
+  /* Tab panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Hero recording card */
+  .hero-card { padding: var(--sp-5); margin-bottom: var(--sp-3); }
+  .hero-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-4); }
+  .hero-label { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .hero-game { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .hero-sub { color: var(--text-secondary); font-size: var(--text-mono); margin-top: 2px; font-family: var(--font-mono); }
+  .rec-pill {
+    display: none; /* hidden by default — JS toggles when recording */
+    align-items: center; gap: var(--sp-2);
+    background: rgba(255,52,52,0.08); border: 1px solid rgba(255,52,52,0.4);
+    border-radius: var(--r-button); padding: 8px 12px;
+  }
+  .rec-pill.active { display: flex; }
+  .rec-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-rec); }
+  .rec-pill .label { color: var(--accent-rec); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; }
+
+  /* Stats grid */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--bg-divider); border-radius: var(--r-button); overflow: hidden; }
+  .stat { background: var(--bg-page); padding: 10px 12px; }
+  .stat-label { color: var(--text-muted); font-size: 9px; font-weight: 600; letter-spacing: 0.15em; }
+  .stat-value { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-body); margin-top: 2px; }
+
+  /* Action row */
+  .actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-4); }
+  .btn {
+    padding: 10px var(--sp-4);
+    border-radius: var(--r-button);
+    font-family: inherit; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; border: 1px solid transparent;
+    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  }
+  .btn-primary { background: var(--text-primary); color: var(--bg-page); border-color: var(--text-primary); flex: 1; }
+  .btn-primary:hover { background: #ddd; border-color: #ddd; }
+  .btn-secondary { background: transparent; color: var(--text-secondary); border-color: var(--bg-border); }
+  .btn-secondary:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+  .btn-destructive {
+    background: rgba(255,52,52,0.08); color: var(--accent-rec);
+    border-color: rgba(255,52,52,0.4);
+  }
+  .btn-destructive:hover { background: rgba(255,52,52,0.15); }
+
+  /* Recent moves table */
+  .moves-card { padding: var(--sp-4) var(--sp-5); }
+  .moves-list { font-family: var(--font-mono); font-size: var(--text-mono); color: var(--text-secondary); margin-top: var(--sp-3); }
+  .moves-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--bg-divider); }
+  .moves-row:last-child { border-bottom: none; }
+  .moves-row .target { color: var(--text-primary); }
+  .moves-row .target.mix { color: var(--accent-warn); }
+  .moves-empty { color: var(--text-muted); font-style: italic; padding: var(--sp-2) 0; }
+
+  /* Sections — used in OBS, Recordings, Settings */
+  .section { margin-bottom: var(--sp-6); }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+  .section-title { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+  .section-hint { color: var(--text-muted); font-size: var(--text-small); margin-bottom: var(--sp-3); line-height: 1.6; }
+
+  /* Output box for long-running script results */
+  .output-box {
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    padding: var(--sp-3);
+    font-family: var(--font-mono); font-size: var(--text-mono);
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    max-height: 320px; overflow: auto;
+    display: none;
+  }
+  .output-box.show { display: block; }
+  .output-box.err { color: var(--accent-rec); }
+  .output-box.ok { color: var(--accent-online); }
+
+  /* Backup list rows */
+  .backup-list { display: flex; flex-direction: column; gap: var(--sp-1); }
+  .backup-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    font-size: var(--text-small);
+  }
+  .backup-name { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .backup-meta { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
+  .backup-empty { color: var(--text-muted); padding: var(--sp-3); text-align: center; }
+
+  .row { display: flex; gap: var(--sp-2); }
+
+  /* Per-game accordion */
+  .game-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-card);
+    margin-bottom: var(--sp-2);
+    overflow: hidden;
+  }
+  .game-head {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: var(--sp-3) var(--sp-4);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--t-fast);
+  }
+  .game-head:hover { background: rgba(255,255,255,0.02); }
+  .game-name { color: var(--text-primary); font-weight: 600; font-size: var(--text-body); }
+  .game-meta { color: var(--text-muted); font-size: 10px; font-family: var(--font-mono); }
+  .game-caret { color: var(--text-muted); transition: transform var(--t-fast); font-size: 10px; }
+  .game-card.open .game-caret { transform: rotate(90deg); }
+
+  .game-files { display: none; padding: 0 var(--sp-4) var(--sp-3); }
+  .game-card.open .game-files { display: block; }
+  .file-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: 6px 0;
+    border-top: 1px solid var(--bg-divider);
+    font-family: var(--font-mono); font-size: var(--text-mono);
+    color: var(--text-secondary);
+  }
+  .file-row .name { color: var(--text-primary); }
+  .file-row .size { color: var(--text-muted); font-size: 10px; }
+  .file-recycle { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px 6px; font-size: 11px; }
+  .file-recycle:hover { color: var(--accent-rec); }
+
+  /* Mix list rows */
+  .mix-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: var(--sp-2);
+    align-items: center;
+    padding: var(--sp-3);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-card);
+    margin-bottom: var(--sp-2);
+  }
+  .mix-name { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .mix-meta { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
+  .mix-status {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 3px 6px; border-radius: var(--r-chip);
+  }
+  .mix-status.split { background: rgba(0,255,133,0.1); color: var(--accent-online); }
+  .mix-status.unsplit { background: rgba(255,176,32,0.1); color: var(--accent-warn); }
+  .mix-status.in-progress { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+
+  /* Forms */
+  .field { margin-bottom: var(--sp-3); }
+  .field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .field input, .field textarea {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    color: var(--text-primary);
+    font-family: inherit; font-size: var(--text-body);
+    transition: border-color var(--t-fast);
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent-online); }
+  .field textarea { font-family: var(--font-mono); font-size: var(--text-mono); min-height: 200px; resize: vertical; }
+  .field-hint { color: var(--text-muted); font-size: 10px; margin-top: var(--sp-1); }
+  .field-row { display: flex; gap: var(--sp-2); align-items: stretch; }
+  .field-row .field { flex: 1; }
+  .field-row input { flex: 1; }
+
+  /* Danger zone */
+  .danger-zone {
+    background: rgba(255,52,52,0.04);
+    border: 1px solid rgba(255,52,52,0.25);
+    border-radius: var(--r-card);
+    padding: var(--sp-4);
+  }
+  .danger-zone .section-title { color: var(--accent-rec); }
+
+  /* Placeholder card for upcoming features */
+  .placeholder-card {
+    background: var(--bg-card);
+    border: 1px dashed var(--bg-border);
+    border-radius: var(--r-card);
+    padding: var(--sp-7);
+    text-align: center;
+  }
+  .placeholder-icon { font-size: 32px; margin-bottom: var(--sp-3); opacity: 0.5; }
+  .placeholder-title { font-size: var(--text-heading); font-weight: 600; margin-bottom: var(--sp-2); }
+  .placeholder-desc { color: var(--text-secondary); max-width: 480px; margin: 0 auto var(--sp-4); line-height: 1.6; }
+  .placeholder-list { text-align: left; max-width: 320px; margin: 0 auto; color: var(--text-muted); font-size: var(--text-small); }
+  .placeholder-list li { padding: 4px 0; border-bottom: 1px solid var(--bg-divider); list-style: none; }
+  .placeholder-list li:last-child { border-bottom: none; }
+  .placeholder-list li::before { content: '·  '; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-brand">
+        <div class="sb-mark">S</div>
+        <div>
+          <div class="sb-name">Sasi Studio</div>
+          <div class="sb-ver">v0.2.0</div>
+        </div>
+      </div>
+      <div class="sb-status">
+        <div class="sb-dot" id="sb-dot"></div>
+        <span class="sb-status-text" id="sb-status-text">Connecting...</span>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="now">● Now</button>
+      <button class="tab-btn" data-tab="overlays">Overlays</button>
+      <button class="tab-btn" data-tab="recordings">Recordings</button>
+      <button class="tab-btn" data-tab="obs">OBS</button>
+      <button class="tab-btn" data-tab="keys">Keys</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <section class="panel active" data-panel="now">
+      <div class="page-head">
+        <div class="page-eyebrow">Dashboard</div>
+        <div class="page-title">Now</div>
+      </div>
+
+      <div class="surface-card hero-card">
+        <div class="hero-row">
+          <div>
+            <div class="hero-label">Recording</div>
+            <div class="hero-game" id="now-game">—</div>
+            <div class="hero-sub" id="now-sub">Watcher offline</div>
+          </div>
+          <div class="rec-pill" id="now-rec-pill">
+            <div class="dot"></div>
+            <div class="label">REC</div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="stat-label">DUMP</div><div class="stat-value" id="now-dump">—</div></div>
+          <div class="stat"><div class="stat-label">QUEUE</div><div class="stat-value" id="now-queue">—</div></div>
+          <div class="stat"><div class="stat-label">UPTIME</div><div class="stat-value" id="now-uptime">—</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="now-open-dump">Open Dump Folder</button>
+          <button class="btn btn-secondary" id="now-restart">Restart</button>
+        </div>
+      </div>
+
+      <div class="surface-card moves-card">
+        <div class="hero-label">Recent moves</div>
+        <div class="moves-list" id="now-moves">
+          <div class="moves-empty">No recent moves</div>
+        </div>
+      </div>
+    </section>
+    <section class="panel" data-panel="overlays">
+      <div class="page-head">
+        <div class="page-eyebrow">Stream</div>
+        <div class="page-title">Overlays</div>
+      </div>
+      <div class="placeholder-card">
+        <div class="placeholder-title">Live overlay editor — coming soon</div>
+        <div class="placeholder-desc">Click any overlay to preview it as it'll look in OBS, then edit screen-specific content (text, animation, timer, image swap). Theme is locked — colors and fonts come from the design system.</div>
+        <ul class="placeholder-list">
+          <li>Starting Soon</li>
+          <li>Be Right Back</li>
+          <li>Ending Screen</li>
+          <li>Lower Thirds</li>
+        </ul>
+      </div>
+    </section>
+    <section class="panel" data-panel="recordings">
+      <div class="page-head">
+        <div class="page-eyebrow">Library</div>
+        <div class="page-title">Recordings</div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">By game</div>
+          <button class="btn btn-secondary" id="rec-refresh" style="font-size: 10px; padding: 6px 12px">Refresh</button>
+        </div>
+        <div id="rec-games"><div class="backup-empty">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Mix recordings</div>
+        <div class="section-hint">Multi-game sessions land here. Split into per-game segments via ffmpeg — original is preserved until you delete it.</div>
+        <div id="rec-mix"><div class="backup-empty">Loading...</div></div>
+      </div>
+    </section>
+    <section class="panel" data-panel="obs">
+      <div class="page-head">
+        <div class="page-eyebrow">Studio</div>
+        <div class="page-title">OBS</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Bundle</div>
+        <div class="section-hint"><strong>Close OBS</strong> before either operation — it locks browser-source state.</div>
+        <div class="row" style="margin-bottom: var(--sp-3)">
+          <button class="btn btn-secondary" id="obs-export" style="flex:1">Export Bundle</button>
+          <button class="btn btn-secondary" id="obs-import" style="flex:1">Import Bundle</button>
+        </div>
+        <div class="row" style="margin-bottom: var(--sp-3); align-items: center">
+          <button class="btn btn-secondary" id="obs-register-lua">Register Lua in OBS</button>
+          <span class="t-small" style="color: var(--text-muted)">Wires game-tracker.lua into every scene collection. Re-run after creating a new collection.</span>
+        </div>
+        <div class="output-box" id="obs-output"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Auto-backups</div>
+          <button class="btn btn-secondary" id="obs-refresh-backups" style="font-size: 10px; padding: 6px 12px">Refresh</button>
+        </div>
+        <div class="section-hint">Each Import auto-saves your current OBS state here first. Restore to undo a previous import.</div>
+        <div class="backup-list" id="obs-backups">
+          <div class="backup-empty">Loading...</div>
+        </div>
+      </div>
+    </section>
+    <section class="panel" data-panel="keys">
+      <div class="page-head">
+        <div class="page-eyebrow">Stream</div>
+        <div class="page-title">Keys</div>
+      </div>
+      <div class="placeholder-card">
+        <div class="placeholder-title">API key vault — coming soon</div>
+        <div class="placeholder-desc">Stream keys and tokens will be encrypted via Windows DPAPI — only your user account can decrypt them. Push-to-OBS button writes the key directly into your stream profile.</div>
+        <ul class="placeholder-list">
+          <li>Twitch stream key</li>
+          <li>YouTube stream key</li>
+          <li>StreamElements / StreamLabs tokens</li>
+          <li>RTMP custom-server credentials</li>
+        </ul>
+      </div>
+    </section>
+    <section class="panel" data-panel="settings">
+      <div class="page-head">
+        <div class="page-eyebrow">System</div>
+        <div class="page-title">Settings</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Folders</div>
+        <div class="field">
+          <label>Dump folder</label>
+          <div class="field-row">
+            <input type="text" id="cfg-dump" placeholder="C:\Users\…\Videos\_dump" readonly>
+            <button class="btn btn-secondary" id="cfg-dump-pick">Pick</button>
+          </div>
+          <div class="field-hint">OBS writes recordings here. The watcher moves them out into per-game folders under the target root.</div>
+        </div>
+        <div class="field">
+          <label>Target root</label>
+          <div class="field-row">
+            <input type="text" id="cfg-target" placeholder="C:\Users\…\Videos" readonly>
+            <button class="btn btn-secondary" id="cfg-target-pick">Pick</button>
+          </div>
+          <div class="field-hint">Per-game folders (Valorant/, GTA 5/, _mix/) get created here.</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="cfg-save">Save</button>
+          <span class="t-small" id="cfg-status" style="color: var(--text-muted); align-self: center"></span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Keep MKV</div>
+        <div class="section-hint">When OFF, the watcher discards the .mkv after auto-remux to .mp4 to save disk space. ON keeps both.</div>
+        <label class="field-row" style="align-items: center; cursor: pointer">
+          <input type="checkbox" id="cfg-keep-mkv" style="width: auto; flex: 0">
+          <span class="t-body" id="cfg-keep-mkv-label">Loading...</span>
+        </label>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Games</div>
+          <button class="btn btn-secondary" id="games-save" style="font-size: 10px; padding: 6px 12px">Save</button>
+        </div>
+        <div class="section-hint">Maps OBS Game Capture exe names → per-game folder name. Edit JSON directly. Watcher hot-reloads on save.</div>
+        <div class="field">
+          <textarea id="games-text" spellcheck="false"></textarea>
+          <div class="field-hint" id="games-status"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="danger-zone">
+          <div class="section-title">Danger zone</div>
+          <div class="section-hint">Stop / restart the watcher, or remove auto-start entirely.</div>
+          <div class="row">
+            <button class="btn btn-secondary" id="cfg-restart">Restart</button>
+            <button class="btn btn-secondary" id="cfg-stop">Stop</button>
+            <button class="btn btn-destructive" id="cfg-uninstall">Uninstall</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const API = 'http://127.0.0.1:6789';
+
+  // CSRF wrapper — required for POST/PUT/DELETE to the watcher.
+  // The watcher rejects mutating requests without X-Clip-Prep: 1.
+  if (!window.__sasiFetchWrapped) {
+    const orig = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const isLocal = url.startsWith(API);
+      const method = ((init && init.method) || 'GET').toUpperCase();
+      const mutating = method === 'POST' || method === 'PUT' || method === 'DELETE';
+      if (isLocal && mutating) {
+        const merged = { ...(init || {}) };
+        merged.headers = { ...(merged.headers || {}), 'X-Clip-Prep': '1' };
+        return orig(input, merged);
+      }
+      return orig(input, init);
+    };
+    window.__sasiFetchWrapped = true;
+  }
+
+  // Tab switching
+  function activateTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    document.querySelectorAll('.panel').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === name);
+    });
+    if (history.replaceState) history.replaceState(null, '', '#' + name);
+  }
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.addEventListener('click', () => activateTab(b.dataset.tab));
+  });
+  // Honor #hash on load
+  const hashTab = (location.hash || '').replace('#', '');
+  if (hashTab && document.querySelector(`[data-tab="${hashTab}"]`)) activateTab(hashTab);
+
+  // Status poller — drives the sidebar online dot + uptime
+  const sbDot = document.getElementById('sb-dot');
+  const sbStatusText = document.getElementById('sb-status-text');
+  function fmtUptime(startedAt) {
+    if (!startedAt) return '';
+    const ms = Date.now() - new Date(startedAt).getTime();
+    const m = Math.floor(ms / 60000);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  }
+  let pollStatus = async function() {
+    try {
+      const r = await fetch(API + '/status');
+      if (!r.ok) throw new Error('http ' + r.status);
+      const s = await r.json();
+      sbDot.className = 'sb-dot online';
+      sbStatusText.textContent = `Online · ${fmtUptime(s.startedAt)}`;
+      window.__sasiStatus = s;
+    } catch (e) {
+      sbDot.className = 'sb-dot offline';
+      sbStatusText.textContent = 'Offline';
+      window.__sasiStatus = null;
+    }
+  };
+  pollStatus();
+  setInterval(pollStatus, 3000);
+
+  // === Now tab rendering ===
+  const $ = (id) => document.getElementById(id);
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function renderNow(s) {
+    if (!s) {
+      $('now-game').textContent = '—';
+      $('now-sub').textContent = 'Watcher offline';
+      $('now-dump').textContent = '—';
+      $('now-queue').textContent = '—';
+      $('now-uptime').textContent = '—';
+      $('now-rec-pill').classList.remove('active');
+      return;
+    }
+    const queueLen = (s.queue || []).length;
+    const lastMove = (s.recentMoves || [])[0];
+    const game = lastMove ? lastMove.target : null;
+
+    $('now-game').textContent = game || 'Idle';
+    $('now-sub').textContent = lastMove
+      ? `Last route ${(lastMove.ts || '').slice(11,19)} → ${lastMove.kind === 'mix' ? '_mix/' : (lastMove.target || '') + '/'}`
+      : 'No recordings yet';
+    $('now-dump').textContent = queueLen + ' files';
+    $('now-queue').textContent = queueLen;
+    $('now-uptime').textContent = fmtUptime(s.startedAt);
+    $('now-rec-pill').classList.toggle('active', queueLen > 0);
+
+    // Recent moves
+    const moves = (s.recentMoves || []).slice(0, 5);
+    const movesEl = $('now-moves');
+    if (moves.length === 0) {
+      movesEl.innerHTML = '<div class="moves-empty">No recent moves</div>';
+    } else {
+      movesEl.innerHTML = moves.map(m => {
+        const ts = escapeHtml(String(m.ts || '').slice(11, 19));
+        const base = escapeHtml(m.basename || '');
+        const targetText = m.kind === 'mix' ? '_mix/' : escapeHtml(m.target || '') + '/';
+        const targetClass = m.kind === 'mix' ? 'target mix' : 'target';
+        return `<div class="moves-row"><span>${ts} · ${base}</span><span class="${targetClass}">${targetText}</span></div>`;
+      }).join('');
+    }
+  }
+
+  // Hook renderNow into the existing pollStatus
+  const _origPoll = pollStatus;
+  pollStatus = async function() {
+    await _origPoll();
+    renderNow(window.__sasiStatus);
+  };
+
+  // Action handlers
+  $('now-open-dump').addEventListener('click', async () => {
+    const dump = window.__sasiStatus?.config?.dumpDir;
+    if (!dump) return;
+    try {
+      const r = await fetch(API + '/open-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: dump }),
+      });
+      if (!r.ok) console.warn('open-folder failed:', r.status);
+    } catch (e) {
+      console.warn('open-folder error:', e);
+    }
+  });
+  $('now-restart').addEventListener('click', async () => {
+    if (!confirm('Restart the watcher?')) return;
+    try { await fetch(API + '/restart', { method: 'POST' }); }
+    catch (e) { console.warn('restart error (expected if watcher already exiting):', e); }
+  });
+
+  // === OBS tab ===
+  const obsOutput = $('obs-output');
+  function setObsOutput(text, kind) {
+    obsOutput.classList.remove('err', 'ok');
+    if (kind) obsOutput.classList.add(kind);
+    obsOutput.textContent = text;
+    obsOutput.classList.add('show');
+  }
+  async function pickFolder(kind) {
+    try {
+      const r = await fetch(API + '/pick-folder?kind=' + kind, { method: 'POST' });
+      if (!r.ok) { console.warn('pick-folder failed:', r.status); return null; }
+      const j = await r.json();
+      return j.cancelled ? null : j.path;
+    } catch (e) {
+      console.warn('pick-folder error:', e);
+      return null;
+    }
+  }
+  $('obs-export').addEventListener('click', async () => {
+    const out = await pickFolder('output');
+    if (!out) return;
+    setObsOutput('Exporting bundle to ' + out + '...', null);
+    try {
+      const r = await fetch(API + '/export-obs-bundle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outputDir: out }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Export failed', 'err');
+      else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
+    } catch (e) { setObsOutput('Export failed: ' + e.message, 'err'); }
+  });
+  $('obs-import').addEventListener('click', async () => {
+    const bundle = await pickFolder('bundle');
+    if (!bundle) return;
+    setObsOutput('Importing bundle from ' + bundle + '...', null);
+    try {
+      const r = await fetch(API + '/import-obs-bundle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bundlePath: bundle }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Import failed', 'err');
+      else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
+    } catch (e) { setObsOutput('Import failed: ' + e.message, 'err'); }
+  });
+  $('obs-register-lua').addEventListener('click', async () => {
+    setObsOutput('Registering game-tracker.lua...', null);
+    try {
+      const r = await fetch(API + '/register-lua', { method: 'POST' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Register failed', 'err');
+      else setObsOutput(j.output || 'Done.', 'ok');
+    } catch (e) { setObsOutput('Register failed: ' + e.message, 'err'); }
+  });
+
+  function fmtBytes(n) {
+    if (!n) return '0 B';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
+    return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  }
+  async function refreshBackups() {
+    const target = $('obs-backups');
+    try {
+      const r = await fetch(API + '/list-obs-backups');
+      const j = await r.json();
+      const backups = j.backups || [];
+      if (backups.length === 0) {
+        target.innerHTML = '<div class="backup-empty">No auto-backups yet. They appear after each Import.</div>';
+        return;
+      }
+      target.innerHTML = backups.map(b => {
+        const ts = escapeHtml(String(b.modified || '').replace('T', ' ').replace(/\..+/, ''));
+        const safeName = escapeHtml(b.name || '');
+        return `<div class="backup-row">
+          <div>
+            <div class="backup-name">${safeName}</div>
+            <div class="backup-meta">${ts} · ${b.fileCount || 0} files · ${escapeHtml(fmtBytes(b.sizeBytes))}</div>
+          </div>
+          <button class="btn btn-secondary" data-restore="${safeName}" style="font-size: 10px; padding: 6px 12px">Restore</button>
+          <button class="btn btn-destructive" data-recycle="${safeName}" style="font-size: 10px; padding: 6px 12px">Delete</button>
+        </div>`;
+      }).join('');
+      target.querySelectorAll('[data-restore]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.restore;
+          if (!confirm('Restore from ' + name + '?\n\nYour current OBS state will be saved as a new pre-restore backup first.')) return;
+          setObsOutput('Restoring from ' + name + '...', null);
+          try {
+            const r = await fetch(API + '/restore-obs-backup', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name }),
+            });
+            const j = await r.json();
+            if (!r.ok) setObsOutput('Restore failed: ' + (j.error || 'unknown'), 'err');
+            else { setObsOutput('Restored. Safety backup: ' + j.safetyBackup, 'ok'); refreshBackups(); }
+          } catch (e) { setObsOutput('Restore failed: ' + e.message, 'err'); }
+        });
+      });
+      target.querySelectorAll('[data-recycle]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.recycle;
+          if (!confirm('Send ' + name + ' to the Recycle Bin?')) return;
+          try {
+            const r = await fetch(API + '/delete-obs-backup', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name }),
+            });
+            const j = await r.json();
+            if (!r.ok) setObsOutput('Delete failed: ' + (j.error || 'unknown'), 'err');
+            else refreshBackups();
+          } catch (e) { setObsOutput('Delete failed: ' + e.message, 'err'); }
+        });
+      });
+    } catch (e) {
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+  $('obs-refresh-backups').addEventListener('click', refreshBackups);
+  refreshBackups();
+
+  // === Recordings tab ===
+  async function refreshRecordings() {
+    const target = $('rec-games');
+    try {
+      const r = await fetch(API + '/list-recordings');
+      const j = await r.json();
+      const games = j.games || [];
+      if (games.length === 0) {
+        target.innerHTML = '<div class="backup-empty">No recordings yet.</div>';
+        return;
+      }
+      target.innerHTML = games.map(g => {
+        const safeName = escapeHtml(g.name);
+        return `<div class="game-card" data-game="${safeName}">
+          <div class="game-head">
+            <div>
+              <div class="game-name">${safeName}</div>
+              <div class="game-meta">${g.fileCount} files · ${escapeHtml(fmtBytes(g.totalSize))}</div>
+            </div>
+            <div class="game-caret">▶</div>
+          </div>
+          <div class="game-files">
+            ${(g.files || []).map(f => `
+              <div class="file-row">
+                <span class="name">${escapeHtml(f.name)}</span>
+                <span class="size">${escapeHtml(fmtBytes(f.size))}</span>
+                <button class="file-recycle" data-recycle="${escapeHtml(f.path)}" title="Recycle">Del</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+      }).join('');
+      target.querySelectorAll('.game-head').forEach(h => {
+        h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+      });
+      target.querySelectorAll('[data-recycle]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Send to Recycle Bin?\n' + btn.dataset.recycle)) return;
+          try {
+            const r = await fetch(API + '/recycle-file', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: btn.dataset.recycle }),
+            });
+            if (!r.ok) { const j = await r.json().catch(() => ({})); alert('Recycle failed: ' + (j.error || 'http ' + r.status)); }
+          } catch (err) { alert('Recycle failed: ' + err.message); }
+          refreshRecordings();
+        });
+      });
+    } catch (e) {
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  async function refreshMix() {
+    const target = $('rec-mix');
+    try {
+      const r = await fetch(API + '/list-mix');
+      const j = await r.json();
+      const files = j.files || [];
+      if (files.length === 0) {
+        target.innerHTML = '<div class="backup-empty">No mix recordings.</div>';
+        return;
+      }
+      target.innerHTML = files.map(f => {
+        const safeBase = escapeHtml(f.basename);
+        const dur = Math.round(f.duration_sec || 0);
+        const mins = Math.floor(dur / 60);
+        const secs = dur % 60;
+        const games = (f.games || []).map(escapeHtml).join(', ');
+        let statusBadge;
+        if (f.in_progress) statusBadge = '<span class="mix-status in-progress">SPLITTING</span>';
+        else if (f.split) statusBadge = '<span class="mix-status split">SPLIT</span>';
+        else statusBadge = '<span class="mix-status unsplit">UNSPLIT</span>';
+        return `<div class="mix-row">
+          <div>
+            <div class="mix-name">${safeBase}</div>
+            <div class="mix-meta">${mins}m ${secs}s · ${games || '—'} · ${escapeHtml(fmtBytes(f.size_bytes))}</div>
+          </div>
+          ${statusBadge}
+          <button class="btn btn-secondary" data-split="${safeBase}" style="font-size: 10px; padding: 6px 12px" ${f.split || f.in_progress ? 'disabled' : ''}>Split</button>
+          <button class="btn btn-destructive" data-delmix="${safeBase}" data-split-state="${f.split ? 'split' : 'unsplit'}" style="font-size: 10px; padding: 6px 12px" ${f.split ? '' : 'disabled'}>Delete</button>
+        </div>`;
+      }).join('');
+      target.querySelectorAll('[data-split]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (btn.disabled) return;
+          btn.disabled = true; btn.textContent = '...';
+          try {
+            const r = await fetch(API + '/split-mix', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ basename: btn.dataset.split }),
+            });
+            const j = await r.json();
+            if (!r.ok) alert('Split failed: ' + (j.error || 'unknown'));
+          } catch (e) { alert('Split failed: ' + e.message); }
+          refreshMix();
+        });
+      });
+      target.querySelectorAll('[data-delmix]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (btn.disabled) return;
+          if (btn.dataset.splitState !== 'split') return; // defense: only delete after split
+          if (!confirm('Send original mix file to Recycle Bin?')) return;
+          try {
+            const r = await fetch(API + '/delete-mix', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ basename: btn.dataset.delmix }),
+            });
+            if (!r.ok) { const j = await r.json().catch(() => ({})); alert('Delete failed: ' + (j.error || 'http ' + r.status)); }
+          } catch (err) { alert('Delete failed: ' + err.message); }
+          refreshMix();
+        });
+      });
+    } catch (e) {
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  $('rec-refresh').addEventListener('click', () => { refreshRecordings(); refreshMix(); });
+  refreshRecordings();
+  refreshMix();
+  setInterval(refreshMix, 8000); // mix list updates faster — splits resolve mid-session
+
+  // === Settings tab ===
+  function setCfgStatus(text, kind) {
+    const el = $('cfg-status');
+    el.textContent = text;
+    el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+  }
+  // Populate paths from poll results
+  function renderSettings(s) {
+    if (!s) return;
+    $('cfg-dump').value = s.config?.dumpDir || '';
+    $('cfg-target').value = s.config?.targetRoot || '';
+  }
+  // Hook into poll
+  const _origPoll2 = pollStatus;
+  pollStatus = async function() {
+    await _origPoll2();
+    renderSettings(window.__sasiStatus);
+  };
+
+  $('cfg-dump-pick').addEventListener('click', async () => {
+    const p = await pickFolder('dump');
+    if (p) $('cfg-dump').value = p;
+  });
+  $('cfg-target-pick').addEventListener('click', async () => {
+    const p = await pickFolder('target');
+    if (p) $('cfg-target').value = p;
+  });
+  $('cfg-save').addEventListener('click', async () => {
+    const dump = $('cfg-dump').value.trim();
+    const target = $('cfg-target').value.trim();
+    if (!dump || !target) { setCfgStatus('Both folders required', 'err'); return; }
+    setCfgStatus('Saving...', null);
+    try {
+      const r = await fetch(API + '/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dumpDir: dump, targetRoot: target }),
+      });
+      const j = await r.json();
+      if (!r.ok) { setCfgStatus(j.error || 'Save failed', 'err'); return; }
+      setCfgStatus('Saved. Restarting watcher to apply...', 'ok');
+      try { await fetch(API + '/restart', { method: 'POST' }); }
+      catch (e) { /* expected — watcher exits before response drains */ }
+    } catch (e) { setCfgStatus('Save failed: ' + e.message, 'err'); }
+  });
+
+  // Games editor
+  async function loadGames() {
+    try {
+      const r = await fetch(API + '/games');
+      $('games-text').value = await r.text();
+      $('games-status').textContent = '';
+      $('games-status').style.color = '';
+    } catch (e) {
+      $('games-status').textContent = 'Failed to load: ' + e.message;
+      $('games-status').style.color = 'var(--accent-rec)';
+    }
+  }
+  $('games-save').addEventListener('click', async () => {
+    let parsed;
+    try { parsed = JSON.parse($('games-text').value); }
+    catch (e) { $('games-status').textContent = 'Invalid JSON: ' + e.message; $('games-status').style.color = 'var(--accent-rec)'; return; }
+    try {
+      const r = await fetch(API + '/games', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed),
+      });
+      if (!r.ok) throw new Error('http ' + r.status);
+      $('games-status').textContent = 'Saved.';
+      $('games-status').style.color = 'var(--accent-online)';
+    } catch (e) {
+      $('games-status').textContent = 'Save failed: ' + e.message;
+      $('games-status').style.color = 'var(--accent-rec)';
+    }
+  });
+  loadGames();
+
+  // Keep-MKV toggle
+  function renderKeepMkv(s) {
+    if (!s) return;
+    const checkbox = $('cfg-keep-mkv');
+    if (document.activeElement !== checkbox) checkbox.checked = s.config?.keepMkv !== false;
+    $('cfg-keep-mkv-label').textContent = checkbox.checked ? 'Keep .mkv (slower, more disk)' : 'Discard .mkv after .mp4 is ready';
+  }
+  // Hook into poll (third wrap)
+  const _origPoll3 = pollStatus;
+  pollStatus = async function() {
+    await _origPoll3();
+    renderKeepMkv(window.__sasiStatus);
+  };
+  $('cfg-keep-mkv').addEventListener('change', async (e) => {
+    const checked = e.target.checked;
+    $('cfg-keep-mkv-label').textContent = 'Saving...';
+    try {
+      const r = await fetch(API + '/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keepMkv: checked }),
+      });
+      if (!r.ok) { e.target.checked = !checked; alert('Save failed'); return; }
+      $('cfg-keep-mkv-label').textContent = checked ? 'Keep .mkv (slower, more disk)' : 'Discard .mkv after .mp4 is ready';
+    } catch (err) { e.target.checked = !checked; alert('Save failed: ' + err.message); }
+  });
+
+  // Danger zone
+  $('cfg-restart').addEventListener('click', async () => {
+    if (!confirm('Restart the watcher?')) return;
+    try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
+  });
+  $('cfg-stop').addEventListener('click', async () => {
+    if (!confirm('Stop the watcher? It will not auto-restart until you launch it again.')) return;
+    try { await fetch(API + '/stop', { method: 'POST' }); } catch {}
+  });
+  $('cfg-uninstall').addEventListener('click', async () => {
+    if (!confirm('Remove auto-start entirely? Files stay; only the Windows login auto-start is removed.')) return;
+    try {
+      const r = await fetch(API + '/uninstall', { method: 'POST' });
+      if (r.ok) alert('Uninstalled. The watcher will not auto-start on next login.');
+    } catch (e) { alert('Uninstall failed: ' + e.message); }
+  });
+</script>
+</body>
+</html>
