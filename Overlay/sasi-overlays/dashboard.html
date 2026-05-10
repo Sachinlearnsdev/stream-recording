@@ -12,7 +12,7 @@
   .shell { display: flex; min-height: 100vh; }
   .sidebar {
     width: 200px; flex-shrink: 0;
-    background: #0a0c10;
+    background: var(--bg-sidebar);
     border-right: 1px solid var(--bg-divider);
     padding: var(--sp-5) 0;
     position: sticky; top: 0; height: 100vh;
@@ -63,9 +63,9 @@
     font-weight: 600;
   }
   .tab-badge {
-    background: var(--accent-rec); color: #fff;
+    background: var(--accent-rec); color: var(--text-primary);
     font-size: 9px; font-weight: 700;
-    padding: 1px 5px; border-radius: 8px;
+    padding: 1px 5px; border-radius: var(--r-chip);
     margin-left: var(--sp-1);
   }
 
@@ -455,6 +455,15 @@
       </div>
 
       <div class="section">
+        <div class="section-title">Keep MKV</div>
+        <div class="section-hint">When OFF, the watcher discards the .mkv after auto-remux to .mp4 to save disk space. ON keeps both.</div>
+        <label class="field-row" style="align-items: center; cursor: pointer">
+          <input type="checkbox" id="cfg-keep-mkv" style="width: auto; flex: 0">
+          <span class="t-body" id="cfg-keep-mkv-label">Loading...</span>
+        </label>
+      </div>
+
+      <div class="section">
         <div class="section-head">
           <div class="section-title">Games</div>
           <button class="btn btn-secondary" id="games-save" style="font-size: 10px; padding: 6px 12px">Save</button>
@@ -629,9 +638,15 @@
     obsOutput.classList.add('show');
   }
   async function pickFolder(kind) {
-    const r = await fetch(API + '/pick-folder?kind=' + kind, { method: 'POST' });
-    const j = await r.json();
-    return j.cancelled ? null : j.path;
+    try {
+      const r = await fetch(API + '/pick-folder?kind=' + kind, { method: 'POST' });
+      if (!r.ok) { console.warn('pick-folder failed:', r.status); return null; }
+      const j = await r.json();
+      return j.cancelled ? null : j.path;
+    } catch (e) {
+      console.warn('pick-folder error:', e);
+      return null;
+    }
   }
   $('obs-export').addEventListener('click', async () => {
     const out = await pickFolder('output');
@@ -764,7 +779,7 @@
               <div class="file-row">
                 <span class="name">${escapeHtml(f.name)}</span>
                 <span class="size">${escapeHtml(fmtBytes(f.size))}</span>
-                <button class="file-recycle" data-recycle="${escapeHtml(f.path)}" title="Recycle">🗑</button>
+                <button class="file-recycle" data-recycle="${escapeHtml(f.path)}" title="Recycle">Del</button>
               </div>
             `).join('')}
           </div>
@@ -777,10 +792,13 @@
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
           if (!confirm('Send to Recycle Bin?\n' + btn.dataset.recycle)) return;
-          await fetch(API + '/recycle-file', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: btn.dataset.recycle }),
-          });
+          try {
+            const r = await fetch(API + '/recycle-file', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: btn.dataset.recycle }),
+            });
+            if (!r.ok) { const j = await r.json().catch(() => ({})); alert('Recycle failed: ' + (j.error || 'http ' + r.status)); }
+          } catch (err) { alert('Recycle failed: ' + err.message); }
           refreshRecordings();
         });
       });
@@ -839,10 +857,13 @@
           if (btn.disabled) return;
           if (btn.dataset.splitState !== 'split') return; // defense: only delete after split
           if (!confirm('Send original mix file to Recycle Bin?')) return;
-          await fetch(API + '/delete-mix', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ basename: btn.dataset.delmix }),
-          });
+          try {
+            const r = await fetch(API + '/delete-mix', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ basename: btn.dataset.delmix }),
+            });
+            if (!r.ok) { const j = await r.json().catch(() => ({})); alert('Delete failed: ' + (j.error || 'http ' + r.status)); }
+          } catch (err) { alert('Delete failed: ' + err.message); }
           refreshMix();
         });
       });
@@ -931,6 +952,32 @@
     }
   });
   loadGames();
+
+  // Keep-MKV toggle
+  function renderKeepMkv(s) {
+    if (!s) return;
+    const checkbox = $('cfg-keep-mkv');
+    if (document.activeElement !== checkbox) checkbox.checked = s.config?.keepMkv !== false;
+    $('cfg-keep-mkv-label').textContent = checkbox.checked ? 'Keep .mkv (slower, more disk)' : 'Discard .mkv after .mp4 is ready';
+  }
+  // Hook into poll (third wrap)
+  const _origPoll3 = pollStatus;
+  pollStatus = async function() {
+    await _origPoll3();
+    renderKeepMkv(window.__sasiStatus);
+  };
+  $('cfg-keep-mkv').addEventListener('change', async (e) => {
+    const checked = e.target.checked;
+    $('cfg-keep-mkv-label').textContent = 'Saving...';
+    try {
+      const r = await fetch(API + '/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keepMkv: checked }),
+      });
+      if (!r.ok) { e.target.checked = !checked; alert('Save failed'); return; }
+      $('cfg-keep-mkv-label').textContent = checked ? 'Keep .mkv (slower, more disk)' : 'Discard .mkv after .mp4 is ready';
+    } catch (err) { e.target.checked = !checked; alert('Save failed: ' + err.message); }
+  });
 
   // Danger zone
   $('cfg-restart').addEventListener('click', async () => {
