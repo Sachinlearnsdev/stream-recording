@@ -232,6 +232,34 @@
   .mix-status.split { background: rgba(0,255,133,0.1); color: var(--accent-online); }
   .mix-status.unsplit { background: rgba(255,176,32,0.1); color: var(--accent-warn); }
   .mix-status.in-progress { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+
+  /* Forms */
+  .field { margin-bottom: var(--sp-3); }
+  .field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .field input, .field textarea {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    color: var(--text-primary);
+    font-family: inherit; font-size: var(--text-body);
+    transition: border-color var(--t-fast);
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent-online); }
+  .field textarea { font-family: var(--font-mono); font-size: var(--text-mono); min-height: 200px; resize: vertical; }
+  .field-hint { color: var(--text-muted); font-size: 10px; margin-top: var(--sp-1); }
+  .field-row { display: flex; gap: var(--sp-2); align-items: stretch; }
+  .field-row .field { flex: 1; }
+  .field-row input { flex: 1; }
+
+  /* Danger zone */
+  .danger-zone {
+    background: rgba(255,52,52,0.04);
+    border: 1px solid rgba(255,52,52,0.25);
+    border-radius: var(--r-card);
+    padding: var(--sp-4);
+  }
+  .danger-zone .section-title { color: var(--accent-rec); }
 </style>
 </head>
 <body>
@@ -367,7 +395,54 @@
         <div class="page-eyebrow">System</div>
         <div class="page-title">Settings</div>
       </div>
-      <p class="t-small">Settings content goes here in Task 6.</p>
+
+      <div class="section">
+        <div class="section-title">Folders</div>
+        <div class="field">
+          <label>Dump folder</label>
+          <div class="field-row">
+            <input type="text" id="cfg-dump" placeholder="C:\Users\…\Videos\_dump" readonly>
+            <button class="btn btn-secondary" id="cfg-dump-pick">Pick</button>
+          </div>
+          <div class="field-hint">OBS writes recordings here. The watcher moves them out into per-game folders under the target root.</div>
+        </div>
+        <div class="field">
+          <label>Target root</label>
+          <div class="field-row">
+            <input type="text" id="cfg-target" placeholder="C:\Users\…\Videos" readonly>
+            <button class="btn btn-secondary" id="cfg-target-pick">Pick</button>
+          </div>
+          <div class="field-hint">Per-game folders (Valorant/, GTA 5/, _mix/) get created here.</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="cfg-save">Save</button>
+          <span class="t-small" id="cfg-status" style="color: var(--text-muted); align-self: center"></span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Games</div>
+          <button class="btn btn-secondary" id="games-save" style="font-size: 10px; padding: 6px 12px">Save</button>
+        </div>
+        <div class="section-hint">Maps OBS Game Capture exe names → per-game folder name. Edit JSON directly. Watcher hot-reloads on save.</div>
+        <div class="field">
+          <textarea id="games-text" spellcheck="false"></textarea>
+          <div class="field-hint" id="games-status"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="danger-zone">
+          <div class="section-title">Danger zone</div>
+          <div class="section-hint">Stop / restart the watcher, or remove auto-start entirely.</div>
+          <div class="row">
+            <button class="btn btn-secondary" id="cfg-restart">Restart</button>
+            <button class="btn btn-secondary" id="cfg-stop">Stop</button>
+            <button class="btn btn-destructive" id="cfg-uninstall">Uninstall</button>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 </div>
@@ -746,6 +821,96 @@
   refreshRecordings();
   refreshMix();
   setInterval(refreshMix, 8000); // mix list updates faster — splits resolve mid-session
+
+  // === Settings tab ===
+  function setCfgStatus(text, kind) {
+    const el = $('cfg-status');
+    el.textContent = text;
+    el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+  }
+  // Populate paths from poll results
+  function renderSettings(s) {
+    if (!s) return;
+    $('cfg-dump').value = s.config?.dumpDir || '';
+    $('cfg-target').value = s.config?.targetRoot || '';
+  }
+  // Hook into poll
+  const _origPoll2 = pollStatus;
+  pollStatus = async function() {
+    await _origPoll2();
+    renderSettings(window.__sasiStatus);
+  };
+
+  $('cfg-dump-pick').addEventListener('click', async () => {
+    const p = await pickFolder('dump');
+    if (p) $('cfg-dump').value = p;
+  });
+  $('cfg-target-pick').addEventListener('click', async () => {
+    const p = await pickFolder('target');
+    if (p) $('cfg-target').value = p;
+  });
+  $('cfg-save').addEventListener('click', async () => {
+    const dump = $('cfg-dump').value.trim();
+    const target = $('cfg-target').value.trim();
+    if (!dump || !target) { setCfgStatus('Both folders required', 'err'); return; }
+    setCfgStatus('Saving...', null);
+    try {
+      const r = await fetch(API + '/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dumpDir: dump, targetRoot: target }),
+      });
+      const j = await r.json();
+      if (!r.ok) { setCfgStatus(j.error || 'Save failed', 'err'); return; }
+      setCfgStatus('Saved. Restarting watcher to apply...', 'ok');
+      await fetch(API + '/restart', { method: 'POST' });
+    } catch (e) { setCfgStatus('Save failed: ' + e.message, 'err'); }
+  });
+
+  // Games editor
+  async function loadGames() {
+    try {
+      const r = await fetch(API + '/games');
+      $('games-text').value = await r.text();
+      $('games-status').textContent = '';
+    } catch (e) {
+      $('games-status').textContent = 'Failed to load: ' + e.message;
+    }
+  }
+  $('games-save').addEventListener('click', async () => {
+    let parsed;
+    try { parsed = JSON.parse($('games-text').value); }
+    catch (e) { $('games-status').textContent = 'Invalid JSON: ' + e.message; $('games-status').style.color = 'var(--accent-rec)'; return; }
+    try {
+      const r = await fetch(API + '/games', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed),
+      });
+      if (!r.ok) throw new Error('http ' + r.status);
+      $('games-status').textContent = 'Saved.';
+      $('games-status').style.color = 'var(--accent-online)';
+    } catch (e) {
+      $('games-status').textContent = 'Save failed: ' + e.message;
+      $('games-status').style.color = 'var(--accent-rec)';
+    }
+  });
+  loadGames();
+
+  // Danger zone
+  $('cfg-restart').addEventListener('click', async () => {
+    if (!confirm('Restart the watcher?')) return;
+    try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
+  });
+  $('cfg-stop').addEventListener('click', async () => {
+    if (!confirm('Stop the watcher? It will not auto-restart until you launch it again.')) return;
+    try { await fetch(API + '/stop', { method: 'POST' }); } catch {}
+  });
+  $('cfg-uninstall').addEventListener('click', async () => {
+    if (!confirm('Remove auto-start entirely? Files stay; only the Windows login auto-start is removed.')) return;
+    try {
+      const r = await fetch(API + '/uninstall', { method: 'POST' });
+      if (r.ok) alert('Uninstalled. The watcher will not auto-start on next login.');
+    } catch (e) { alert('Uninstall failed: ' + e.message); }
+  });
 </script>
 </body>
 </html>
