@@ -1,0 +1,93 @@
+/* Sasi Studio — Design tokens
+ * Single source of truth for the dashboard + overlay HTML files.
+ * Locked per spec: docs/superpowers/specs/2026-05-10-sasi-studio-dashboard-design.md
+ */
+
+:root {
+  /* Surfaces */
+  --bg-page:    #0E1014;
+  --bg-card:    #13161D;
+  --bg-divider: #1F222A;
+  --bg-border:  #2A2F3A;
+
+  /* Text */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #9DA5B4;
+  --text-muted:     #5A6273;
+
+  /* State accents */
+  --accent-online: #00FF85;
+  --accent-rec:    #FF3434;
+  --accent-warn:   #FFB020;
+
+  /* Typography */
+  --font-ui:   'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+  /* Type scale (px) */
+  --text-display: 24px;
+  --text-heading: 18px;
+  --text-body:    13px;
+  --text-small:   11px;
+  --text-label:   9px;
+  --text-mono:    12px;
+
+  /* Spacing scale (px) */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-7:  32px;
+  --sp-8:  48px;
+
+  /* Radii */
+  --r-chip:   3px;
+  --r-button: 4px;
+  --r-card:   6px;
+  --r-card-lg: 8px;
+
+  /* Transitions */
+  --t-fast: 150ms ease;
+}
+
+/* Base reset */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography utilities */
+.t-display  { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.02em; }
+.t-heading  { font-size: var(--text-heading); font-weight: 600; letter-spacing: -0.01em; }
+.t-body     { font-size: var(--text-body); }
+.t-small    { font-size: var(--text-small); color: var(--text-secondary); }
+.t-label    {
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.t-mono     { font-family: var(--font-mono); font-size: var(--text-mono); }
+
+/* Surface utilities */
+.surface-card {
+  background: var(--bg-card);
+  border: 1px solid var(--bg-divider);
+  border-radius: var(--r-card);
+}
+
+/* Focus state — single rule, applies everywhere */
+*:focus-visible {
+  outline: 1px solid var(--accent-online);
+  outline-offset: 1px;
+}
