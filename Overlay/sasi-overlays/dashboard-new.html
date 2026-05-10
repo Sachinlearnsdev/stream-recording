@@ -77,6 +77,57 @@
   /* Tab panels */
   .panel { display: none; }
   .panel.active { display: block; }
+
+  /* Hero recording card */
+  .hero-card { padding: var(--sp-5); margin-bottom: var(--sp-3); }
+  .hero-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-4); }
+  .hero-label { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .hero-game { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .hero-sub { color: var(--text-secondary); font-size: var(--text-mono); margin-top: 2px; font-family: var(--font-mono); }
+  .rec-pill {
+    display: none; /* hidden by default — JS toggles when recording */
+    align-items: center; gap: var(--sp-2);
+    background: rgba(255,52,52,0.08); border: 1px solid rgba(255,52,52,0.4);
+    border-radius: var(--r-button); padding: 8px 12px;
+  }
+  .rec-pill.active { display: flex; }
+  .rec-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-rec); }
+  .rec-pill .label { color: var(--accent-rec); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; }
+
+  /* Stats grid */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--bg-divider); border-radius: var(--r-button); overflow: hidden; }
+  .stat { background: var(--bg-page); padding: 10px 12px; }
+  .stat-label { color: var(--text-muted); font-size: 9px; font-weight: 600; letter-spacing: 0.15em; }
+  .stat-value { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-body); margin-top: 2px; }
+
+  /* Action row */
+  .actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-4); }
+  .btn {
+    padding: 10px var(--sp-4);
+    border-radius: var(--r-button);
+    font-family: inherit; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; border: 1px solid transparent;
+    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  }
+  .btn-primary { background: var(--text-primary); color: var(--bg-page); border-color: var(--text-primary); flex: 1; }
+  .btn-primary:hover { background: #ddd; border-color: #ddd; }
+  .btn-secondary { background: transparent; color: var(--text-secondary); border-color: var(--bg-border); }
+  .btn-secondary:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+  .btn-destructive {
+    background: rgba(255,52,52,0.08); color: var(--accent-rec);
+    border-color: rgba(255,52,52,0.4);
+  }
+  .btn-destructive:hover { background: rgba(255,52,52,0.15); }
+
+  /* Recent moves table */
+  .moves-card { padding: var(--sp-4) var(--sp-5); }
+  .moves-list { font-family: var(--font-mono); font-size: var(--text-mono); color: var(--text-secondary); margin-top: var(--sp-3); }
+  .moves-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--bg-divider); }
+  .moves-row:last-child { border-bottom: none; }
+  .moves-row .target { color: var(--text-primary); }
+  .moves-row .target.mix { color: var(--accent-warn); }
+  .moves-empty { color: var(--text-muted); font-style: italic; padding: var(--sp-2) 0; }
 </style>
 </head>
 <body>
@@ -111,7 +162,36 @@
         <div class="page-eyebrow">Dashboard</div>
         <div class="page-title">Now</div>
       </div>
-      <p class="t-small">Now-tab content goes here in Task 3.</p>
+
+      <div class="surface-card hero-card">
+        <div class="hero-row">
+          <div>
+            <div class="hero-label">Recording</div>
+            <div class="hero-game" id="now-game">—</div>
+            <div class="hero-sub" id="now-sub">Watcher offline</div>
+          </div>
+          <div class="rec-pill" id="now-rec-pill">
+            <div class="dot"></div>
+            <div class="label">REC</div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="stat-label">DUMP</div><div class="stat-value" id="now-dump">—</div></div>
+          <div class="stat"><div class="stat-label">QUEUE</div><div class="stat-value" id="now-queue">—</div></div>
+          <div class="stat"><div class="stat-label">UPTIME</div><div class="stat-value" id="now-uptime">—</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="now-open-dump">Open Dump Folder</button>
+          <button class="btn btn-secondary" id="now-restart">Restart</button>
+        </div>
+      </div>
+
+      <div class="surface-card moves-card">
+        <div class="hero-label">Recent moves</div>
+        <div class="moves-list" id="now-moves">
+          <div class="moves-empty">No recent moves</div>
+        </div>
+      </div>
     </section>
     <section class="panel" data-panel="overlays">
       <div class="page-head">
@@ -201,7 +281,7 @@
     const h = Math.floor(m / 60);
     return `${h}h ${m % 60}m`;
   }
-  async function pollStatus() {
+  let pollStatus = async function() {
     try {
       const r = await fetch(API + '/status');
       if (!r.ok) throw new Error('http ' + r.status);
@@ -214,9 +294,75 @@
       sbStatusText.textContent = 'Offline';
       window.__sasiStatus = null;
     }
-  }
+  };
   pollStatus();
   setInterval(pollStatus, 3000);
+
+  // === Now tab rendering ===
+  const $ = (id) => document.getElementById(id);
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function renderNow(s) {
+    if (!s) {
+      $('now-game').textContent = '—';
+      $('now-sub').textContent = 'Watcher offline';
+      $('now-dump').textContent = '—';
+      $('now-queue').textContent = '—';
+      $('now-uptime').textContent = '—';
+      $('now-rec-pill').classList.remove('active');
+      return;
+    }
+    const queueLen = (s.queue || []).length;
+    const lastMove = (s.recentMoves || [])[0];
+    const game = lastMove ? lastMove.target : null;
+
+    $('now-game').textContent = game || 'Idle';
+    $('now-sub').textContent = lastMove
+      ? `Last route ${(lastMove.ts || '').slice(11,19)} → ${lastMove.kind === 'mix' ? '_mix/' : (lastMove.target || '') + '/'}`
+      : 'No recordings yet';
+    $('now-dump').textContent = queueLen + ' files';
+    $('now-queue').textContent = queueLen;
+    $('now-uptime').textContent = fmtUptime(s.startedAt);
+    $('now-rec-pill').classList.toggle('active', queueLen > 0);
+
+    // Recent moves
+    const moves = (s.recentMoves || []).slice(0, 5);
+    const movesEl = $('now-moves');
+    if (moves.length === 0) {
+      movesEl.innerHTML = '<div class="moves-empty">No recent moves</div>';
+    } else {
+      movesEl.innerHTML = moves.map(m => {
+        const ts = escapeHtml(String(m.ts || '').slice(11, 19));
+        const base = escapeHtml(m.basename || '');
+        const targetText = m.kind === 'mix' ? '_mix/' : escapeHtml(m.target || '') + '/';
+        const targetClass = m.kind === 'mix' ? 'target mix' : 'target';
+        return `<div class="moves-row"><span>${ts} · ${base}</span><span class="${targetClass}">${targetText}</span></div>`;
+      }).join('');
+    }
+  }
+
+  // Hook renderNow into the existing pollStatus
+  const _origPoll = pollStatus;
+  pollStatus = async function() {
+    await _origPoll();
+    renderNow(window.__sasiStatus);
+  };
+
+  // Action handlers
+  $('now-open-dump').addEventListener('click', async () => {
+    const dump = window.__sasiStatus?.config?.dumpDir;
+    if (!dump) return;
+    await fetch(API + '/open-folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: dump }),
+    });
+  });
+  $('now-restart').addEventListener('click', async () => {
+    if (!confirm('Restart the watcher?')) return;
+    try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
+  });
 </script>
 </body>
 </html>
