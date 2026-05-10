@@ -629,12 +629,18 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // POST /export-obs-bundle  body: { outputDir }
   // Runs obs-export.ps1 -OutputDir <outputDir>. Returns full stdout/stderr.
   app.post('/export-obs-bundle', async (req, res) => {
-    const outputDir = (req.body && req.body.outputDir) ? String(req.body.outputDir).replace(/\//g, path.sep) : '';
-    if (!outputDir) return res.status(400).json({ error: 'body.outputDir required' });
+    const pickedDir = (req.body && req.body.outputDir) ? String(req.body.outputDir).replace(/\//g, path.sep) : '';
+    if (!pickedDir) return res.status(400).json({ error: 'body.outputDir required' });
     if (!exportScript || !existsSync(exportScript)) {
       return res.status(500).json({ error: 'export script not found at ' + exportScript });
     }
+    // Auto-create a timestamped subfolder so bundle files never leak into a
+    // non-empty picked folder (which has happened — users pick their recordings
+    // root and end up with manifest.json / global.ini sitting alongside videos).
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
+    const outputDir = path.join(pickedDir, 'bundle-' + stamp);
     try {
+      if (!existsSync(outputDir)) await fs.mkdir(outputDir, { recursive: true });
       log.info(`export-obs-bundle: ${outputDir}`);
       const r = await runPowerShell(exportScript, ['-OutputDir', outputDir], { log });
       const combined = (r.stdout + (r.stderr ? '\n--- stderr ---\n' + r.stderr : '')).trim();
@@ -820,6 +826,98 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       res.json({ ok: true, output: r.stdout.trim() });
     } catch (err) {
       log.error(`delete-obs-backup failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ===== ASSET / SCENE UPLOAD (Sasi Studio v2 Overlays tab) =====
+  // Accepts base64-encoded payloads via JSON (no multer dependency). Strict
+  // filename validation (no path traversal). Writes into install dir's
+  // sasi-overlays/{assets,scenes}/.
+  const overlaysRoot = installDir ? path.join(installDir, 'sasi-overlays') : '';
+
+  function isSafeFilename(name) {
+    if (!name || typeof name !== 'string') return false;
+    if (name.includes('/') || name.includes('\\')) return false;
+    if (name === '.' || name === '..' || name.includes('..')) return false;
+    if (/[\x00-\x1f<>:"|?*]/.test(name)) return false;
+    if (name.length > 200) return false;
+    return true;
+  }
+
+  // POST /upload-asset — body: { filename, dataBase64 }
+  // Image (PNG/JPG/SVG/WebP) → install dir's sasi-overlays/assets/<filename>.
+  app.post('/upload-asset', async (req, res) => {
+    if (!overlaysRoot) return res.status(500).json({ error: 'overlaysRoot not configured' });
+    const { filename, dataBase64 } = req.body || {};
+    if (!isSafeFilename(filename)) return res.status(400).json({ error: 'invalid filename' });
+    if (!dataBase64 || typeof dataBase64 !== 'string') return res.status(400).json({ error: 'dataBase64 required' });
+    if (!/\.(png|jpe?g|gif|webp|svg)$/i.test(filename)) {
+      return res.status(400).json({ error: 'only PNG/JPG/GIF/WebP/SVG allowed' });
+    }
+    try {
+      const buf = Buffer.from(dataBase64, 'base64');
+      if (buf.length > 10 * 1024 * 1024) return res.status(400).json({ error: 'asset too large (max 10MB)' });
+      const assetsDir = path.join(overlaysRoot, 'assets');
+      if (!existsSync(assetsDir)) await fs.mkdir(assetsDir, { recursive: true });
+      const dest = path.join(assetsDir, filename);
+      await fs.writeFile(dest, buf);
+      log.info(`upload-asset: ${dest} (${buf.length} bytes)`);
+      res.json({ ok: true, path: dest.replace(/\\/g, '/'), url: 'assets/' + filename });
+    } catch (err) {
+      log.error(`upload-asset failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /upload-scene — body: { filename, html }
+  // Custom overlay HTML → install dir's sasi-overlays/scenes/<filename>.
+  // Returns the file:// URL the user can paste into OBS browser source.
+  app.post('/upload-scene', async (req, res) => {
+    if (!overlaysRoot) return res.status(500).json({ error: 'overlaysRoot not configured' });
+    const { filename, html } = req.body || {};
+    if (!isSafeFilename(filename)) return res.status(400).json({ error: 'invalid filename' });
+    if (!html || typeof html !== 'string') return res.status(400).json({ error: 'html (string) required' });
+    if (!/\.html?$/i.test(filename)) return res.status(400).json({ error: 'only .html files allowed' });
+    if (html.length > 2 * 1024 * 1024) return res.status(400).json({ error: 'scene too large (max 2MB)' });
+    try {
+      const scenesDir = path.join(overlaysRoot, 'scenes');
+      if (!existsSync(scenesDir)) await fs.mkdir(scenesDir, { recursive: true });
+      const dest = path.join(scenesDir, filename);
+      await fs.writeFile(dest, html, { encoding: 'utf8' });
+      const fileUrl = 'file:///' + dest.replace(/\\/g, '/');
+      log.info(`upload-scene: ${dest} (${html.length} chars)`);
+      res.json({ ok: true, path: dest.replace(/\\/g, '/'), fileUrl });
+    } catch (err) {
+      log.error(`upload-scene failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /list-scenes — returns the user's scene files (built-in + custom)
+  app.get('/list-scenes', async (_req, res) => {
+    if (!overlaysRoot) return res.status(500).json({ error: 'overlaysRoot not configured' });
+    const scenesDir = path.join(overlaysRoot, 'scenes');
+    try {
+      if (!existsSync(scenesDir)) return res.json({ scenes: [] });
+      const entries = await fs.readdir(scenesDir, { withFileTypes: true });
+      const scenes = [];
+      for (const ent of entries) {
+        if (!ent.isFile() || !/\.html?$/i.test(ent.name)) continue;
+        const full = path.join(scenesDir, ent.name);
+        const stat = await fs.stat(full);
+        scenes.push({
+          name: ent.name,
+          path: full.replace(/\\/g, '/'),
+          fileUrl: 'file:///' + full.replace(/\\/g, '/'),
+          size: stat.size,
+          mtime: stat.mtimeMs,
+        });
+      }
+      scenes.sort((a, b) => a.name.localeCompare(b.name));
+      res.json({ scenes });
+    } catch (err) {
+      log.error(`list-scenes failed: ${err.message}`);
       res.status(500).json({ error: err.message });
     }
   });

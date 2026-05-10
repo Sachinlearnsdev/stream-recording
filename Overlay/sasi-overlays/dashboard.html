@@ -77,10 +77,11 @@
 
   /* === OVERLAYS TAB === */
   /* Scene grid */
-  .scene-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-6); }
+  .scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-6); }
   .scene-card {
     background: var(--bg-card); border: 1px solid var(--bg-divider); border-radius: var(--r-card);
     overflow: hidden; cursor: pointer; transition: border-color var(--t-fast);
+    position: relative;
   }
   .scene-card:hover { border-color: var(--text-muted); }
   .scene-card.active { border-color: var(--accent-online); }
@@ -93,7 +94,17 @@
     background: var(--bg-divider); padding: 6px 10px;
     color: var(--text-secondary); font-size: 10px;
     font-weight: 600; text-align: center;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
   }
+  .scene-label .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .scene-copy-btn {
+    background: transparent; border: 1px solid var(--bg-border); color: var(--text-muted);
+    font-family: inherit; font-size: 9px; font-weight: 600; letter-spacing: 0.05em;
+    padding: 2px 6px; border-radius: var(--r-chip); cursor: pointer;
+    transition: color var(--t-fast), border-color var(--t-fast);
+  }
+  .scene-copy-btn:hover { color: var(--accent-online); border-color: var(--accent-online); }
+  .scene-copy-btn.copied { color: var(--accent-online); border-color: var(--accent-online); }
   .scene-card.active .scene-label { background: rgba(0,255,133,0.08); color: var(--accent-online); }
 
   /* Scene editor */
@@ -429,28 +440,27 @@
     <section class="panel active" data-panel="overlays">
       <div class="page-head"><div class="page-eyebrow">Stream</div><div class="page-title">Overlays</div></div>
 
-      <div class="scene-grid" id="scene-grid">
-        <div class="scene-card active" data-scene="starting-soon">
-          <div class="scene-thumb"><iframe data-src="scenes/starting-soon.html"></iframe></div>
-          <div class="scene-label">Starting Soon</div>
-        </div>
-        <div class="scene-card" data-scene="brb">
-          <div class="scene-thumb"><iframe data-src="scenes/brb.html"></iframe></div>
-          <div class="scene-label">BRB</div>
-        </div>
-        <div class="scene-card" data-scene="stream-ending">
-          <div class="scene-thumb"><iframe data-src="scenes/stream-ending.html"></iframe></div>
-          <div class="scene-label">Stream Ending</div>
-        </div>
-        <div class="scene-card" data-scene="overlay">
-          <div class="scene-thumb"><iframe data-src="scenes/overlay.html"></iframe></div>
-          <div class="scene-label">In-Game</div>
-        </div>
-        <div class="scene-card" data-scene="just-chatting">
-          <div class="scene-thumb"><iframe data-src="scenes/just-chatting.html"></iframe></div>
-          <div class="scene-label">Just Chatting</div>
+      <div class="advanced-accordion" id="adv-uploads" style="margin-bottom:var(--sp-4)">
+        <div class="advanced-head"><div class="title">▶ Upload custom logo + overlay layouts</div><div class="caret">▶</div></div>
+        <div class="advanced-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)">
+            <div>
+              <div class="section-title">Brand logo</div>
+              <div class="section-hint">Upload a PNG or JPG. Replaces <code>assets/Sasi_Streams_logo.png</code> across all overlays — your logo appears in the top-left of every scene.</div>
+              <input type="file" id="upload-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="font-size:var(--text-small);color:var(--text-secondary)">
+              <div class="field-hint" id="upload-logo-status" style="min-height:1.2em"></div>
+            </div>
+            <div>
+              <div class="section-title">Custom overlay layout</div>
+              <div class="section-hint">Upload an .html file. Saved to <code>scenes/</code>. Returns a <code>file://</code> path — paste it into OBS → Add Source → Browser → URL.</div>
+              <input type="file" id="upload-scene" accept=".html,text/html" style="font-size:var(--text-small);color:var(--text-secondary)">
+              <div class="field-hint" id="upload-scene-status" style="min-height:1.2em;word-break:break-all"></div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div class="scene-grid" id="scene-grid"></div>
 
       <div class="editor-row">
         <div class="editor-form">
@@ -977,6 +987,88 @@ setInterval(() => pollStatus(), 3000);
 // OVERLAYS TAB
 // =========================================================
 
+// Default friendly labels for built-in scenes; unknown scenes show their filename.
+const SCENE_LABELS = {
+  'starting-soon.html': 'Starting Soon',
+  'brb.html': 'BRB',
+  'stream-ending.html': 'Stream Ending',
+  'overlay.html': 'In-Game',
+  'just-chatting.html': 'Just Chatting',
+  'breaking-news.html': 'Breaking News',
+  'transition.html': 'Transition',
+  'bg.html': 'Background',
+};
+
+// Build the grid dynamically — include ALL .html scenes from disk so custom
+// uploads appear as new tiles automatically.
+async function buildSceneGrid() {
+  const grid = document.getElementById('scene-grid');
+  // Try to fetch scene list from the watcher; fall back to the built-in 5.
+  let scenes = [];
+  try {
+    const r = await fetch(API + '/list-scenes');
+    if (r.ok) scenes = (await r.json()).scenes || [];
+  } catch {}
+  if (scenes.length === 0) {
+    // Fallback when watcher has no /list-scenes endpoint (older deploy).
+    scenes = ['starting-soon.html', 'brb.html', 'stream-ending.html', 'overlay.html', 'just-chatting.html']
+      .map(name => ({ name, fileUrl: 'scenes/' + name }));
+  }
+  // Skip bg.html — it's a layered background, not a standalone scene.
+  scenes = scenes.filter(s => s.name !== 'bg.html');
+  const previousActive = window.__activeScene || (scenes[0] && scenes[0].name.replace('.html', ''));
+
+  grid.innerHTML = scenes.map(s => {
+    const sceneId = s.name.replace(/\.html?$/i, '');
+    const label = SCENE_LABELS[s.name] || sceneId;
+    const isActive = sceneId === previousActive;
+    // Use the file:// URL if returned by API (for OBS browser source); use relative
+    // src for the iframe preview (relative resolves to file:// when dashboard runs from disk).
+    const previewSrc = 'scenes/' + s.name;
+    const obsUrl = s.fileUrl || ('file:///' + location.pathname.replace(/\/[^/]*$/, '') + '/scenes/' + s.name);
+    return `<div class="scene-card${isActive ? ' active' : ''}" data-scene="${sceneId}" data-file="${escapeAttr(s.name)}" data-obs-url="${escapeAttr(obsUrl)}">
+      <div class="scene-thumb"><iframe data-src="${escapeAttr(previewSrc)}"></iframe></div>
+      <div class="scene-label">
+        <span class="name" title="${escapeAttr(label)}">${escapeAttr(label)}</span>
+        <button class="scene-copy-btn" data-copy-url="${escapeAttr(obsUrl)}" title="Copy URL for OBS Browser source">📋 URL</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Wire scene-card clicks (excluding the copy button)
+  grid.querySelectorAll('.scene-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.scene-copy-btn')) return; // copy button handles its own click
+      grid.querySelectorAll('.scene-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      window.__activeScene = card.dataset.scene;
+      window.dispatchEvent(new CustomEvent('sasi-scene-change', { detail: card.dataset.scene }));
+    });
+  });
+
+  // Copy URL buttons
+  grid.querySelectorAll('.scene-copy-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copyUrl);
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+      } catch (err) {
+        alert('Copy failed. URL is:\n\n' + btn.dataset.copyUrl);
+      }
+    });
+  });
+
+  scaleSceneThumbs();
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 // Scale grid thumbnails to fit container
 function scaleSceneThumbs() {
   document.querySelectorAll('.scene-thumb').forEach(thumb => {
@@ -993,19 +1085,10 @@ function scaleEditorPreview() {
   if (!container || !iframe) return;
   iframe.style.transform = `scale(${container.clientWidth / 1920})`;
 }
-requestAnimationFrame(() => { scaleSceneThumbs(); scaleEditorPreview(); });
-window.addEventListener('resize', () => { scaleSceneThumbs(); scaleEditorPreview(); });
-
-// Active scene state + click handler
+// Initial active scene + dynamic grid build (replaces static markup)
 window.__activeScene = 'starting-soon';
-document.querySelectorAll('.scene-card').forEach(card => {
-  card.addEventListener('click', () => {
-    document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
-    window.__activeScene = card.dataset.scene;
-    window.dispatchEvent(new CustomEvent('sasi-scene-change', { detail: card.dataset.scene }));
-  });
-});
+buildSceneGrid();
+window.addEventListener('resize', () => { scaleSceneThumbs(); scaleEditorPreview(); });
 
 // Per-scene field definitions
 const SCENE_FIELDS = {
@@ -1066,6 +1149,11 @@ function renderEditor(sceneName) {
   const container = document.getElementById('editor-fields');
   document.getElementById('editor-title').textContent = 'SELECTED · ' + sceneName.toUpperCase().replace('-', ' ');
 
+  if (fields.length === 0) {
+    container.innerHTML = '<div class="placeholder-card" style="padding:var(--sp-4);text-align:left"><div class="placeholder-title" style="font-size:var(--text-body)">Custom layout</div><div class="placeholder-desc" style="margin:0;text-align:left">Live preview is on the right. To make text fields editable here, the scene HTML needs to call <code>registerLiveUpdater()</code> from <code>lib/live-update.js</code> for each editable element. See an existing scene like <code>starting-soon.html</code> for the pattern.</div></div>';
+    return;
+  }
+
   container.innerHTML = fields.map(f => {
     const stored = localStorage.getItem('sasi_' + f.key) || '';
     if (f.type === 'toggle') {
@@ -1117,6 +1205,66 @@ document.getElementById('preview-reload').addEventListener('click', () => {
   // Also reload all grid thumbs so they pick up theme/color changes
   document.querySelectorAll('.scene-thumb iframe').forEach(f => { f.src = f.src; });
   setTimeout(() => { scaleSceneThumbs(); scaleEditorPreview(); }, 200);
+});
+
+// === Overlays tab — upload handlers ===
+document.querySelectorAll('#adv-uploads .advanced-head').forEach(h =>
+  h.addEventListener('click', () => h.parentElement.classList.toggle('open'))
+);
+
+document.getElementById('upload-logo').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('upload-logo-status');
+  status.textContent = 'Uploading ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB)...';
+  status.style.color = 'var(--text-muted)';
+  try {
+    const buf = await file.arrayBuffer();
+    const dataBase64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    // Always save as Sasi_Streams_logo.png so existing scenes pick it up via SASI_CONFIG.brand.logo
+    const filename = 'Sasi_Streams_logo' + (file.name.match(/\.[^.]+$/) || ['.png'])[0];
+    const r = await fetch(API + '/upload-asset', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, dataBase64 }),
+    });
+    const j = await r.json();
+    if (!r.ok) { status.textContent = 'Failed: ' + (j.error || 'http ' + r.status); status.style.color = 'var(--accent-rec)'; return; }
+    status.textContent = '✓ Saved to ' + j.path + '. Reload preview to see it.';
+    status.style.color = 'var(--accent-online)';
+    // Force-reload all scene iframes so the new logo loads
+    document.querySelectorAll('.scene-thumb iframe').forEach(f => { f.src = f.src; });
+    const editor = document.getElementById('editor-preview-iframe');
+    if (editor) editor.src = editor.src;
+  } catch (err) {
+    status.textContent = 'Failed: ' + err.message;
+    status.style.color = 'var(--accent-rec)';
+  }
+  e.target.value = '';
+});
+
+document.getElementById('upload-scene').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('upload-scene-status');
+  status.textContent = 'Uploading ' + file.name + '...';
+  status.style.color = 'var(--text-muted)';
+  try {
+    const html = await file.text();
+    const r = await fetch(API + '/upload-scene', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, html }),
+    });
+    const j = await r.json();
+    if (!r.ok) { status.textContent = 'Failed: ' + (j.error || 'http ' + r.status); status.style.color = 'var(--accent-rec)'; return; }
+    status.innerHTML = '✓ Saved. New scene tile added below. <strong>OBS Browser source URL:</strong><br><code style="font-size:10px;background:var(--bg-page);padding:4px 6px;border-radius:3px;display:inline-block;margin-top:4px;user-select:all">' + j.fileUrl + '</code>';
+    status.style.color = 'var(--accent-online)';
+    // Refresh the scene grid so the new layout appears as a tile
+    setTimeout(() => buildSceneGrid(), 200);
+  } catch (err) {
+    status.textContent = 'Failed: ' + err.message;
+    status.style.color = 'var(--accent-rec)';
+  }
+  e.target.value = '';
 });
 
 // Common controls + brand inputs

@@ -60,7 +60,9 @@
            (window.SASI_CONFIG && SASI_CONFIG.activePlatform) || 'youtube';
   }
   function getVideoId() {
+    // Priority: manual override (Go Live tab input) → last cached found videoId → config default → empty (triggers search).
     return localStorage.getItem('sasi_liveVideoId') ||
+           localStorage.getItem('sasi_lastFoundVideoId') ||
            (window.SASI_CONFIG && SASI_CONFIG.liveVideoId) || '';
   }
   function getTwitchChannel() {
@@ -262,6 +264,22 @@
           console.log('[Chat/YT] Stream live! Chat ID:', chatId);
           ytPollMessages(); return;
         }
+      } else if (data.items && data.items[0]) {
+        // Video exists but isn't a livestream — cached id is stale, drop it.
+        const cached = localStorage.getItem('sasi_lastFoundVideoId');
+        if (cached === videoId) {
+          console.log('[Chat/YT] Cached video', videoId, 'is no longer a livestream — clearing cache, falling back to search');
+          try { localStorage.removeItem('sasi_lastFoundVideoId'); localStorage.removeItem('sasi_lastFoundAt'); } catch {}
+          ytSearchForStream(); return;
+        }
+      } else {
+        // Video deleted/private — drop cache same as above.
+        const cached = localStorage.getItem('sasi_lastFoundVideoId');
+        if (cached === videoId) {
+          console.log('[Chat/YT] Cached video', videoId, 'no longer found — clearing cache, falling back to search');
+          try { localStorage.removeItem('sasi_lastFoundVideoId'); localStorage.removeItem('sasi_lastFoundAt'); } catch {}
+          ytSearchForStream(); return;
+        }
       }
       console.log('[Chat/YT] Not live yet, waiting...');
       ytScheduleDetect(videoId);
@@ -291,9 +309,15 @@
         setTimeout(ytSearchForStream, SEARCH_INTERVAL); return;
       }
       if (data.items && data.items.length > 0) {
-        console.log('[Chat/YT] Found live video:', data.items[0].id.videoId);
+        const foundId = data.items[0].id.videoId;
+        console.log('[Chat/YT] Found live video:', foundId, '— caching to skip search next time');
+        // Cache the videoId so the NEXT GO LIVE skips the 100-unit search.
+        try {
+          localStorage.setItem('sasi_lastFoundVideoId', foundId);
+          localStorage.setItem('sasi_lastFoundAt', String(Date.now()));
+        } catch {}
         detectStartTime = Date.now();
-        ytDetectByVideoId(data.items[0].id.videoId); return;
+        ytDetectByVideoId(foundId); return;
       }
       console.log('[Chat/YT] No stream found, retry ' + searchTries + '/' + MAX_SEARCH_TRIES);
       setTimeout(ytSearchForStream, SEARCH_INTERVAL);
@@ -507,11 +531,12 @@
     const isFake = fakeLs !== null ? fakeLs === 'true' : (window.SASI_CONFIG && SASI_CONFIG.fakeAlerts);
     if (isFake) { startFakeChat(); return; }
 
-    // Check if stream is live (dashboard toggle)
+    // Check if stream is live (dashboard toggle).
+    // Treat null/missing as OFF — protects fresh installs from burning quota
+    // before the user has even clicked GO LIVE.
     const streamLive = localStorage.getItem('sasi_streamLive');
-    if (streamLive === 'false') {
-      console.log('[Chat] Stream not started (dashboard toggle OFF). Waiting...');
-      // Poll every 5s until toggled on
+    if (streamLive !== 'true') {
+      console.log('[Chat] Stream not started (sasi_streamLive=' + streamLive + '). Waiting for GO LIVE...');
       setTimeout(boot, 5000);
       return;
     }
