@@ -353,15 +353,21 @@
   $('now-open-dump').addEventListener('click', async () => {
     const dump = window.__sasiStatus?.config?.dumpDir;
     if (!dump) return;
-    await fetch(API + '/open-folder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: dump }),
-    });
+    try {
+      const r = await fetch(API + '/open-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: dump }),
+      });
+      if (!r.ok) console.warn('open-folder failed:', r.status);
+    } catch (e) {
+      console.warn('open-folder error:', e);
+    }
   });
   $('now-restart').addEventListener('click', async () => {
     if (!confirm('Restart the watcher?')) return;
-    try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
+    try { await fetch(API + '/restart', { method: 'POST' }); }
+    catch (e) { console.warn('restart error (expected if watcher already exiting):', e); }
   });
 </script>
 </body>
