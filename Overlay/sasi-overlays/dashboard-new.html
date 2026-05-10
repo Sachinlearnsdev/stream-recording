@@ -169,6 +169,69 @@
   .backup-empty { color: var(--text-muted); padding: var(--sp-3); text-align: center; }
 
   .row { display: flex; gap: var(--sp-2); }
+
+  /* Per-game accordion */
+  .game-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-card);
+    margin-bottom: var(--sp-2);
+    overflow: hidden;
+  }
+  .game-head {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: var(--sp-3) var(--sp-4);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--t-fast);
+  }
+  .game-head:hover { background: rgba(255,255,255,0.02); }
+  .game-name { color: var(--text-primary); font-weight: 600; font-size: var(--text-body); }
+  .game-meta { color: var(--text-muted); font-size: 10px; font-family: var(--font-mono); }
+  .game-caret { color: var(--text-muted); transition: transform var(--t-fast); font-size: 10px; }
+  .game-card.open .game-caret { transform: rotate(90deg); }
+
+  .game-files { display: none; padding: 0 var(--sp-4) var(--sp-3); }
+  .game-card.open .game-files { display: block; }
+  .file-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: 6px 0;
+    border-top: 1px solid var(--bg-divider);
+    font-family: var(--font-mono); font-size: var(--text-mono);
+    color: var(--text-secondary);
+  }
+  .file-row .name { color: var(--text-primary); }
+  .file-row .size { color: var(--text-muted); font-size: 10px; }
+  .file-recycle { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px 6px; font-size: 11px; }
+  .file-recycle:hover { color: var(--accent-rec); }
+
+  /* Mix list rows */
+  .mix-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: var(--sp-2);
+    align-items: center;
+    padding: var(--sp-3);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-card);
+    margin-bottom: var(--sp-2);
+  }
+  .mix-name { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .mix-meta { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
+  .mix-status {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 3px 6px; border-radius: var(--r-chip);
+  }
+  .mix-status.split { background: rgba(0,255,133,0.1); color: var(--accent-online); }
+  .mix-status.unsplit { background: rgba(255,176,32,0.1); color: var(--accent-warn); }
+  .mix-status.in-progress { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
 </style>
 </head>
 <body>
@@ -246,7 +309,20 @@
         <div class="page-eyebrow">Library</div>
         <div class="page-title">Recordings</div>
       </div>
-      <p class="t-small">Recordings content goes here in Task 5.</p>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">By game</div>
+          <button class="btn btn-secondary" id="rec-refresh" style="font-size: 10px; padding: 6px 12px">Refresh</button>
+        </div>
+        <div id="rec-games"><div class="backup-empty">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Mix recordings</div>
+        <div class="section-hint">Multi-game sessions land here. Split into per-game segments via ffmpeg — original is preserved until you delete it.</div>
+        <div id="rec-mix"><div class="backup-empty">Loading...</div></div>
+      </div>
     </section>
     <section class="panel" data-panel="obs">
       <div class="page-head">
@@ -552,6 +628,123 @@
   }
   $('obs-refresh-backups').addEventListener('click', refreshBackups);
   refreshBackups();
+
+  // === Recordings tab ===
+  async function refreshRecordings() {
+    const target = $('rec-games');
+    try {
+      const r = await fetch(API + '/list-recordings');
+      const j = await r.json();
+      const games = j.games || [];
+      if (games.length === 0) {
+        target.innerHTML = '<div class="backup-empty">No recordings yet.</div>';
+        return;
+      }
+      target.innerHTML = games.map(g => {
+        const safeName = escapeHtml(g.name);
+        return `<div class="game-card" data-game="${safeName}">
+          <div class="game-head">
+            <div>
+              <div class="game-name">${safeName}</div>
+              <div class="game-meta">${g.fileCount} files · ${escapeHtml(fmtBytes(g.totalSize))}</div>
+            </div>
+            <div class="game-caret">▶</div>
+          </div>
+          <div class="game-files">
+            ${(g.files || []).map(f => `
+              <div class="file-row">
+                <span class="name">${escapeHtml(f.name)}</span>
+                <span class="size">${escapeHtml(fmtBytes(f.size))}</span>
+                <button class="file-recycle" data-recycle="${escapeHtml(f.path)}" title="Recycle">🗑</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+      }).join('');
+      target.querySelectorAll('.game-head').forEach(h => {
+        h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+      });
+      target.querySelectorAll('[data-recycle]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Send to Recycle Bin?\n' + btn.dataset.recycle)) return;
+          await fetch(API + '/recycle-file', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: btn.dataset.recycle }),
+          });
+          refreshRecordings();
+        });
+      });
+    } catch (e) {
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  async function refreshMix() {
+    const target = $('rec-mix');
+    try {
+      const r = await fetch(API + '/list-mix');
+      const j = await r.json();
+      const files = j.files || [];
+      if (files.length === 0) {
+        target.innerHTML = '<div class="backup-empty">No mix recordings.</div>';
+        return;
+      }
+      target.innerHTML = files.map(f => {
+        const safeBase = escapeHtml(f.basename);
+        const dur = Math.round(f.duration_sec || 0);
+        const mins = Math.floor(dur / 60);
+        const secs = dur % 60;
+        const games = (f.games || []).map(escapeHtml).join(', ');
+        let statusBadge;
+        if (f.in_progress) statusBadge = '<span class="mix-status in-progress">SPLITTING</span>';
+        else if (f.split) statusBadge = '<span class="mix-status split">SPLIT</span>';
+        else statusBadge = '<span class="mix-status unsplit">UNSPLIT</span>';
+        return `<div class="mix-row">
+          <div>
+            <div class="mix-name">${safeBase}</div>
+            <div class="mix-meta">${mins}m ${secs}s · ${games || '—'} · ${escapeHtml(fmtBytes(f.size_bytes))}</div>
+          </div>
+          ${statusBadge}
+          <button class="btn btn-secondary" data-split="${safeBase}" style="font-size: 10px; padding: 6px 12px" ${f.split || f.in_progress ? 'disabled' : ''}>Split</button>
+          <button class="btn btn-destructive" data-delmix="${safeBase}" style="font-size: 10px; padding: 6px 12px" ${f.split ? '' : 'disabled'}>Delete</button>
+        </div>`;
+      }).join('');
+      target.querySelectorAll('[data-split]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (btn.disabled) return;
+          btn.disabled = true; btn.textContent = '...';
+          try {
+            const r = await fetch(API + '/split-mix', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ basename: btn.dataset.split }),
+            });
+            const j = await r.json();
+            if (!r.ok) alert('Split failed: ' + (j.error || 'unknown'));
+          } catch (e) { alert('Split failed: ' + e.message); }
+          refreshMix();
+        });
+      });
+      target.querySelectorAll('[data-delmix]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (btn.disabled) return;
+          if (!confirm('Send original mix file to Recycle Bin?')) return;
+          await fetch(API + '/delete-mix', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ basename: btn.dataset.delmix }),
+          });
+          refreshMix();
+        });
+      });
+    } catch (e) {
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  $('rec-refresh').addEventListener('click', () => { refreshRecordings(); refreshMix(); });
+  refreshRecordings();
+  refreshMix();
+  setInterval(refreshMix, 8000); // mix list updates faster — splits resolve mid-session
 </script>
 </body>
 </html>
