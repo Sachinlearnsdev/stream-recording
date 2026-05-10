@@ -2,2734 +2,952 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Sasi Streams — Dashboard</title>
+<title>Sasi Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="tokens.css">
 <style>
-:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; --bg:#050005; }
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  background:var(--bg); color:#fff;
-  font-family:'Segoe UI','Arial',sans-serif;
-  min-height:100vh;
-}
+  /* Layout */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: #0a0c10;
+    border-right: 1px solid var(--bg-divider);
+    padding: var(--sp-5) 0;
+    position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  .main { flex: 1; padding: var(--sp-6) var(--sp-7); max-width: 920px; }
 
-/* ── Layout ── */
-.shell { display:flex; min-height:100vh; }
-.sidebar {
-  width:200px; flex-shrink:0;
-  background:rgba(0,0,0,.4);
-  border-right:1px solid rgba(255,34,0,.15);
-  padding:20px 0;
-  position:sticky; top:0; height:100vh;
-}
-.main { flex:1; padding:36px 40px; max-width:720px; }
+  /* Sidebar header */
+  .sb-head { padding: 0 var(--sp-4) var(--sp-4); border-bottom: 1px solid var(--bg-divider); margin-bottom: var(--sp-3); }
+  .sb-brand { display: flex; align-items: center; gap: var(--sp-2); }
+  .sb-mark {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent-rec), var(--accent-warn));
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--bg-page); font-weight: 900; font-size: 13px;
+  }
+  /* Note: the gradient on the brand mark is the ONLY allowed gradient — it's the logo, not chrome. */
+  .sb-name { color: var(--text-primary); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
+  .sb-ver  { color: var(--text-muted); font-size: 9px; letter-spacing: 0.12em; margin-top: 1px; }
+  .sb-status { display: flex; align-items: center; gap: var(--sp-1); margin-top: var(--sp-3); }
+  .sb-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-muted);
+    transition: background var(--t-fast);
+  }
+  .sb-dot.online { background: var(--accent-online); box-shadow: 0 0 6px var(--accent-online); }
+  .sb-dot.offline { background: var(--accent-rec); }
+  .sb-status-text { color: var(--text-secondary); font-size: 10px; font-weight: 500; }
 
-/* ── Sidebar ── */
-.sb-logo {
-  display:flex; align-items:center; gap:10px;
-  padding:0 16px 20px; border-bottom:1px solid rgba(255,34,0,.1);
-  margin-bottom:12px;
-}
-.sb-logo img { width:32px; height:32px; border-radius:6px; }
-.sb-logo span { font-size:11px; font-weight:900; letter-spacing:2px; color:rgba(255,255,255,.5); }
-.tab-btn {
-  display:flex; align-items:center; gap:10px;
-  width:100%; padding:11px 20px;
-  background:transparent; border:none;
-  color:rgba(255,255,255,.5); font-family:inherit;
-  font-size:13px; font-weight:600; letter-spacing:.5px;
-  cursor:pointer; transition:all .15s;
-  text-align:left;
-}
-.tab-btn:hover { color:#fff; background:rgba(255,34,0,.06); }
-.tab-btn.active {
-  color:#fff; background:rgba(255,34,0,.1);
-  border-right:2px solid var(--red);
-}
-.tab-btn .dot {
-  width:6px; height:6px; border-radius:50%;
-  flex-shrink:0;
-}
+  /* Sidebar tabs */
+  .tabs { flex: 1; }
+  .tab-btn {
+    display: block; width: 100%;
+    padding: 10px var(--sp-4);
+    background: transparent; border: none;
+    color: var(--text-secondary);
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    letter-spacing: 0.04em; text-align: left; cursor: pointer;
+    transition: color var(--t-fast), background var(--t-fast);
+    border-left: 2px solid transparent;
+  }
+  .tab-btn:hover { color: var(--text-primary); }
+  .tab-btn.active {
+    color: var(--text-primary);
+    background: rgba(255,255,255,0.03);
+    border-left-color: var(--text-primary);
+    font-weight: 600;
+  }
+  .tab-badge {
+    background: var(--accent-rec); color: #fff;
+    font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 8px;
+    margin-left: var(--sp-1);
+  }
 
-/* ── Tab content ── */
-.tab { display:none; }
-.tab.active { display:block; }
-.tab-title {
-  font-size:20px; font-weight:900; letter-spacing:2px;
-  margin-bottom:6px;
-}
-.tab-desc {
-  font-size:12px; color:rgba(255,255,255,.35); letter-spacing:1px;
-  margin-bottom:28px;
-}
+  /* Page header */
+  .page-head { margin-bottom: var(--sp-6); }
+  .page-eyebrow { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .page-title { font-size: var(--text-display); font-weight: 600; letter-spacing: -0.02em; }
 
-/* ── Sections ── */
-.section { margin-bottom:24px; }
-.section-title {
-  font-size:10px; font-weight:900; letter-spacing:4px;
-  color:var(--orange); text-transform:uppercase;
-  margin-bottom:12px;
-}
+  /* Tab panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
 
-/* ── Fields ── */
-.field { margin-bottom:14px; }
-.field label {
-  display:block; font-size:11px; font-weight:700;
-  letter-spacing:1px; color:rgba(255,255,255,.5);
-  margin-bottom:5px; text-transform:uppercase;
-}
-.field input, .field select, .field textarea {
-  width:100%; padding:10px 14px;
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,34,0,.18);
-  border-radius:6px; color:#fff;
-  font-size:14px; font-family:inherit;
-  outline:none; transition:border-color .15s;
-}
-.field input:focus, .field select:focus { border-color:var(--red); box-shadow:0 0 10px rgba(255,34,0,.12); }
-.field input::placeholder { color:rgba(255,255,255,.2); }
-.field .hint { font-size:11px; color:rgba(255,255,255,.25); margin-top:3px; }
-.field select { cursor:pointer; }
-.field select option { background:#111; }
-.field input[readonly] { opacity:.5; cursor:default; }
+  /* Hero recording card */
+  .hero-card { padding: var(--sp-5); margin-bottom: var(--sp-3); }
+  .hero-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-4); }
+  .hero-label { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .hero-game { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .hero-sub { color: var(--text-secondary); font-size: var(--text-mono); margin-top: 2px; font-family: var(--font-mono); }
+  .rec-pill {
+    display: none; /* hidden by default — JS toggles when recording */
+    align-items: center; gap: var(--sp-2);
+    background: rgba(255,52,52,0.08); border: 1px solid rgba(255,52,52,0.4);
+    border-radius: var(--r-button); padding: 8px 12px;
+  }
+  .rec-pill.active { display: flex; }
+  .rec-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-rec); }
+  .rec-pill .label { color: var(--accent-rec); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; }
 
-.row { display:flex; gap:14px; }
-.row .field { flex:1; }
+  /* Stats grid */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--bg-divider); border-radius: var(--r-button); overflow: hidden; }
+  .stat { background: var(--bg-page); padding: 10px 12px; }
+  .stat-label { color: var(--text-muted); font-size: 9px; font-weight: 600; letter-spacing: 0.15em; }
+  .stat-value { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-body); margin-top: 2px; }
 
-/* Color inputs */
-.color-wrap { display:flex; gap:8px; align-items:center; }
-.color-wrap input[type=color] {
-  width:38px; height:38px; padding:2px; border-radius:6px;
-  border:1px solid rgba(255,34,0,.25); background:transparent; cursor:pointer;
-}
-.color-wrap input[type=text] { flex:1; }
+  /* Action row */
+  .actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-4); }
+  .btn {
+    padding: 10px var(--sp-4);
+    border-radius: var(--r-button);
+    font-family: inherit; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; border: 1px solid transparent;
+    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  }
+  .btn-primary { background: var(--text-primary); color: var(--bg-page); border-color: var(--text-primary); flex: 1; }
+  .btn-primary:hover { background: #ddd; border-color: #ddd; }
+  .btn-secondary { background: transparent; color: var(--text-secondary); border-color: var(--bg-border); }
+  .btn-secondary:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+  .btn-destructive {
+    background: rgba(255,52,52,0.08); color: var(--accent-rec);
+    border-color: rgba(255,52,52,0.4);
+  }
+  .btn-destructive:hover { background: rgba(255,52,52,0.15); }
 
-/* Toggle */
-.toggle-row {
-  display:flex; align-items:center; gap:12px;
-  padding:10px 14px;
-  background:rgba(255,255,255,.02);
-  border:1px solid rgba(255,34,0,.12);
-  border-radius:6px;
-  margin-bottom:10px;
-  cursor:pointer; user-select:none;
-}
-.toggle-row:hover { border-color:rgba(255,34,0,.25); }
-.toggle-row .tl { flex:1; }
-.toggle-row .label { font-size:13px; font-weight:600; }
-.toggle-row .desc { font-size:11px; color:rgba(255,255,255,.3); margin-top:1px; }
-.toggle {
-  width:40px; height:22px; border-radius:11px;
-  background:rgba(255,255,255,.1); position:relative;
-  transition:background .15s; flex-shrink:0;
-}
-.toggle.on { background:var(--red); }
-.toggle::after {
-  content:''; position:absolute; top:2px; left:2px;
-  width:18px; height:18px; border-radius:50%;
-  background:#fff; transition:transform .15s;
-}
-.toggle.on::after { transform:translateX(18px); }
+  /* Recent moves table */
+  .moves-card { padding: var(--sp-4) var(--sp-5); }
+  .moves-list { font-family: var(--font-mono); font-size: var(--text-mono); color: var(--text-secondary); margin-top: var(--sp-3); }
+  .moves-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--bg-divider); }
+  .moves-row:last-child { border-bottom: none; }
+  .moves-row .target { color: var(--text-primary); }
+  .moves-row .target.mix { color: var(--accent-warn); }
+  .moves-empty { color: var(--text-muted); font-style: italic; padding: var(--sp-2) 0; }
 
-/* Status */
-.status {
-  padding:14px; background:rgba(255,255,255,.02);
-  border:1px solid rgba(255,255,255,.06); border-radius:6px;
-}
-.status-title { font-size:10px; font-weight:900; letter-spacing:3px; color:rgba(255,255,255,.3); margin-bottom:6px; }
-.si { display:flex; justify-content:space-between; padding:3px 0; font-size:13px; }
-.si .k { color:rgba(255,255,255,.45); }
-.si .v { font-weight:700; }
-.v.ok { color:#4ade80; } .v.warn { color:var(--gold); } .v.err { color:var(--red); }
+  /* Sections — used in OBS, Recordings, Settings */
+  .section { margin-bottom: var(--sp-6); }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+  .section-title { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+  .section-hint { color: var(--text-muted); font-size: var(--text-small); margin-bottom: var(--sp-3); line-height: 1.6; }
 
-/* Buttons */
-.btn-row { display:flex; gap:10px; margin-top:20px; }
-.btn {
-  padding:12px 20px;
-  border:2px solid var(--red); background:transparent;
-  color:#fff; font-family:inherit; font-size:12px;
-  font-weight:900; letter-spacing:3px;
-  border-radius:6px; cursor:pointer;
-  transition:background .15s; text-transform:uppercase;
-}
-.btn:hover { background:rgba(255,34,0,.1); }
-.btn.primary { background:var(--red); flex:1; }
-.btn.primary:hover { background:#e61e00; }
-.btn.sm { padding:8px 14px; font-size:11px; letter-spacing:2px; border-color:rgba(255,255,255,.15); color:rgba(255,255,255,.6); }
-.btn.sm:hover { border-color:var(--red); color:#fff; }
+  /* Output box for long-running script results */
+  .output-box {
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    padding: var(--sp-3);
+    font-family: var(--font-mono); font-size: var(--text-mono);
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    max-height: 320px; overflow: auto;
+    display: none;
+  }
+  .output-box.show { display: block; }
+  .output-box.err { color: var(--accent-rec); }
+  .output-box.ok { color: var(--accent-online); }
 
-/* Toast */
-.toast {
-  position:fixed; top:16px; left:50%; transform:translateX(-50%);
-  background:var(--red); color:#fff;
-  padding:8px 24px; border-radius:6px;
-  font-size:12px; font-weight:700; letter-spacing:2px;
-  opacity:0; transition:opacity .25s; pointer-events:none; z-index:100;
-}
-.toast.show { opacity:1; }
+  /* Backup list rows */
+  .backup-list { display: flex; flex-direction: column; gap: var(--sp-1); }
+  .backup-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    font-size: var(--text-small);
+  }
+  .backup-name { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .backup-meta { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
+  .backup-empty { color: var(--text-muted); padding: var(--sp-3); text-align: center; }
 
-/* BG preview */
-.bg-grid { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
-.bg-opt {
-  padding:8px 14px; border-radius:6px;
-  border:1px solid rgba(255,255,255,.1);
-  background:rgba(255,255,255,.03);
-  font-size:12px; font-weight:600; letter-spacing:1px;
-  cursor:pointer; transition:all .15s; color:rgba(255,255,255,.5);
-}
-.bg-opt:hover { border-color:rgba(255,34,0,.3); color:#fff; }
-.bg-opt.active { border-color:var(--red); color:#fff; background:rgba(255,34,0,.12); }
+  .row { display: flex; gap: var(--sp-2); }
 
-/* Social rows */
-.social-row {
-  display:flex; gap:8px; align-items:center; margin-bottom:8px;
-}
-.social-row input { flex:1; padding:8px 12px; font-size:13px; }
-.social-row .del-btn {
-  width:32px; height:32px; border:1px solid rgba(255,255,255,.1);
-  background:transparent; color:rgba(255,255,255,.4); border-radius:6px;
-  cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;
-}
-.social-row .del-btn:hover { border-color:var(--red); color:var(--red); }
+  /* Per-game accordion */
+  .game-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-card);
+    margin-bottom: var(--sp-2);
+    overflow: hidden;
+  }
+  .game-head {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: var(--sp-3) var(--sp-4);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--t-fast);
+  }
+  .game-head:hover { background: rgba(255,255,255,0.02); }
+  .game-name { color: var(--text-primary); font-weight: 600; font-size: var(--text-body); }
+  .game-meta { color: var(--text-muted); font-size: 10px; font-family: var(--font-mono); }
+  .game-caret { color: var(--text-muted); transition: transform var(--t-fast); font-size: 10px; }
+  .game-card.open .game-caret { transform: rotate(90deg); }
 
-/* Stream control */
-.stream-btn {
-  width:100%; padding:16px;
-  border-radius:8px; border:2px solid;
-  font-family:inherit; font-size:14px; font-weight:900;
-  letter-spacing:4px; cursor:pointer;
-  transition:all .2s; text-transform:uppercase;
-}
-.stream-btn.start {
-  border-color:#4ade80; color:#4ade80;
-  background:rgba(74,222,128,.06);
-}
-.stream-btn.start:hover {
-  background:rgba(74,222,128,.15);
-  box-shadow:0 0 24px rgba(74,222,128,.2);
-}
-.stream-btn.stop {
-  border-color:var(--red); color:#fff;
-  background:var(--red);
-}
-.stream-btn.stop:hover {
-  background:#cc1a00;
-  box-shadow:0 0 24px rgba(255,34,0,.3);
-}
-.stream-status {
-  text-align:center; margin-top:8px;
-  font-size:11px; letter-spacing:2px;
-  color:rgba(255,255,255,.35);
-}
-.notif-item {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,34,0,.15);
-  border-radius:6px;
-  margin-bottom:6px;
-}
-.notif-item.wheel { border-color:rgba(255,215,0,.3); }
-.notif-item-icon {
-  width:6px; height:6px; border-radius:50%;
-  background:var(--red); flex-shrink:0;
-}
-.notif-item.wheel .notif-item-icon { background:var(--gold); }
-.notif-item-info {
-  flex:1; min-width:0;
-}
-.notif-item-title {
-  font-size:9px; font-weight:900; letter-spacing:2px;
-  color:rgba(255,119,0,.7); text-transform:uppercase;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.notif-item-body {
-  font-size:12px; font-weight:700;
-  color:#fff;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.notif-item-user {
-  font-size:11px; color:rgba(255,255,255,.5);
-}
-.notif-item-time {
-  font-size:9px; color:rgba(255,255,255,.3);
-  font-variant-numeric:tabular-nums;
-  flex-shrink:0;
-}
-.notif-item-dismiss {
-  width:24px; height:24px;
-  border:1px solid rgba(255,255,255,.1);
-  background:transparent;
-  color:rgba(255,255,255,.4);
-  border-radius:4px;
-  cursor:pointer;
-  font-size:14px;
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
-  transition:all .15s;
-}
-.notif-item-dismiss:hover {
-  border-color:var(--red); color:var(--red);
-}
-.notif-empty {
-  padding:14px;
-  text-align:center;
-  font-size:11px;
-  color:rgba(255,255,255,.25);
-  letter-spacing:1px;
-}
-.stream-status .live-indicator {
-  display:inline-block; width:8px; height:8px;
-  border-radius:50%; background:#4ade80;
-  margin-right:6px; vertical-align:middle;
-  animation:statusPulse 1.5s ease-in-out infinite;
-}
-@keyframes statusPulse {
-  0%,100% { opacity:1; box-shadow:0 0 6px #4ade80; }
-  50% { opacity:.4; box-shadow:none; }
-}
+  .game-files { display: none; padding: 0 var(--sp-4) var(--sp-3); }
+  .game-card.open .game-files { display: block; }
+  .file-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: 6px 0;
+    border-top: 1px solid var(--bg-divider);
+    font-family: var(--font-mono); font-size: var(--text-mono);
+    color: var(--text-secondary);
+  }
+  .file-row .name { color: var(--text-primary); }
+  .file-row .size { color: var(--text-muted); font-size: 10px; }
+  .file-recycle { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px 6px; font-size: 11px; }
+  .file-recycle:hover { color: var(--accent-rec); }
+
+  /* Mix list rows */
+  .mix-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: var(--sp-2);
+    align-items: center;
+    padding: var(--sp-3);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-card);
+    margin-bottom: var(--sp-2);
+  }
+  .mix-name { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .mix-meta { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
+  .mix-status {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 3px 6px; border-radius: var(--r-chip);
+  }
+  .mix-status.split { background: rgba(0,255,133,0.1); color: var(--accent-online); }
+  .mix-status.unsplit { background: rgba(255,176,32,0.1); color: var(--accent-warn); }
+  .mix-status.in-progress { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+
+  /* Forms */
+  .field { margin-bottom: var(--sp-3); }
+  .field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: var(--sp-1); text-transform: uppercase; }
+  .field input, .field textarea {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    color: var(--text-primary);
+    font-family: inherit; font-size: var(--text-body);
+    transition: border-color var(--t-fast);
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent-online); }
+  .field textarea { font-family: var(--font-mono); font-size: var(--text-mono); min-height: 200px; resize: vertical; }
+  .field-hint { color: var(--text-muted); font-size: 10px; margin-top: var(--sp-1); }
+  .field-row { display: flex; gap: var(--sp-2); align-items: stretch; }
+  .field-row .field { flex: 1; }
+  .field-row input { flex: 1; }
+
+  /* Danger zone */
+  .danger-zone {
+    background: rgba(255,52,52,0.04);
+    border: 1px solid rgba(255,52,52,0.25);
+    border-radius: var(--r-card);
+    padding: var(--sp-4);
+  }
+  .danger-zone .section-title { color: var(--accent-rec); }
+
+  /* Placeholder card for upcoming features */
+  .placeholder-card {
+    background: var(--bg-card);
+    border: 1px dashed var(--bg-border);
+    border-radius: var(--r-card);
+    padding: var(--sp-7);
+    text-align: center;
+  }
+  .placeholder-icon { font-size: 32px; margin-bottom: var(--sp-3); opacity: 0.5; }
+  .placeholder-title { font-size: var(--text-heading); font-weight: 600; margin-bottom: var(--sp-2); }
+  .placeholder-desc { color: var(--text-secondary); max-width: 480px; margin: 0 auto var(--sp-4); line-height: 1.6; }
+  .placeholder-list { text-align: left; max-width: 320px; margin: 0 auto; color: var(--text-muted); font-size: var(--text-small); }
+  .placeholder-list li { padding: 4px 0; border-bottom: 1px solid var(--bg-divider); list-style: none; }
+  .placeholder-list li:last-child { border-bottom: none; }
+  .placeholder-list li::before { content: '·  '; color: var(--text-muted); }
 </style>
 </head>
 <body>
 <div class="shell">
-
-<!-- ══════════ SIDEBAR ══════════ -->
-<div class="sidebar">
-  <div class="sb-logo">
-    <img src="./assets/Sasi_Streams_logo.png" alt="">
-    <span>DASHBOARD</span>
-  </div>
-  <button class="tab-btn active" onclick="showTab('golive')">
-    <span class="dot" style="background:var(--red)"></span> Go Live
-  </button>
-  <button class="tab-btn" onclick="showTab('starting')">
-    <span class="dot" style="background:var(--orange)"></span> Starting Soon
-  </button>
-  <button class="tab-btn" onclick="showTab('brb')">
-    <span class="dot" style="background:var(--gold)"></span> BRB
-  </button>
-  <button class="tab-btn" onclick="showTab('ending')">
-    <span class="dot" style="background:rgba(255,255,255,.3)"></span> Stream Ending
-  </button>
-  <button class="tab-btn" onclick="showTab('live')">
-    <span class="dot" style="background:#4ade80"></span> Live Overlay
-  </button>
-  <button class="tab-btn" onclick="showTab('alerts')">
-    <span class="dot" style="background:#ffd700"></span> Alerts
-  </button>
-  <button class="tab-btn" onclick="showTab('games')">
-    <span class="dot" style="background:#a855f7"></span> Games
-  </button>
-  <button class="tab-btn" onclick="showTab('theme')">
-    <span class="dot" style="background:cyan"></span> Theme
-  </button>
-  <button class="tab-btn" onclick="showTab('recorder')">
-    <span class="dot" style="background:#10b981"></span> Recorder
-  </button>
-</div>
-
-<!-- ══════════ MAIN ══════════ -->
-<div class="main">
-
-<!-- ────────── GO LIVE ────────── -->
-<div class="tab active" id="tab-golive">
-  <div class="tab-title">GO LIVE</div>
-  <div class="tab-desc">PRE-STREAM SETUP — SET BEFORE EVERY STREAM</div>
-
-  <div class="section">
-    <div class="section-title">Connection</div>
-    <div class="field">
-      <label>Platform</label>
-      <select id="platform" onchange="onPlatformChange()">
-        <option value="youtube">YouTube</option>
-        <option value="twitch">Twitch</option>
-      </select>
-    </div>
-    <div id="yt-fields">
-      <div class="field">
-        <label>YouTube Video ID or URL</label>
-        <input type="text" id="videoId" placeholder="Paste URL or ID (e.g. OAD6b2k10Ys)">
-        <div class="hint">Saves 100x API quota vs auto-search</div>
-      </div>
-    </div>
-    <div id="tw-fields" style="display:none">
-      <div class="field">
-        <label>Twitch Channel</label>
-        <input type="text" id="twitchChannel" readonly>
-        <div class="hint">IRC WebSocket — free, no quota</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Stream Control</div>
-    <div id="stream-ctrl"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Notifications Queue</div>
-    <div class="status" style="margin-bottom:10px">
-      <div class="si"><span class="k">Pending</span><span class="v" id="s-queue">—</span></div>
-    </div>
-    <div id="notif-list" style="max-height:340px;overflow-y:auto;margin-bottom:10px"></div>
-    <button class="btn sm" onclick="clearNotifications()" style="width:100%">CLEAR ALL NOTIFICATIONS</button>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Quick Settings</div>
-    <div class="row">
-      <div class="field">
-        <label>Countdown (min)</label>
-        <input type="number" id="countdown" min="1" max="60" value="5">
-      </div>
-      <div class="field">
-        <label>Today's Topic</label>
-        <input type="text" id="today" placeholder="e.g. REACT VIDEOS">
-      </div>
-    </div>
-    <div class="toggle-row" onclick="toggle('fakeToggle')">
-      <div class="tl">
-        <div class="label">Test Mode</div>
-        <div class="desc">Fake alerts + chat for UI testing</div>
-      </div>
-      <div class="toggle" id="fakeToggle"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Status</div>
-    <div class="status">
-      <div class="si"><span class="k">Platform</span><span class="v" id="s-plat">—</span></div>
-      <div class="si"><span class="k">Chat Source</span><span class="v" id="s-chat">—</span></div>
-      <div class="si" id="s-vid-row"><span class="k">Video ID</span><span class="v" id="s-vid">—</span></div>
-      <div class="si" id="s-keys-row"><span class="k">API Keys</span><span class="v" id="s-keys">—</span></div>
-      <div class="si" id="s-hours-row"><span class="k">Max Stream Time</span><span class="v" id="s-hours">—</span></div>
-      <div class="si"><span class="k">SE Alerts JWT</span><span class="v" id="s-jwt">—</span></div>
-      <div class="si"><span class="k">Test Mode</span><span class="v" id="s-fake">—</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- ────────── STARTING SOON ────────── -->
-<div class="tab" id="tab-starting">
-  <div class="tab-title">STARTING SOON</div>
-  <div class="tab-desc">STARTING-SOON.HTML SCENE SETTINGS</div>
-
-  <div class="section">
-    <div class="section-title">Background</div>
-    <div class="field">
-      <label>Scene Background</label>
-      <div class="bg-grid" id="bg-starting" data-key="bg_startingSoon"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Text</div>
-    <div class="row">
-      <div class="field">
-        <label>Badge</label>
-        <input type="text" id="ss_badge" placeholder="STARTING SOON">
-      </div>
-      <div class="field">
-        <label>Top Text (italic)</label>
-        <input type="text" id="ss_topText" placeholder="Stream">
-      </div>
-    </div>
-    <div class="field">
-      <label>Main Text (big)</label>
-      <input type="text" id="ss_mainText" placeholder="STARTING">
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Countdown (min)</label>
-        <input type="number" id="ss_countdown" min="1" max="60" value="5">
-      </div>
-      <div class="field">
-        <label>Next Stream</label>
-        <input type="text" id="ss_nextStream" placeholder="FRIDAY • 8PM">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Toggles</div>
-    <div class="toggle-row" onclick="toggle('ss_clock')">
-      <div class="tl"><div class="label">Show Clock / Date</div></div>
-      <div class="toggle" id="ss_clock"></div>
-    </div>
-    <div class="toggle-row" onclick="toggle('ss_ticker')">
-      <div class="tl"><div class="label">Show Ticker</div></div>
-      <div class="toggle" id="ss_ticker"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ────────── BRB ────────── -->
-<div class="tab" id="tab-brb">
-  <div class="tab-title">BRB</div>
-  <div class="tab-desc">BRB.HTML SCENE SETTINGS</div>
-
-  <div class="section">
-    <div class="section-title">Background</div>
-    <div class="field">
-      <label>Scene Background</label>
-      <div class="bg-grid" id="bg-brb" data-key="bg_brb"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Text</div>
-    <div class="field">
-      <label>Badge</label>
-      <input type="text" id="brb_badge" placeholder="BRB">
-    </div>
-    <div class="field">
-      <label>Main Text (use \n for line break)</label>
-      <input type="text" id="brb_mainText" placeholder="BE RIGHT\nBACK">
-    </div>
-    <div class="field">
-      <label>Subtext</label>
-      <input type="text" id="brb_subtext" placeholder="grabbing something, back in a moment">
-    </div>
-    <div class="field">
-      <label>Tagline (brand area)</label>
-      <input type="text" id="brb_tagline" placeholder="BE RIGHT BACK">
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Toggles</div>
-    <div class="toggle-row" onclick="toggle('brb_clock')">
-      <div class="tl"><div class="label">Show Clock / Date</div></div>
-      <div class="toggle" id="brb_clock"></div>
-    </div>
-    <div class="toggle-row" onclick="toggle('brb_ticker')">
-      <div class="tl"><div class="label">Show Ticker</div></div>
-      <div class="toggle" id="brb_ticker"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ────────── STREAM ENDING ────────── -->
-<div class="tab" id="tab-ending">
-  <div class="tab-title">STREAM ENDING</div>
-  <div class="tab-desc">STREAM-ENDING.HTML SCENE SETTINGS</div>
-
-  <div class="section">
-    <div class="section-title">Background</div>
-    <div class="field">
-      <label>Scene Background</label>
-      <div class="bg-grid" id="bg-ending" data-key="bg_ending"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Text</div>
-    <div class="row">
-      <div class="field">
-        <label>Badge</label>
-        <input type="text" id="end_badge" placeholder="OFFLINE">
-      </div>
-      <div class="field">
-        <label>Tagline</label>
-        <input type="text" id="end_tagline" placeholder="SEE YOU NEXT TIME">
-      </div>
-    </div>
-    <div class="field">
-      <label>Thanks Text</label>
-      <input type="text" id="end_thanks" placeholder="Thanks for">
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Main Text (big)</label>
-        <input type="text" id="end_main" placeholder="WATCHING">
-      </div>
-      <div class="field">
-        <label>Sub Text</label>
-        <input type="text" id="end_sub" placeholder="SEE YOU SOON">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Toggles</div>
-    <div class="toggle-row" onclick="toggle('end_ticker')">
-      <div class="tl"><div class="label">Show Ticker</div></div>
-      <div class="toggle" id="end_ticker"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ────────── LIVE OVERLAY ────────── -->
-<div class="tab" id="tab-live">
-  <div class="tab-title">LIVE OVERLAY</div>
-  <div class="tab-desc">OVERLAY.HTML — ON-SCREEN DURING GAMEPLAY</div>
-
-  <div class="section">
-    <div class="section-title">Subscribe Strip</div>
-    <div class="field">
-      <label>Scroll Strip Text</label>
-      <input type="text" id="sub_items" placeholder="SUBSCRIBE">
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Likes Strip</div>
-    <div class="field">
-      <label>Scroll Strip Text</label>
-      <input type="text" id="likes_items" placeholder="LIKE">
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Stream Info Panel</div>
-    <div class="hint" style="margin-bottom:10px">Rolling info cards on just-chatting &amp; overlay scenes. Drag to reorder, click type to change fields.</div>
-    <div id="streaminfo-list"></div>
-    <button class="btn sm" onclick="addStreamInfoItem()" style="margin-top:8px">+ ADD ITEM</button>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Webcam Frame</div>
-    <div class="row">
-      <div class="field">
-        <label>Width (px)</label>
-        <input type="number" id="cam_width" value="480">
-      </div>
-      <div class="field">
-        <label>Height (px)</label>
-        <input type="number" id="cam_height" value="270">
-      </div>
-      <div class="field">
-        <label>Position</label>
-        <select id="cam_position">
-          <option value="bottom-left">Bottom Left</option>
-          <option value="bottom-right">Bottom Right</option>
-          <option value="top-left">Top Left</option>
-          <option value="top-right">Top Right</option>
-        </select>
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Margin (px)</label>
-        <input type="number" id="cam_margin" value="20">
-      </div>
-      <div class="field">
-        <label>Label</label>
-        <input type="text" id="cam_label" placeholder="(empty = hidden)">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Name Tag</div>
-    <div class="field">
-      <label>Text (empty = uses brand name)</label>
-      <input type="text" id="nametag" placeholder="">
-    </div>
-  </div>
-</div>
-
-<!-- ────────── ALERTS ────────── -->
-<div class="tab" id="tab-alerts">
-  <div class="tab-title">ALERTS</div>
-  <div class="tab-desc">SUPER CHAT TIERS, DURATIONS &amp; THRESHOLDS</div>
-
-  <div class="section">
-    <div class="section-title">Super Chat Tier Thresholds (INR)</div>
-    <div class="hint" style="margin-bottom:10px">Amount ranges that determine which visual tier a Super Chat gets.</div>
-    <div class="row">
-      <div class="field">
-        <label>Tier 2 starts at (₹)</label>
-        <input type="number" id="alert_t2_min" min="1" value="100">
-      </div>
-      <div class="field">
-        <label>Tier 3 starts at (₹)</label>
-        <input type="number" id="alert_t3_min" min="1" value="500">
-      </div>
-      <div class="field">
-        <label>Tier 4 (Hero) starts at (₹)</label>
-        <input type="number" id="alert_t4_min" min="1" value="2000">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Durations</div>
-    <div class="hint" style="margin-bottom:10px">Super Chat duration scales with amount (logarithmic). Other alerts use fixed durations.</div>
-    <div class="row">
-      <div class="field">
-        <label>Base Duration (ms)</label>
-        <input type="number" id="alert_baseDur" min="1000" max="10000" step="500" value="2500">
-      </div>
-      <div class="field">
-        <label>Max Duration (ms)</label>
-        <input type="number" id="alert_maxDur" min="3000" max="15000" step="500" value="7000">
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Membership (ms)</label>
-        <input type="number" id="alert_memberDur" min="1000" max="15000" step="500" value="6000">
-      </div>
-      <div class="field">
-        <label>Gift Base (ms)</label>
-        <input type="number" id="alert_giftBaseDur" min="1000" max="10000" step="500" value="3000">
-      </div>
-      <div class="field">
-        <label>Gift Per Unit (ms)</label>
-        <input type="number" id="alert_giftPerUnit" min="100" max="1000" step="50" value="400">
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Redeem / Game (ms)</label>
-        <input type="number" id="alert_redeemDur" min="1000" max="10000" step="500" value="5000">
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ────────── GAMES ────────── -->
-<div class="tab" id="tab-games">
-  <div class="tab-title">VIEWER GAMES</div>
-  <div class="tab-desc">WHEEL, MYSTERY BOX &amp; HIGHLIGHT — SE LOYALTY POINTS</div>
-
-  <div class="section">
-    <div class="section-title">🎰 Wheel of Fortune</div>
-    <div class="row">
-      <div class="field">
-        <label>Cost (loyalty points)</label>
-        <input type="number" id="game_wheel_cost" min="0" value="1000000">
-      </div>
-    </div>
-    <div class="field" style="margin-top:8px">
-      <label>Rewards (name : weight — higher weight = more common)</label>
-      <div class="hint" style="margin-bottom:6px">One per line: "Reward Name : 40"</div>
-      <textarea id="game_wheel_rewards" rows="6" style="width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:6px;color:#fff;padding:10px;font-family:monospace;font-size:12px;resize:vertical;">500K Points : 40
-VIP Badge : 20
-Custom Emote : 15
-Shoutout : 15
-1M Points : 8
-Nothing 💀 : 2</textarea>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">📦 Mystery Box</div>
-    <div class="row">
-      <div class="field">
-        <label>Cost (loyalty points)</label>
-        <input type="number" id="game_mystery_cost" min="0" value="500000">
-      </div>
-    </div>
-    <div class="field" style="margin-top:8px">
-      <label>Rewards (name : weight)</label>
-      <textarea id="game_mystery_rewards" rows="5" style="width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:6px;color:#fff;padding:10px;font-family:monospace;font-size:12px;resize:vertical;">Rare Emote Pack : 30
-200K Points : 30
-Secret Role : 15
-Nothing 💀 : 15
-1M Points Jackpot : 10</textarea>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">💬 Highlight Message</div>
-    <div class="row">
-      <div class="field">
-        <label>Cost (loyalty points)</label>
-        <input type="number" id="game_highlight_cost" min="0" value="100000">
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ────────── THEME ────────── -->
-<div class="tab" id="tab-theme">
-  <div class="tab-title">THEME</div>
-  <div class="tab-desc">BRAND, COLORS, EFFECTS &amp; GLOBAL SETTINGS</div>
-
-  <div class="section">
-    <div class="section-title">Brand</div>
-    <div class="row">
-      <div class="field">
-        <label>Channel Name</label>
-        <input type="text" id="brand_name" placeholder="SASI STREAMS">
-      </div>
-      <div class="field">
-        <label>Tagline</label>
-        <input type="text" id="brand_tagline" placeholder="LIVE STREAM">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Locale</div>
-    <div class="row">
-      <div class="field">
-        <label>Number Format Region</label>
-        <select id="locale_region">
-          <option value="en-IN">India (10,00,000)</option>
-          <option value="en-US">US (1,000,000)</option>
-          <option value="en-GB">UK (1,000,000)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Default Currency Symbol</label>
-        <input type="text" id="locale_currency" value="₹" style="max-width:80px">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Ticker Extra Text</div>
-    <div class="hint" style="margin-bottom:10px">Last item in the ticker for each scene.</div>
-    <div class="row">
-      <div class="field">
-        <label>Starting Soon</label>
-        <input type="text" id="ticker_ss" placeholder="Stream Starting Soon — STAY TUNED">
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>BRB</label>
-        <input type="text" id="ticker_brb" placeholder="Be Right Back — STAY TUNED">
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Stream Ending</label>
-        <input type="text" id="ticker_end" placeholder="Stream Ended — SEE YOU SOON">
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Default Background</div>
-    <div class="field">
-      <label>Fallback for scenes without a specific background</label>
-      <div class="bg-grid" id="bg-global" data-key="background"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Colors</div>
-    <div class="row">
-      <div class="field">
-        <label>Primary</label>
-        <div class="color-wrap">
-          <input type="color" id="cRed" value="#FF2200" oninput="syncColor('cRed')">
-          <input type="text" id="cRedHex" value="#FF2200" onchange="syncColorHex('cRed')">
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-brand">
+        <div class="sb-mark">S</div>
+        <div>
+          <div class="sb-name">Sasi Studio</div>
+          <div class="sb-ver">v0.2.0</div>
         </div>
       </div>
-      <div class="field">
-        <label>Secondary</label>
-        <div class="color-wrap">
-          <input type="color" id="cOrange" value="#FF7700" oninput="syncColor('cOrange')">
-          <input type="text" id="cOrangeHex" value="#FF7700" onchange="syncColorHex('cOrange')">
+      <div class="sb-status">
+        <div class="sb-dot" id="sb-dot"></div>
+        <span class="sb-status-text" id="sb-status-text">Connecting...</span>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="now">● Now</button>
+      <button class="tab-btn" data-tab="overlays">Overlays</button>
+      <button class="tab-btn" data-tab="recordings">Recordings</button>
+      <button class="tab-btn" data-tab="obs">OBS</button>
+      <button class="tab-btn" data-tab="keys">Keys</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <section class="panel active" data-panel="now">
+      <div class="page-head">
+        <div class="page-eyebrow">Dashboard</div>
+        <div class="page-title">Now</div>
+      </div>
+
+      <div class="surface-card hero-card">
+        <div class="hero-row">
+          <div>
+            <div class="hero-label">Recording</div>
+            <div class="hero-game" id="now-game">—</div>
+            <div class="hero-sub" id="now-sub">Watcher offline</div>
+          </div>
+          <div class="rec-pill" id="now-rec-pill">
+            <div class="dot"></div>
+            <div class="label">REC</div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="stat-label">DUMP</div><div class="stat-value" id="now-dump">—</div></div>
+          <div class="stat"><div class="stat-label">QUEUE</div><div class="stat-value" id="now-queue">—</div></div>
+          <div class="stat"><div class="stat-label">UPTIME</div><div class="stat-value" id="now-uptime">—</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="now-open-dump">Open Dump Folder</button>
+          <button class="btn btn-secondary" id="now-restart">Restart</button>
         </div>
       </div>
-      <div class="field">
-        <label>Accent</label>
-        <div class="color-wrap">
-          <input type="color" id="cGold" value="#FFD700" oninput="syncColor('cGold')">
-          <input type="text" id="cGoldHex" value="#FFD700" onchange="syncColorHex('cGold')">
+
+      <div class="surface-card moves-card">
+        <div class="hero-label">Recent moves</div>
+        <div class="moves-list" id="now-moves">
+          <div class="moves-empty">No recent moves</div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Socials</div>
-    <div class="hint" style="margin-bottom:10px">Shown in tickers and bottom bars across all scenes. Leave handle empty to hide a platform.</div>
-    <div id="socials-list"></div>
-    <button class="btn sm" onclick="addSocial()" style="margin-top:8px">+ ADD SOCIAL</button>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Effects</div>
-    <div class="toggle-row" onclick="toggle('glitchToggle')">
-      <div class="tl">
-        <div class="label">Glitch Effects</div>
-        <div class="desc">Master toggle for glitch, neon flicker, RGB split</div>
+    </section>
+    <section class="panel" data-panel="overlays">
+      <div class="page-head">
+        <div class="page-eyebrow">Stream</div>
+        <div class="page-title">Overlays</div>
       </div>
-      <div class="toggle" id="glitchToggle"></div>
-    </div>
-    <div class="hint" style="margin:12px 0 8px">Per-element effect assignments:</div>
-    <div id="effects-list"></div>
-    <div class="row">
-      <div class="field">
-        <label>Animation Speed</label>
-        <select id="animSpeed">
-          <option value="0.5">Slow (0.5x)</option>
-          <option value="1">Normal (1x)</option>
-          <option value="1.5">Fast (1.5x)</option>
-          <option value="2">Very Fast (2x)</option>
-        </select>
+      <div class="placeholder-card">
+        <div class="placeholder-title">Live overlay editor — coming soon</div>
+        <div class="placeholder-desc">Click any overlay to preview it as it'll look in OBS, then edit screen-specific content (text, animation, timer, image swap). Theme is locked — colors and fonts come from the design system.</div>
+        <ul class="placeholder-list">
+          <li>Starting Soon</li>
+          <li>Be Right Back</li>
+          <li>Ending Screen</li>
+          <li>Lower Thirds</li>
+        </ul>
       </div>
-      <div class="field">
-        <label>Ticker Speed (sec)</label>
-        <input type="number" id="tickerSpeed" min="10" max="60" value="28">
-        <div class="hint">Lower = faster scroll</div>
+    </section>
+    <section class="panel" data-panel="recordings">
+      <div class="page-head">
+        <div class="page-eyebrow">Library</div>
+        <div class="page-title">Recordings</div>
       </div>
-    </div>
-  </div>
-</div>
 
-<!-- ────────── RECORDER (clip-prep) ────────── -->
-<div class="tab" id="tab-recorder">
-  <div class="tab-title">RECORDER</div>
-  <div class="tab-desc">CLIP-PREP — AUTO-ROUTE OBS RECORDINGS BY GAME</div>
-
-  <div class="section">
-    <div class="section-title">Service Status</div>
-    <div class="status">
-      <div class="si"><span class="k">State</span><span class="v" id="cp-state">—</span></div>
-      <div class="si"><span class="k">Queue</span><span class="v" id="cp-queue">—</span></div>
-    </div>
-    <div class="row" style="margin-top:10px;gap:8px">
-      <button class="btn sm primary" id="cp-start" disabled>START</button>
-      <button class="btn sm" id="cp-stop" disabled>STOP</button>
-      <button class="btn sm" id="cp-restart" disabled>RESTART</button>
-    </div>
-    <div id="cp-launch-status" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(16,185,129,.08);border-left:3px solid #10b981;border-radius:4px;font-size:.85em;line-height:1.5">
-      <strong>Launching watcher…</strong> If a browser prompt appears asking <em>"Open clip-prep?"</em>, click <strong>Open</strong>. Tick "always allow" so future starts are instant.
-      <span id="cp-launch-detail" style="display:block;color:#888;margin-top:4px;font-size:.95em"></span>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Folders</div>
-
-    <div class="field" style="background:#0d0d0d;padding:12px;border-radius:6px;border:1px solid #1f1f1f;margin-bottom:14px">
-      <label style="font-weight:600">OBS Recording Folder <span class="hint" style="font-weight:normal;font-size:.75em;margin-left:6px">recommended</span></label>
-      <div class="hint" style="margin:4px 0 8px">
-        Pick one parent folder. We'll create <code>_dump/</code> (where OBS writes) and <code>recording/</code> (organized output) inside it, and route everything automatically. For split-drive setups (e.g. SSD dump + HDD archive), use the advanced fields below instead.
-      </div>
-      <div class="row" style="gap:6px">
-        <button class="btn sm primary" id="cp-recroot-pick" disabled>📁 PICK ONE FOLDER</button>
-        <button class="btn sm" id="cp-recroot-open" disabled>OPEN IN EXPLORER</button>
-      </div>
-      <div id="cp-recroot-resolved" style="margin-top:8px;font-size:.8em;color:#888;font-family:monospace"></div>
-      <div class="cp-feedback" id="cp-recroot-feedback" style="margin-top:6px;font-size:.85em;min-height:1.2em;color:#888"></div>
-    </div>
-
-    <details style="margin-bottom:6px">
-      <summary style="cursor:pointer;color:#888;font-size:.85em;padding:4px 0">Advanced — set dump and target separately</summary>
-    <div class="field" style="margin-top:10px">
-      <label>Dump folder <span id="cp-dump-dirty" style="color:#FFD700;font-size:.8em;margin-left:6px;display:none">● unsaved</span></label>
-      <div class="hint" style="margin-bottom:6px">Where OBS writes new recordings.</div>
-      <input type="text" id="cp-dump" placeholder="paste path or click PICK FOLDER" autocomplete="off" style="width:100%;font-family:monospace;font-size:.85em;background:#111;color:#eee;border:1px solid #333;padding:8px;border-radius:3px">
-      <div class="row" style="margin-top:8px;gap:6px">
-        <button class="btn sm primary" id="cp-dump-pick" disabled>PICK FOLDER</button>
-        <button class="btn sm primary" id="cp-dump-save" disabled>SAVE PATH</button>
-        <button class="btn sm" id="cp-dump-open" disabled>OPEN IN EXPLORER</button>
-      </div>
-      <div class="cp-feedback" id="cp-dump-feedback" style="margin-top:6px;font-size:.85em;min-height:1.2em;color:#888"></div>
-    </div>
-    <div class="field" style="margin-top:14px">
-      <label>Recording format</label>
-      <div class="hint" style="margin:4px 0 8px">OBS records MKV first (crash-safe) and auto-remuxes to MP4. If you only edit in MP4, untick to discard the MKV after pairing — saves about half the disk per recording.</div>
-      <label style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:.9em;color:#ccc">
-        <input type="checkbox" id="cp-keep-mkv" checked>
-        <span>Keep MKV files after routing</span>
-        <span id="cp-keep-mkv-status" style="font-size:.85em;color:#888"></span>
-      </label>
-      <div style="margin-top:10px;border:1px solid #2a2a2a;border-radius:4px">
-        <div style="padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:rgba(0,0,0,.2)">
-          <strong style="flex:1;font-size:.85em">Existing MKV files in target</strong>
-          <span id="cp-mkv-count" style="font-size:.8em;color:#888">—</span>
-          <button class="btn sm" id="cp-mkv-all" style="font-size:.75em;padding:3px 8px" disabled>ALL</button>
-          <button class="btn sm" id="cp-mkv-none" style="font-size:.75em;padding:3px 8px" disabled>NONE</button>
-          <button class="btn sm" id="cp-mkv-recycle" style="font-size:.78em;padding:4px 10px;background:rgba(255,68,68,.1);border-color:#553;color:#d66" disabled>♻ RECYCLE SELECTED</button>
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">By game</div>
+          <button class="btn btn-secondary" id="rec-refresh" style="font-size: 10px; padding: 6px 12px">Refresh</button>
         </div>
-        <div id="cp-mkv-list" style="max-height:240px;overflow:auto;font-size:.82em"></div>
+        <div id="rec-games"><div class="backup-empty">Loading...</div></div>
       </div>
-      <div class="hint" style="margin-top:6px;font-size:.8em">Tick the MKVs you want to recycle (sent to Recycle Bin, recoverable). <code id="cp-recycle-target">targetRoot</code> is scanned recursively.</div>
-    </div>
 
-    <div class="field" style="margin-top:14px">
-      <label>Target root <span id="cp-root-dirty" style="color:#FFD700;font-size:.8em;margin-left:6px;display:none">● unsaved</span></label>
-      <div class="hint" style="margin-bottom:6px">Where organized clips go. PICK auto-appends <code>/Recording</code> as a subfolder; auto-created on save if it doesn't exist.</div>
-      <input type="text" id="cp-root" placeholder="paste path or click PICK FOLDER" autocomplete="off" style="width:100%;font-family:monospace;font-size:.85em;background:#111;color:#eee;border:1px solid #333;padding:8px;border-radius:3px">
-      <div class="row" style="margin-top:8px;gap:6px">
-        <button class="btn sm primary" id="cp-root-pick" disabled>PICK FOLDER</button>
-        <button class="btn sm primary" id="cp-root-save" disabled>SAVE PATH</button>
-        <button class="btn sm" id="cp-root-open" disabled>OPEN IN EXPLORER</button>
+      <div class="section">
+        <div class="section-title">Mix recordings</div>
+        <div class="section-hint">Multi-game sessions land here. Split into per-game segments via ffmpeg — original is preserved until you delete it.</div>
+        <div id="rec-mix"><div class="backup-empty">Loading...</div></div>
       </div>
-      <div class="cp-feedback" id="cp-root-feedback" style="margin-top:6px;font-size:.85em;min-height:1.2em;color:#888"></div>
-    </div>
-    </details>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Live log</div>
-    <div class="hint" style="margin-bottom:8px">Last 30 entries from the watcher (refreshes every 3s).
-      <button class="btn sm" id="cp-open-log" style="margin-left:8px;font-size:.8em" disabled>OPEN LOG FILE</button>
-    </div>
-    <pre id="cp-log-pane" style="background:#000;color:#bbb;padding:10px;max-height:240px;overflow:auto;font-size:.78em;line-height:1.5;font-family:'Consolas',monospace;border:1px solid #222;border-radius:4px;margin:0;white-space:pre-wrap;word-break:break-word">connecting…</pre>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Recent Moves</div>
-    <ul id="cp-moves" style="font-family:monospace;font-size:.85em;max-height:160px;overflow:auto;padding-left:1.2rem;list-style:disc;color:#ccc"></ul>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Mix recordings</div>
-    <div class="hint" style="margin-bottom:10px">Multi-game recordings in <code>_mix/</code>. Click SPLIT to ffmpeg-cut into per-game segments using the sidecar timeline. Default mode: stream copy (fast, lossless, ±2s keyframe snap). Tick PRECISE for frame-accurate cuts (slow re-encode).</div>
-    <div style="margin-bottom:8px">
-      <label style="font-size:.85em;color:#ccc;cursor:pointer"><input type="checkbox" id="cp-mix-precise" style="margin-right:6px"> Precise cuts (re-encode, slower)</label>
-      <button class="btn sm" id="cp-mix-refresh" style="margin-left:12px">REFRESH LIST</button>
-    </div>
-    <div id="cp-mix-list" style="border:1px solid #222;border-radius:4px;max-height:340px;overflow:auto"></div>
-    <div class="cp-feedback" id="cp-mix-feedback" style="margin-top:8px;font-size:.85em;min-height:1.2em;color:#888"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Game folders <span id="cp-games-dirty" style="color:#FFD700;font-size:.75em;margin-left:6px;display:none">● unsaved changes</span></div>
-    <div class="hint" style="margin-bottom:10px">Maps each game's exe (as OBS Game Capture reports) to a folder. Inline edit per row, or RAW JSON for advanced (if_running) rules. Watcher hot-reloads on save — no restart needed.</div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-      <input type="text" id="cp-games-filter" placeholder="filter by exe or folder…" style="flex:1;min-width:200px;padding:6px 10px;font-size:.85em;background:#111;color:#eee;border:1px solid #333;border-radius:3px">
-      <button class="btn sm" id="cp-games-add-toggle" disabled>+ ADD ENTRY</button>
-      <button class="btn sm" id="cp-games-export" disabled>↓ EXPORT</button>
-      <button class="btn sm" id="cp-games-import-btn" disabled>↑ IMPORT</button>
-      <input type="file" id="cp-games-import-file" accept=".json,application/json" style="display:none">
-      <button class="btn sm" id="cp-games-toggle-raw">RAW JSON</button>
-    </div>
-    <div id="cp-games-add-panel" style="display:none;background:rgba(16,185,129,.05);border:1px dashed rgba(16,185,129,.3);border-radius:4px;padding:10px;margin-bottom:8px">
-      <div class="hint" style="margin-bottom:6px">Add a new mapping. Both fields required.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;align-items:center">
-        <input type="text" id="cp-games-add-exe" placeholder="executable name (no .exe)" style="font-family:monospace;background:#111;color:#eee;border:1px solid #333;padding:6px;border-radius:3px">
-        <input type="text" id="cp-games-add-folder" placeholder="folder name" style="background:#111;color:#eee;border:1px solid #333;padding:6px;border-radius:3px">
-        <button class="btn sm primary" id="cp-games-add-confirm">ADD</button>
-        <button class="btn sm" id="cp-games-add-cancel">CANCEL</button>
+    </section>
+    <section class="panel" data-panel="obs">
+      <div class="page-head">
+        <div class="page-eyebrow">Studio</div>
+        <div class="page-title">OBS</div>
       </div>
-    </div>
-    <div id="cp-games-table" style="border:1px solid #222;border-radius:4px;max-height:340px;overflow:auto"></div>
-    <div id="cp-games-raw-panel" style="display:none;margin-top:8px">
-      <textarea id="cp-games-raw" rows="14" style="width:100%;font-family:monospace;font-size:.8em;background:#111;color:#eee;border:1px solid #333;padding:10px"></textarea>
-      <div style="margin-top:8px"><button class="btn sm primary" id="cp-games-raw-save" disabled>SAVE RAW JSON</button></div>
-    </div>
-    <div class="cp-feedback" id="cp-games-feedback" style="margin-top:8px;font-size:.85em;min-height:1.2em;color:#888"></div>
-    <details style="margin-top:8px;font-size:.82em;color:#888">
-      <summary style="cursor:pointer">JSON format reference (for sharing with AI / importing later)</summary>
-<pre style="background:#111;padding:10px;border-radius:4px;font-size:.95em;line-height:1.5;margin-top:6px;overflow:auto">{
-  "&lt;exe-name&gt;": "&lt;Folder Name&gt;",
-  "GTA5": {
-    "default": "GTA 5",
-    "if_running": [
-      { "process": "FiveM.exe", "name": "GTA 5 RP" }
-    ]
-  }
-}</pre>
-    </details>
-  </div>
 
-  <div class="section" style="background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.25);border-radius:8px">
-    <div class="section-title" style="color:#FFD700">⚙ One-time OBS setup — add the Lua script</div>
-    <div class="hint" style="margin-bottom:10px">
-      In OBS: <strong>Tools → Scripts → click <code>+</code></strong> → in the file picker, <strong>paste this folder path into the address bar</strong> → press Enter → select <code>game-tracker.lua</code> → Open.<br>
-      Do this once per scene collection. Script Log should show <code>[clip-prep] subscribed to Game Capture</code> when it loads.
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <input type="text" id="cp-lua-path" readonly style="flex:1;padding:8px 10px;font-family:monospace;font-size:.85em;background:#111;color:#FFD700;border:1px solid #443300;border-radius:3px" value="(loading…)">
-      <button class="btn sm" id="cp-lua-copy">📋 COPY</button>
-      <button class="btn sm" id="cp-lua-open">OPEN FOLDER</button>
-    </div>
-    <div id="cp-lua-copy-feedback" style="font-size:.8em;color:#10b981;margin-top:6px;min-height:1em"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">OBS Bundle <span class="hint" style="font-weight:normal;font-size:.7em;margin-left:6px">backup &amp; restore your OBS state</span></div>
-    <div class="hint" style="margin-bottom:12px">
-      A bundle is a portable folder containing your OBS scenes, profiles, settings, and third-party plugin DLLs.
-      Keep it on a USB drive, OneDrive, or a separate backup repo — restore on any new PC by clicking Import.
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <button class="btn" id="cp-bundle-export" style="background:rgba(255,215,0,.1);border-color:#FFD700;color:#FFD700">📤 EXPORT BUNDLE</button>
-      <button class="btn" id="cp-bundle-import" style="background:rgba(255,215,0,.1);border-color:#FFD700;color:#FFD700">📥 IMPORT BUNDLE</button>
-    </div>
-    <div class="hint" style="margin-bottom:8px">
-      <strong>Close OBS</strong> before either operation — it locks browser-source state.
-    </div>
-    <div id="cp-bundle-status" style="font-size:.85em;color:#888;min-height:1.2em;margin:8px 0;white-space:pre-wrap;font-family:monospace;background:#0a0a0a;padding:8px;border-radius:4px;display:none;max-height:300px;overflow:auto"></div>
-
-    <div style="margin-top:16px;border-top:1px solid #1a1a1a;padding-top:12px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <strong style="font-size:.9em">Auto-backups</strong>
-        <button class="btn sm" id="cp-bundle-refresh-backups" style="font-size:.7em">REFRESH</button>
-        <span class="hint" style="font-size:.75em">in %APPDATA%\obs-studio\</span>
+      <div class="section">
+        <div class="section-title">Bundle</div>
+        <div class="section-hint"><strong>Close OBS</strong> before either operation — it locks browser-source state.</div>
+        <div class="row" style="margin-bottom: var(--sp-3)">
+          <button class="btn btn-secondary" id="obs-export" style="flex:1">Export Bundle</button>
+          <button class="btn btn-secondary" id="obs-import" style="flex:1">Import Bundle</button>
+        </div>
+        <div class="row" style="margin-bottom: var(--sp-3); align-items: center">
+          <button class="btn btn-secondary" id="obs-register-lua">Register Lua in OBS</button>
+          <span class="t-small" style="color: var(--text-muted)">Wires game-tracker.lua into every scene collection. Re-run after creating a new collection.</span>
+        </div>
+        <div class="output-box" id="obs-output"></div>
       </div>
-      <div class="hint" style="margin-bottom:6px;font-size:.8em">
-        Each Import auto-saves your current OBS state here first. Restore to undo a previous import.
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Auto-backups</div>
+          <button class="btn btn-secondary" id="obs-refresh-backups" style="font-size: 10px; padding: 6px 12px">Refresh</button>
+        </div>
+        <div class="section-hint">Each Import auto-saves your current OBS state here first. Restore to undo a previous import.</div>
+        <div class="backup-list" id="obs-backups">
+          <div class="backup-empty">Loading...</div>
+        </div>
       </div>
-      <div id="cp-bundle-backups"></div>
-    </div>
-  </div>
+    </section>
+    <section class="panel" data-panel="keys">
+      <div class="page-head">
+        <div class="page-eyebrow">Stream</div>
+        <div class="page-title">Keys</div>
+      </div>
+      <div class="placeholder-card">
+        <div class="placeholder-title">API key vault — coming soon</div>
+        <div class="placeholder-desc">Stream keys and tokens will be encrypted via Windows DPAPI — only your user account can decrypt them. Push-to-OBS button writes the key directly into your stream profile.</div>
+        <ul class="placeholder-list">
+          <li>Twitch stream key</li>
+          <li>YouTube stream key</li>
+          <li>StreamElements / StreamLabs tokens</li>
+          <li>RTMP custom-server credentials</li>
+        </ul>
+      </div>
+    </section>
+    <section class="panel" data-panel="settings">
+      <div class="page-head">
+        <div class="page-eyebrow">System</div>
+        <div class="page-title">Settings</div>
+      </div>
 
-  <div class="section" style="border:1px solid rgba(255,68,68,.3);border-radius:8px">
-    <div class="section-title" style="color:#ff5555">Danger Zone</div>
-    <div class="hint" style="margin-bottom:10px">Removes auto-start (registry, Start Menu shortcut, clip-prep:// protocol) and stops the watcher. Files in <code>Overlay/clip-prep/</code> stay on disk — re-run install.bat to reinstall.</div>
-    <button class="btn sm" id="cp-uninstall" disabled style="background:rgba(255,68,68,.15);border-color:#ff5555;color:#ff5555">UNINSTALL CLIP-PREP</button>
-    <span id="cp-uninstall-feedback" style="font-size:.85em;color:#888;margin-left:10px"></span>
-  </div>
+      <div class="section">
+        <div class="section-title">Folders</div>
+        <div class="field">
+          <label>Dump folder</label>
+          <div class="field-row">
+            <input type="text" id="cfg-dump" placeholder="C:\Users\…\Videos\_dump" readonly>
+            <button class="btn btn-secondary" id="cfg-dump-pick">Pick</button>
+          </div>
+          <div class="field-hint">OBS writes recordings here. The watcher moves them out into per-game folders under the target root.</div>
+        </div>
+        <div class="field">
+          <label>Target root</label>
+          <div class="field-row">
+            <input type="text" id="cfg-target" placeholder="C:\Users\…\Videos" readonly>
+            <button class="btn btn-secondary" id="cfg-target-pick">Pick</button>
+          </div>
+          <div class="field-hint">Per-game folders (Valorant/, GTA 5/, _mix/) get created here.</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="cfg-save">Save</button>
+          <span class="t-small" id="cfg-status" style="color: var(--text-muted); align-self: center"></span>
+        </div>
+      </div>
 
-  <style>
-    .cp-feedback.ok  { color:#10b981 !important; }
-    .cp-feedback.err { color:#ff5555 !important; }
-    .cp-feedback.info{ color:#888 !important; }
-    .cp-games-row { display:grid; grid-template-columns: 1fr 1fr auto auto; gap:8px; padding:8px 10px; border-bottom:1px solid #1a1a1a; align-items:center; }
-    .cp-games-row:last-child { border-bottom:none; }
-    .cp-games-row code { color:#888; font-size:.85em; word-break:break-all; }
-    .cp-games-row input { width:100%; padding:5px 8px; font-size:.85em; background:#111; color:#eee; border:1px solid #2a2a2a; border-radius:3px; font-family:monospace; }
-    .cp-games-row input.complex { background:#1a1410; color:#888; }
-    .cp-games-row .row-tag { font-size:.7em; color:#FFD700; padding:2px 6px; border:1px solid #5a4a10; border-radius:10px; }
-    .cp-games-row button { padding:4px 9px; font-size:.75em; }
-    .cp-games-row button.del { background:rgba(255,68,68,.1); border-color:#553; color:#d66; }
-    .cp-games-row button.del:hover { background:rgba(255,68,68,.25); }
-    @keyframes cppulse { 0%,100% { opacity:1 } 50% { opacity:.45 } }
-  </style>
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Games</div>
+          <button class="btn btn-secondary" id="games-save" style="font-size: 10px; padding: 6px 12px">Save</button>
+        </div>
+        <div class="section-hint">Maps OBS Game Capture exe names → per-game folder name. Edit JSON directly. Watcher hot-reloads on save.</div>
+        <div class="field">
+          <textarea id="games-text" spellcheck="false"></textarea>
+          <div class="field-hint" id="games-status"></div>
+        </div>
+      </div>
 
+      <div class="section">
+        <div class="danger-zone">
+          <div class="section-title">Danger zone</div>
+          <div class="section-hint">Stop / restart the watcher, or remove auto-start entirely.</div>
+          <div class="row">
+            <button class="btn btn-secondary" id="cfg-restart">Restart</button>
+            <button class="btn btn-secondary" id="cfg-stop">Stop</button>
+            <button class="btn btn-destructive" id="cfg-uninstall">Uninstall</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
-<!-- ══════════ FOOTER BUTTONS (always visible) ══════════ -->
-<div class="btn-row">
-  <button class="btn primary" onclick="save()">SAVE &amp; APPLY</button>
-  <button class="btn sm" onclick="resetTab()">RESET TAB</button>
-  <button class="btn sm" onclick="clearAll()">CLEAR ALL</button>
-</div>
-
-</div><!-- /main -->
-</div><!-- /shell -->
-
-<div class="toast" id="toast"></div>
-
-<script src="./secrets.js"></script>
 <script>
-// ══════════ TABS ══════════
-function showTab(id) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  // Find the button that matches
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    if (b.onclick && b.onclick.toString().indexOf("'" + id + "'") !== -1) b.classList.add('active');
-  });
-}
-
-// ══════════ HELPERS ══════════
-function ls(k) { return localStorage.getItem('sasi_' + k); }
-function lsSet(k, v) { localStorage.setItem('sasi_' + k, v); }
-function lsDel(k) { localStorage.removeItem('sasi_' + k); }
-function toggle(id) { document.getElementById(id).classList.toggle('on'); }
-function isOn(id) { return document.getElementById(id).classList.contains('on'); }
-function setOn(id, v) { document.getElementById(id).className = 'toggle' + (v ? ' on' : ''); }
-function val(id) { return document.getElementById(id).value; }
-function setVal(id, v) { document.getElementById(id).value = v; }
-function syncColor(id) { document.getElementById(id + 'Hex').value = document.getElementById(id).value; }
-function syncColorHex(id) { document.getElementById(id).value = document.getElementById(id + 'Hex').value; }
-function flash(t) { const e = document.getElementById('toast'); e.textContent = t; e.classList.add('show'); setTimeout(() => e.classList.remove('show'), 2500); }
-
-// ══════════ STREAM CONTROL ══════════
-function renderStreamCtrl() {
-  const live = ls('streamLive') === 'true';
-  const ctrl = document.getElementById('stream-ctrl');
-  if (live) {
-    ctrl.innerHTML =
-      '<button class="stream-btn stop" onclick="stopStream()">STOP STREAM</button>' +
-      '<div class="stream-status"><span class="live-indicator"></span>LIVE — chat + alerts active</div>';
-  } else {
-    ctrl.innerHTML =
-      '<button class="stream-btn start" onclick="startStream()">START STREAM</button>' +
-      '<div class="stream-status">Offline — no API calls running</div>';
-  }
-}
-
-function startStream() {
-  lsSet('streamLive', 'true');
-  renderStreamCtrl();
-  updateStatus();
-  flash('STREAM STARTED — refresh overlays in OBS');
-}
-
-function stopStream() {
-  lsSet('streamLive', 'false');
-  renderStreamCtrl();
-  updateStatus();
-  flash('STREAM STOPPED — API calls disabled');
-}
-
-// ══════════ NOTIFICATIONS QUEUE ══════════
-function getNotifQueue() {
-  try {
-    const raw = localStorage.getItem('sasi_notifications_queue');
-    return raw ? JSON.parse(raw) : [];
-  } catch(e) { return []; }
-}
-
-function clearNotifications() {
-  localStorage.removeItem('sasi_notifications_queue');
-  updateNotifCount();
-  flash('NOTIFICATIONS CLEARED');
-}
-
-function dismissNotif(id) {
-  const queue = getNotifQueue().filter(n => n.id !== id);
-  localStorage.setItem('sasi_notifications_queue', JSON.stringify(queue));
-  updateNotifCount();
-}
-
-function updateNotifCount() {
-  const queue = getNotifQueue();
-  const now = Date.now();
-  const active = queue.filter(n => (n.ts + (n.duration || 60000)) > now);
-
-  // Update count
-  const el = document.getElementById('s-queue');
-  if (el) {
-    el.textContent = active.length + ' active';
-    el.className = 'v ' + (active.length === 0 ? 'ok' : 'warn');
-  }
-
-  // Render list
-  const list = document.getElementById('notif-list');
-  if (!list) return;
-
-  if (active.length === 0) {
-    list.innerHTML = '<div class="notif-empty">No active notifications</div>';
-    return;
-  }
-
-  list.innerHTML = '';
-  active.forEach(n => {
-    const elapsed = Math.floor((now - n.ts) / 1000);
-    const elapsedStr = elapsed < 60 ? elapsed + 's' : Math.floor(elapsed / 60) + 'm';
-    const item = document.createElement('div');
-    item.className = 'notif-item ' + (n.type || '');
-    item.innerHTML =
-      '<div class="notif-item-icon"></div>' +
-      '<div class="notif-item-info">' +
-        '<div class="notif-item-title">' + escapeHtml(n.title || '') + '</div>' +
-        '<div class="notif-item-body">' +
-          (n.user ? '<span class="notif-item-user">' + escapeHtml(n.user) + ' → </span>' : '') +
-          escapeHtml(n.body || '') +
-        '</div>' +
-      '</div>' +
-      '<div class="notif-item-time">' + elapsedStr + '</div>' +
-      '<button class="notif-item-dismiss" data-id="' + n.id + '">×</button>';
-    list.appendChild(item);
-  });
-
-  // Wire up dismiss buttons
-  list.querySelectorAll('.notif-item-dismiss').forEach(btn => {
-    btn.onclick = () => dismissNotif(btn.dataset.id);
-  });
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// Update queue count every 2s
-setInterval(updateNotifCount, 2000);
-
-function onPlatformChange() {
-  const p = val('platform');
-  document.getElementById('yt-fields').style.display = p === 'youtube' ? 'block' : 'none';
-  document.getElementById('tw-fields').style.display = p === 'twitch' ? 'block' : 'none';
-}
-
-// ══════════ SOCIALS ══════════
-const DEFAULT_SOCIALS = [
-  { platform:'TWITCH', handle:'@ONLY_SASI' },
-  { platform:'YOUTUBE', handle:'@SASI_STREAMS' },
-  { platform:'INSTAGRAM', handle:'@SASI_PLAYS' },
-  { platform:'X / TWITTER', handle:'@SASI_PLAYS' },
-];
-
-function loadSocials() {
-  const raw = ls('socials');
-  if (raw) { try { return JSON.parse(raw); } catch(e) {} }
-  return null; // null means use config defaults
-}
-
-const PLATFORM_OPTIONS = ['TWITCH','YOUTUBE','INSTAGRAM','X / TWITTER','TIKTOK','DISCORD','FACEBOOK','THREADS'];
-
-function renderSocials(socials) {
-  const list = document.getElementById('socials-list');
-  list.innerHTML = '';
-  socials.forEach((s, i) => {
-    const row = document.createElement('div');
-    row.className = 'social-row';
-    const opts = PLATFORM_OPTIONS.map(p =>
-      '<option value="' + p + '"' + (p === (s.platform||'').toUpperCase() ? ' selected' : '') + '>' + p + '</option>'
-    ).join('');
-    row.innerHTML =
-      '<select style="max-width:160px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:6px;color:#fff;padding:8px 10px;font-size:13px;" data-idx="' + i + '" data-field="platform">' + opts + '</select>' +
-      '<input type="text" value="' + (s.handle||'') + '" placeholder="@handle" data-idx="' + i + '" data-field="handle">' +
-      '<button class="del-btn" onclick="removeSocial(' + i + ')">×</button>';
-    list.appendChild(row);
-  });
-}
-
-function getSocialsFromUI() {
-  const rows = document.querySelectorAll('#socials-list .social-row');
-  const result = [];
-  rows.forEach(row => {
-    const sel = row.querySelector('select');
-    const inp = row.querySelector('input');
-    const p = sel ? sel.value.trim() : '';
-    const h = inp ? inp.value.trim() : '';
-    if (p || h) result.push({ platform: p, handle: h });
-  });
-  return result;
-}
-
-function addSocial() {
-  const socials = getSocialsFromUI();
-  socials.push({ platform:'', handle:'' });
-  renderSocials(socials);
-}
-
-function removeSocial(idx) {
-  const socials = getSocialsFromUI();
-  socials.splice(idx, 1);
-  renderSocials(socials);
-}
-
-// ══════════ STREAM INFO EDITOR ══════════
-const SI_TYPES = ['text','youtube-goal','discord-qr','stream-time','social'];
-const SI_TYPE_LABELS = { 'text':'Text', 'youtube-goal':'YouTube Subs Goal', 'discord-qr':'Discord QR', 'stream-time':'Stream Timer', 'social':'Social Link' };
-
-function getDefaultStreamInfo() {
-  return [
-    { type:'youtube-goal', label:'YOUTUBE SUBS', color:'red' },
-    { type:'discord-qr', label:'JOIN DISCORD', server:"SASI's Hub", url:'https://discord.gg/ZSzGcup8Vn', sub:'SCAN TO JOIN' },
-    { type:'text', label:'NEXT STREAM', value:'FRIDAY · 8PM' },
-    { type:'text', label:'SCHEDULE', value:'MON · WED · FRI @ 8PM' },
-    { type:'text', label:'TODAY', value:'REACT VIDEOS' },
-  ];
-}
-
-function loadStreamInfo() {
-  const raw = ls('streamInfo');
-  if (raw) try { return JSON.parse(raw); } catch(e) {}
-  return null;
-}
-
-function renderStreamInfo(items) {
-  const list = document.getElementById('streaminfo-list');
-  list.innerHTML = '';
-  items.forEach((item, i) => {
-    const row = document.createElement('div');
-    row.className = 'social-row';
-    row.style.cssText = 'flex-wrap:wrap;gap:6px;padding:10px;margin-bottom:6px;background:rgba(0,0,0,.2);border:1px solid rgba(255,34,0,.1);border-radius:6px;';
-
-    const typeOpts = SI_TYPES.map(t =>
-      '<option value="' + t + '"' + (t === item.type ? ' selected' : '') + '>' + SI_TYPE_LABELS[t] + '</option>'
-    ).join('');
-
-    let fieldsHtml = '<div style="display:flex;gap:6px;width:100%;align-items:center;">' +
-      '<select onchange="changeStreamInfoType(' + i + ',this.value)" style="max-width:180px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:4px;color:#fff;padding:6px 8px;font-size:12px;">' + typeOpts + '</select>' +
-      '<input type="text" value="' + (item.label||'') + '" placeholder="LABEL" data-si="' + i + '" data-f="label" style="max-width:140px;font-size:12px;">' +
-      '<button class="del-btn" onclick="removeStreamInfoItem(' + i + ')">×</button></div>';
-
-    // Type-specific fields
-    if (item.type === 'text') {
-      fieldsHtml += '<input type="text" value="' + (item.value||'') + '" placeholder="Value text" data-si="' + i + '" data-f="value" style="width:100%;font-size:12px;margin-top:4px;">';
-    } else if (item.type === 'youtube-goal') {
-      fieldsHtml += '<select data-si="' + i + '" data-f="color" style="max-width:120px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:4px;color:#fff;padding:6px;font-size:12px;margin-top:4px;">' +
-        ['red','orange','gold'].map(c => '<option value="' + c + '"' + (c === (item.color||'red') ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
-    } else if (item.type === 'discord-qr') {
-      fieldsHtml += '<div style="display:flex;gap:6px;width:100%;margin-top:4px;">' +
-        '<input type="text" value="' + (item.server||'') + '" placeholder="Server name" data-si="' + i + '" data-f="server" style="font-size:12px;">' +
-        '<input type="text" value="' + (item.url||'') + '" placeholder="discord.gg/..." data-si="' + i + '" data-f="url" style="font-size:12px;">' +
-        '</div>';
-    } else if (item.type === 'social') {
-      const pOpts = PLATFORM_OPTIONS.map(p => '<option value="' + p.toLowerCase() + '"' + (p.toLowerCase() === (item.platform||'') ? ' selected' : '') + '>' + p + '</option>').join('');
-      fieldsHtml += '<select data-si="' + i + '" data-f="platform" style="max-width:160px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:4px;color:#fff;padding:6px;font-size:12px;margin-top:4px;">' + pOpts + '</select>';
-    }
-
-    row.innerHTML = fieldsHtml;
-    list.appendChild(row);
-  });
-}
-
-function getStreamInfoFromUI() {
-  const items = [];
-  const rows = document.querySelectorAll('#streaminfo-list > div');
-  rows.forEach((row, i) => {
-    const sel = row.querySelector('select');
-    const type = sel ? sel.value : 'text';
-    const item = { type };
-    row.querySelectorAll('[data-si="' + i + '"]').forEach(el => {
-      item[el.dataset.f] = el.value;
-    });
-    items.push(item);
-  });
-  return items;
-}
-
-function addStreamInfoItem() {
-  const items = getStreamInfoFromUI();
-  items.push({ type:'text', label:'', value:'' });
-  renderStreamInfo(items);
-}
-
-function removeStreamInfoItem(idx) {
-  const items = getStreamInfoFromUI();
-  items.splice(idx, 1);
-  renderStreamInfo(items);
-}
-
-function changeStreamInfoType(idx, newType) {
-  const items = getStreamInfoFromUI();
-  items[idx] = { type:newType, label:items[idx].label || '' };
-  renderStreamInfo(items);
-}
-
-// ══════════ EFFECTS EDITOR ══════════
-const EFFECT_OPTIONS = ['','glitch','shimmer','pulse','neonFlicker','rgbSplit','scanLine','fadeInUp','float','glowPulse'];
-const EFFECT_ELEMENTS = [
-  { sel:'.t-starting', name:'Starting Soon — main text' },
-  { sel:'.t-stream', name:'Starting Soon — "Stream" text' },
-  { sel:'.t-main', name:'BRB — main text' },
-  { sel:'.t-watching', name:'Stream Ending — "WATCHING"' },
-  { sel:'.t-thanks', name:'Stream Ending — "Thanks for"' },
-  { sel:'.t-seeyou', name:'Stream Ending — "SEE YOU SOON"' },
-  { sel:'.scene-name', name:'Live — scene label' },
-  { sel:'.tag-name', name:'Name tag text' },
-  { sel:'.clock-date', name:'Date display' },
-  { sel:'.brand-l1', name:'Brand name' },
-  { sel:'.live-text', name:'LIVE / BRB badge' },
-  { sel:'.countdown-time', name:'Countdown timer' },
-];
-
-function renderEffects() {
-  const list = document.getElementById('effects-list');
-  list.innerHTML = '';
-  const saved = loadEffects();
-  EFFECT_ELEMENTS.forEach((el, i) => {
-    const current = saved[el.sel] || '';
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);';
-    const opts = EFFECT_OPTIONS.map(e =>
-      '<option value="' + e + '"' + (e === current ? ' selected' : '') + '>' + (e || '(none)') + '</option>'
-    ).join('');
-    row.innerHTML =
-      '<span style="flex:1;font-size:12px;color:rgba(255,255,255,.6);">' + el.name + '</span>' +
-      '<select data-efx="' + el.sel + '" style="max-width:150px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:4px;color:#fff;padding:5px 8px;font-size:11px;">' + opts + '</select>';
-    list.appendChild(row);
-  });
-}
-
-function loadEffects() {
-  const raw = ls('effects');
-  if (raw) try { return JSON.parse(raw); } catch(e) {}
-  return {};
-}
-
-function getEffectsFromUI() {
-  const result = {};
-  document.querySelectorAll('[data-efx]').forEach(sel => {
-    result[sel.dataset.efx] = sel.value;
-  });
-  return result;
-}
-
-function extractVideoId(input) {
-  input = input.trim();
-  const m = input.match(/(?:youtube\.com\/(?:watch\?v=|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  if (m) return m[1];
-  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
-  return input;
-}
-
-function getYtKeyCount() {
-  const yt = window.SASI_SECRETS && window.SASI_SECRETS.youtube;
-  const keys = (yt && yt.apiKeys) || (yt && yt.apiKey ? [yt.apiKey] : []);
-  return keys.filter(k => k && !k.startsWith('PASTE_')).length;
-}
-
-// ══════════ BG GRIDS ══════════
-const BG_OPTIONS = ['random','hexgrid','particles','ember','matrix','minimal'];
-function initBgGrids() {
-  document.querySelectorAll('.bg-grid').forEach(grid => {
-    const key = grid.dataset.key;
-    grid.innerHTML = '';
-    BG_OPTIONS.forEach(bg => {
-      const opt = document.createElement('div');
-      opt.className = 'bg-opt';
-      opt.textContent = bg.charAt(0).toUpperCase() + bg.slice(1);
-      opt.dataset.val = bg;
-      opt.onclick = () => {
-        grid.querySelectorAll('.bg-opt').forEach(o => o.classList.remove('active'));
-        opt.classList.add('active');
-      };
-      grid.appendChild(opt);
-    });
-  });
-}
-
-function setBgGrid(gridId, value) {
-  const grid = document.getElementById(gridId);
-  if (!grid) return;
-  grid.querySelectorAll('.bg-opt').forEach(o => {
-    o.classList.toggle('active', o.dataset.val === value);
-  });
-}
-
-function getBgGrid(gridId) {
-  const grid = document.getElementById(gridId);
-  if (!grid) return '';
-  const active = grid.querySelector('.bg-opt.active');
-  return active ? active.dataset.val : '';
-}
-
-// ══════════ LOAD ══════════
-function load() {
-  // Go Live
-  setVal('platform', ls('activePlatform') || 'youtube');
-  onPlatformChange();
-  setVal('videoId', ls('liveVideoId') || '');
-  const tw = window.SASI_SECRETS && window.SASI_SECRETS.twitch;
-  setVal('twitchChannel', (tw && tw.username) || '(not set)');
-  setVal('countdown', ls('countdown') || '5');
-  setVal('today', ls('today') || '');
-  renderStreamCtrl();
-  updateNotifCount();
-  setOn('fakeToggle', ls('fakeAlerts') === 'true');
-
-  // Starting Soon
-  setBgGrid('bg-starting', ls('bg_startingSoon') || 'random');
-  setVal('ss_badge', ls('ss_badge') || '');
-  setVal('ss_topText', ls('ss_topText') || '');
-  setVal('ss_mainText', ls('ss_mainText') || '');
-  setVal('ss_countdown', ls('ss_countdown') || '5');
-  setVal('ss_nextStream', ls('ss_nextStream') || '');
-  setOn('ss_clock', ls('ss_clock') !== 'false');
-  setOn('ss_ticker', ls('ss_ticker') !== 'false');
-
-  // BRB
-  setBgGrid('bg-brb', ls('bg_brb') || 'random');
-  setVal('brb_badge', ls('brb_badge') || '');
-  setVal('brb_mainText', ls('brb_mainText') || '');
-  setVal('brb_subtext', ls('brb_subtext') || '');
-  setVal('brb_tagline', ls('brb_tagline') || '');
-  setOn('brb_clock', ls('brb_clock') !== 'false');
-  setOn('brb_ticker', ls('brb_ticker') !== 'false');
-
-  // Ending
-  setBgGrid('bg-ending', ls('bg_ending') || 'random');
-  setVal('end_badge', ls('end_badge') || '');
-  setVal('end_tagline', ls('end_tagline') || '');
-  setVal('end_thanks', ls('end_thanks') || '');
-  setVal('end_main', ls('end_main') || '');
-  setVal('end_sub', ls('end_sub') || '');
-  setOn('end_ticker', ls('end_ticker') !== 'false');
-
-  // Live Overlay
-  setVal('sub_items', ls('sub_items') || '');
-  setVal('likes_items', ls('likes_items') || '');
-  setVal('cam_width', ls('cam_width') || '480');
-  setVal('cam_height', ls('cam_height') || '270');
-  setVal('cam_position', ls('cam_position') || 'bottom-left');
-  setVal('cam_margin', ls('cam_margin') || '20');
-  setVal('cam_label', ls('cam_label') || '');
-  setVal('nametag', ls('nametag') || '');
-
-  // Stream Info
-  const savedSI = loadStreamInfo();
-  renderStreamInfo(savedSI || getDefaultStreamInfo());
-
-  // Effects
-  renderEffects();
-
-  // Theme — Brand
-  setVal('brand_name', ls('brand_name') || '');
-  setVal('brand_tagline', ls('brand_tagline') || '');
-  setVal('locale_region', ls('locale_region') || 'en-IN');
-  setVal('locale_currency', ls('locale_currency') || '₹');
-  setVal('ticker_ss', ls('ticker_ss') || '');
-  setVal('ticker_brb', ls('ticker_brb') || '');
-  setVal('ticker_end', ls('ticker_end') || '');
-
-  // Theme — BG/Colors
-  setBgGrid('bg-global', ls('background') || 'random');
-  const cR = ls('colorRed') || '#FF2200', cO = ls('colorOrange') || '#FF7700', cG = ls('colorGold') || '#FFD700';
-  setVal('cRed', cR); setVal('cRedHex', cR);
-  setVal('cOrange', cO); setVal('cOrangeHex', cO);
-  setVal('cGold', cG); setVal('cGoldHex', cG);
-  setOn('glitchToggle', ls('glitch') !== 'false');
-  setVal('animSpeed', ls('animSpeed') || '1');
-  setVal('tickerSpeed', ls('tickerSpeed') || '28');
-
-  // Alerts
-  setVal('alert_t2_min', ls('alert_t2_min') || '100');
-  setVal('alert_t3_min', ls('alert_t3_min') || '500');
-  setVal('alert_t4_min', ls('alert_t4_min') || '2000');
-  setVal('alert_baseDur', ls('alert_baseDur') || '2500');
-  setVal('alert_maxDur', ls('alert_maxDur') || '7000');
-  setVal('alert_memberDur', ls('alert_memberDur') || '6000');
-  setVal('alert_giftBaseDur', ls('alert_giftBaseDur') || '3000');
-  setVal('alert_giftPerUnit', ls('alert_giftPerUnit') || '400');
-  setVal('alert_redeemDur', ls('alert_redeemDur') || '5000');
-
-  // Games
-  setVal('game_wheel_cost', ls('game_wheel_cost') || '1000000');
-  setVal('game_mystery_cost', ls('game_mystery_cost') || '500000');
-  setVal('game_highlight_cost', ls('game_highlight_cost') || '100000');
-  if (ls('game_wheel_rewards')) setVal('game_wheel_rewards', ls('game_wheel_rewards'));
-  if (ls('game_mystery_rewards')) setVal('game_mystery_rewards', ls('game_mystery_rewards'));
-
-  // Socials
-  const savedSocials = loadSocials();
-  renderSocials(savedSocials || DEFAULT_SOCIALS);
-
-  updateStatus();
-}
-
-// ══════════ SAVE ══════════
-function save() {
-  function s(k, v) { v ? lsSet(k, v) : lsDel(k); }
-
-  // Go Live
-  const vid = extractVideoId(val('videoId'));
-  setVal('videoId', vid);
-  s('liveVideoId', vid);
-  lsSet('activePlatform', val('platform'));
-  lsSet('countdown', val('countdown'));
-  s('today', val('today'));
-  lsSet('fakeAlerts', isOn('fakeToggle').toString());
-
-  // Starting Soon
-  s('bg_startingSoon', getBgGrid('bg-starting'));
-  s('ss_badge', val('ss_badge'));
-  s('ss_topText', val('ss_topText'));
-  s('ss_mainText', val('ss_mainText'));
-  s('ss_countdown', val('ss_countdown'));
-  s('ss_nextStream', val('ss_nextStream'));
-  lsSet('ss_clock', isOn('ss_clock').toString());
-  lsSet('ss_ticker', isOn('ss_ticker').toString());
-
-  // BRB
-  s('bg_brb', getBgGrid('bg-brb'));
-  s('brb_badge', val('brb_badge'));
-  s('brb_mainText', val('brb_mainText'));
-  s('brb_subtext', val('brb_subtext'));
-  s('brb_tagline', val('brb_tagline'));
-  lsSet('brb_clock', isOn('brb_clock').toString());
-  lsSet('brb_ticker', isOn('brb_ticker').toString());
-
-  // Ending
-  s('bg_ending', getBgGrid('bg-ending'));
-  s('end_badge', val('end_badge'));
-  s('end_tagline', val('end_tagline'));
-  s('end_thanks', val('end_thanks'));
-  s('end_main', val('end_main'));
-  s('end_sub', val('end_sub'));
-  lsSet('end_ticker', isOn('end_ticker').toString());
-
-  // Stream Info
-  const siItems = getStreamInfoFromUI();
-  if (siItems.length) lsSet('streamInfo', JSON.stringify(siItems));
-  else lsDel('streamInfo');
-
-  // Effects
-  const efx = getEffectsFromUI();
-  lsSet('effects', JSON.stringify(efx));
-
-  // Live Overlay
-  s('sub_items', val('sub_items'));
-  s('likes_items', val('likes_items'));
-  lsSet('cam_width', val('cam_width'));
-  lsSet('cam_height', val('cam_height'));
-  lsSet('cam_position', val('cam_position'));
-  lsSet('cam_margin', val('cam_margin'));
-  s('cam_label', val('cam_label'));
-  s('nametag', val('nametag'));
-
-  // Theme — Brand
-  s('brand_name', val('brand_name'));
-  s('brand_tagline', val('brand_tagline'));
-  s('locale_region', val('locale_region'));
-  s('locale_currency', val('locale_currency'));
-  s('ticker_ss', val('ticker_ss'));
-  s('ticker_brb', val('ticker_brb'));
-  s('ticker_end', val('ticker_end'));
-
-  // Theme — BG/Colors
-  s('background', getBgGrid('bg-global'));
-  lsSet('colorRed', val('cRedHex') || '#FF2200');
-  lsSet('colorOrange', val('cOrangeHex') || '#FF7700');
-  lsSet('colorGold', val('cGoldHex') || '#FFD700');
-  lsSet('glitch', isOn('glitchToggle').toString());
-  lsSet('animSpeed', val('animSpeed'));
-  lsSet('tickerSpeed', val('tickerSpeed'));
-
-  // Alerts
-  lsSet('alert_t2_min', val('alert_t2_min'));
-  lsSet('alert_t3_min', val('alert_t3_min'));
-  lsSet('alert_t4_min', val('alert_t4_min'));
-  lsSet('alert_baseDur', val('alert_baseDur'));
-  lsSet('alert_maxDur', val('alert_maxDur'));
-  lsSet('alert_memberDur', val('alert_memberDur'));
-  lsSet('alert_giftBaseDur', val('alert_giftBaseDur'));
-  lsSet('alert_giftPerUnit', val('alert_giftPerUnit'));
-  lsSet('alert_redeemDur', val('alert_redeemDur'));
-
-  // Games
-  lsSet('game_wheel_cost', val('game_wheel_cost'));
-  lsSet('game_mystery_cost', val('game_mystery_cost'));
-  lsSet('game_highlight_cost', val('game_highlight_cost'));
-  lsSet('game_wheel_rewards', val('game_wheel_rewards'));
-  lsSet('game_mystery_rewards', val('game_mystery_rewards'));
-
-  // Socials
-  const socials = getSocialsFromUI();
-  if (socials.length) lsSet('socials', JSON.stringify(socials));
-  else lsDel('socials');
-
-  updateStatus();
-  flash('SAVED — REFRESH OVERLAYS IN OBS');
-}
-
-// ══════════ RESET / CLEAR ══════════
-const TAB_KEYS = {
-  golive:   ['liveVideoId','activePlatform','countdown','today','fakeAlerts','streamLive'],
-  starting: ['bg_startingSoon','ss_badge','ss_topText','ss_mainText','ss_countdown','ss_nextStream','ss_clock','ss_ticker'],
-  brb:      ['bg_brb','brb_badge','brb_mainText','brb_subtext','brb_tagline','brb_clock','brb_ticker'],
-  ending:   ['bg_ending','end_badge','end_tagline','end_thanks','end_main','end_sub','end_ticker'],
-  live:     ['sub_items','likes_items','cam_width','cam_height','cam_position','cam_margin','cam_label','nametag','streamInfo'],
-  alerts:   ['alert_t2_min','alert_t3_min','alert_t4_min','alert_baseDur','alert_maxDur','alert_memberDur','alert_giftBaseDur','alert_giftPerUnit','alert_redeemDur'],
-  games:    ['game_wheel_cost','game_mystery_cost','game_highlight_cost','game_wheel_rewards','game_mystery_rewards'],
-  theme:    ['brand_name','brand_tagline','locale_region','locale_currency','ticker_ss','ticker_brb','ticker_end','background','colorRed','colorOrange','colorGold','glitch','animSpeed','tickerSpeed','socials','effects'],
-};
-
-function resetTab() {
-  const active = document.querySelector('.tab.active');
-  if (!active) return;
-  const tabId = active.id.replace('tab-', '');
-  const keys = TAB_KEYS[tabId] || [];
-  keys.forEach(k => lsDel(k));
-  load();
-  flash('TAB RESET TO DEFAULTS');
-}
-
-function clearAll() {
-  Object.values(TAB_KEYS).flat().forEach(k => lsDel(k));
-  load();
-  flash('ALL CLEARED — USING CONFIG.JS DEFAULTS');
-}
-
-// ══════════ STATUS ══════════
-function updateStatus() {
-  const platform = val('platform');
-  const vid = val('videoId');
-  const fake = isOn('fakeToggle');
-  const se = window.SASI_SECRETS && window.SASI_SECRETS.streamelements;
-  const tw = window.SASI_SECRETS && window.SASI_SECRETS.twitch;
-
-  s('s-plat', platform === 'twitch' ? 'Twitch' : 'YouTube', 'ok');
-  s('s-chat', platform === 'twitch'
-    ? (tw && tw.username ? 'Twitch IRC (free)' : 'No channel')
-    : 'YouTube Data API',
-    platform === 'twitch' ? (tw && tw.username ? 'ok' : 'err') : 'ok');
-
-  const yt = platform === 'youtube';
-  vis('s-vid-row', yt); vis('s-keys-row', yt); vis('s-hours-row', yt);
-  if (yt) {
-    s('s-vid', vid || 'Not set (will search)', vid ? 'ok' : 'warn');
-    const kc = getYtKeyCount();
-    s('s-keys', kc + ' available', kc >= 2 ? 'ok' : kc === 1 ? 'warn' : 'err');
-    s('s-hours', '~' + Math.floor((kc * 10000) / 720) + ' hrs', Math.floor((kc * 10000) / 720) >= 12 ? 'ok' : 'warn');
-  }
-  const seA = se && se[platform];
-  const jwt = seA && seA.jwt && !seA.jwt.startsWith('PASTE_');
-  s('s-jwt', jwt ? 'Valid' : 'Missing', jwt ? 'ok' : 'err');
-  s('s-fake', fake ? 'ON' : 'OFF', fake ? 'warn' : 'ok');
-
-  function s(id, t, c) { const e = document.getElementById(id); e.textContent = t; e.className = 'v ' + c; }
-  function vis(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; }
-}
-
-// ══════════ INIT ══════════
-initBgGrids();
-load();
-
-// ══════════ CLIP-PREP RECORDER PANEL ══════════
-(function () {
   const API = 'http://127.0.0.1:6789';
-  const $ = (id) => document.getElementById(id);
 
-  // ── Folders: dirty tracking so polling never clobbers user typing ──────
-  const dirty = { dump: false, root: false };
-  function setFeedback(id, text, kind) {
-    const el = $(id);
-    el.textContent = text;
-    el.className = 'cp-feedback ' + (kind || 'info');
+  // CSRF wrapper — required for POST/PUT/DELETE to the watcher.
+  // The watcher rejects mutating requests without X-Clip-Prep: 1.
+  if (!window.__sasiFetchWrapped) {
+    const orig = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const isLocal = url.startsWith(API);
+      const method = ((init && init.method) || 'GET').toUpperCase();
+      const mutating = method === 'POST' || method === 'PUT' || method === 'DELETE';
+      if (isLocal && mutating) {
+        const merged = { ...(init || {}) };
+        merged.headers = { ...(merged.headers || {}), 'X-Clip-Prep': '1' };
+        return orig(input, merged);
+      }
+      return orig(input, init);
+    };
+    window.__sasiFetchWrapped = true;
   }
-  function markDirty(field) {
-    dirty[field] = true;
-    $('cp-' + field + '-dirty').style.display = 'inline';
-  }
-  function clearDirty(field) {
-    dirty[field] = false;
-    $('cp-' + field + '-dirty').style.display = 'none';
-  }
-  $('cp-dump').addEventListener('input', () => markDirty('dump'));
-  $('cp-root').addEventListener('input', () => markDirty('root'));
 
-  let firstStatus = true;
-  async function poll() {
+  // Tab switching
+  function activateTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    document.querySelectorAll('.panel').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === name);
+    });
+    if (history.replaceState) history.replaceState(null, '', '#' + name);
+  }
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.addEventListener('click', () => activateTab(b.dataset.tab));
+  });
+  // Honor #hash on load
+  const hashTab = (location.hash || '').replace('#', '');
+  if (hashTab && document.querySelector(`[data-tab="${hashTab}"]`)) activateTab(hashTab);
+
+  // Status poller — drives the sidebar online dot + uptime
+  const sbDot = document.getElementById('sb-dot');
+  const sbStatusText = document.getElementById('sb-status-text');
+  function fmtUptime(startedAt) {
+    if (!startedAt) return '';
+    const ms = Date.now() - new Date(startedAt).getTime();
+    const m = Math.floor(ms / 60000);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  }
+  let pollStatus = async function() {
     try {
       const r = await fetch(API + '/status');
       if (!r.ok) throw new Error('http ' + r.status);
       const s = await r.json();
-      $('cp-state').textContent = 'RUNNING';
-      $('cp-state').className = 'v ok';
-      $('cp-queue').textContent = s.queue.length;
-      if (s.installDir) {
-        try { localStorage.setItem('cp-install-dir', s.installDir); } catch {}
-        // Populate the Lua FOLDER path banner. We show the folder (not the
-        // full file path) because OBS's file-picker dialog navigates to a
-        // pasted folder reliably; pasting a full file path is flaky.
-        const luaFolder = (s.installDir + '/obs').replace(/\//g, '\\');
-        const luaInput = $('cp-lua-path');
-        if (luaInput && luaInput.value !== luaFolder) luaInput.value = luaFolder;
-      }
-      // Folders: only fill inputs from server when not dirty AND not focused.
-      // First load always fills (so user sees current values).
-      const updateField = (id, value, field) => {
-        if (firstStatus || (!dirty[field] && document.activeElement !== $(id))) {
-          $(id).value = value || '';
-        }
-      };
-      updateField('cp-dump', s.config.dumpDir, 'dump');
-      updateField('cp-root', s.config.targetRoot, 'root');
-      // Show current resolved paths under the single-folder picker. If both
-      // share a common parent, surface that as the "recording root".
-      const dd = s.config.dumpDir || '';
-      const tr = s.config.targetRoot || '';
-      const ddParent = dd.replace(/[\\/][^\\/]+\/?$/, '');
-      const trParent = tr.replace(/[\\/][^\\/]+\/?$/, '');
-      const sharedRoot = (ddParent && ddParent === trParent) ? ddParent : null;
-      const recRootEl = $('cp-recroot-resolved');
-      if (sharedRoot) {
-        recRootEl.innerHTML = '<strong style="color:#ccc">Current root:</strong> <span style="color:#ddd">' + sharedRoot + '</span><br>'
-          + '<span style="color:#666">→ dump: ' + dd + '</span><br>'
-          + '<span style="color:#666">→ recording: ' + tr + '</span>';
-      } else if (dd || tr) {
-        recRootEl.innerHTML = '<span style="color:#FFD700">Split paths active</span> '
-          + '<span style="color:#666">(no shared parent — use Advanced fields below)</span>';
-      } else {
-        recRootEl.innerHTML = '<span style="color:#666">Not configured. Click PICK ONE FOLDER to set up.</span>';
-      }
-      // Mirror keepMkv into the toggle (skip if user is currently interacting)
-      if (document.activeElement !== $('cp-keep-mkv')) {
-        $('cp-keep-mkv').checked = s.config.keepMkv !== false;
-      }
-      $('cp-recycle-target').textContent = s.config.targetRoot || 'targetRoot';
-      firstStatus = false;
-      // Online: STOP + RESTART enabled, START disabled, all editors enabled
-      $('cp-start').disabled = true;
-      $('cp-stop').disabled = false;
-      $('cp-restart').disabled = false;
-      $('cp-launch-status').style.display = 'none';
-      ['cp-dump-pick','cp-dump-save','cp-dump-open','cp-root-pick','cp-root-save','cp-root-open','cp-recroot-pick','cp-recroot-open','cp-uninstall','cp-open-log','cp-keep-mkv'].forEach(id => $(id).disabled = false);
-      $('cp-moves').innerHTML = s.recentMoves.length
-        ? s.recentMoves.map((m) =>
-            '<li>' + m.ts.slice(11, 19) + ' — <strong>' + m.basename + '</strong> → ' +
-            (m.kind === 'mix' ? '_mix/' : m.target + '/') + '</li>'
-          ).join('')
-        : '<li style="color:#666;list-style:none;margin-left:-1.2rem">No recent moves</li>';
-    } catch {
-      $('cp-state').textContent = 'OFFLINE';
-      $('cp-state').className = 'v err';
-      $('cp-queue').textContent = '—';
-      $('cp-start').disabled = false;
-      $('cp-stop').disabled = true;
-      $('cp-restart').disabled = true;
-      ['cp-dump-pick','cp-dump-save','cp-dump-open','cp-root-pick','cp-root-save','cp-root-open','cp-recroot-pick','cp-recroot-open','cp-uninstall','cp-open-log','cp-keep-mkv'].forEach(id => $(id).disabled = true);
-    }
-  }
-
-  async function pollLog() {
-    try {
-      const r = await fetch(API + '/log?limit=30');
-      if (!r.ok) throw new Error('http ' + r.status);
-      const entries = await r.json();
-      if (!Array.isArray(entries) || entries.length === 0) {
-        $('cp-log-pane').textContent = '(no log entries yet)';
-        return;
-      }
-      $('cp-log-pane').textContent = entries.map(e => {
-        const time = (e.ts || '').slice(11, 19);
-        return time + '  [' + e.level + ']  ' + e.message;
-      }).join('\n');
-      $('cp-log-pane').scrollTop = $('cp-log-pane').scrollHeight;
-    } catch {
-      $('cp-log-pane').textContent = 'watcher offline — open clip-prep.log directly via OPEN LOG FILE\n(button only works when watcher is running)';
-    }
-  }
-
-  // ─── Folder save / open / pick ─────────────────────────────────────────
-  async function savePath(field) {
-    const inputId = 'cp-' + field;
-    const feedbackId = 'cp-' + field + '-feedback';
-    const value = $(inputId).value.trim();
-    if (!value) return setFeedback(feedbackId, '✗ Path is empty.', 'err');
-    setFeedback(feedbackId, 'Saving and restarting watcher…', 'info');
-    try {
-      const body = {};
-      body[field === 'dump' ? 'dumpDir' : 'targetRoot'] = value;
-      const r = await fetch(API + '/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        return setFeedback(feedbackId, '✗ ' + (err.error || ('save failed: ' + r.status)), 'err');
-      }
-      clearDirty(field);
-      try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
-      setFeedback(feedbackId, '✓ Saved. Watcher restarting…', 'ok');
-      setTimeout(poll, 2500);
+      sbDot.className = 'sb-dot online';
+      sbStatusText.textContent = `Online · ${fmtUptime(s.startedAt)}`;
+      window.__sasiStatus = s;
     } catch (e) {
-      setFeedback(feedbackId, '✗ ' + e.message, 'err');
+      sbDot.className = 'sb-dot offline';
+      sbStatusText.textContent = 'Offline';
+      window.__sasiStatus = null;
+    }
+  };
+  pollStatus();
+  setInterval(pollStatus, 3000);
+
+  // === Now tab rendering ===
+  const $ = (id) => document.getElementById(id);
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function renderNow(s) {
+    if (!s) {
+      $('now-game').textContent = '—';
+      $('now-sub').textContent = 'Watcher offline';
+      $('now-dump').textContent = '—';
+      $('now-queue').textContent = '—';
+      $('now-uptime').textContent = '—';
+      $('now-rec-pill').classList.remove('active');
+      return;
+    }
+    const queueLen = (s.queue || []).length;
+    const lastMove = (s.recentMoves || [])[0];
+    const game = lastMove ? lastMove.target : null;
+
+    $('now-game').textContent = game || 'Idle';
+    $('now-sub').textContent = lastMove
+      ? `Last route ${(lastMove.ts || '').slice(11,19)} → ${lastMove.kind === 'mix' ? '_mix/' : (lastMove.target || '') + '/'}`
+      : 'No recordings yet';
+    $('now-dump').textContent = queueLen + ' files';
+    $('now-queue').textContent = queueLen;
+    $('now-uptime').textContent = fmtUptime(s.startedAt);
+    $('now-rec-pill').classList.toggle('active', queueLen > 0);
+
+    // Recent moves
+    const moves = (s.recentMoves || []).slice(0, 5);
+    const movesEl = $('now-moves');
+    if (moves.length === 0) {
+      movesEl.innerHTML = '<div class="moves-empty">No recent moves</div>';
+    } else {
+      movesEl.innerHTML = moves.map(m => {
+        const ts = escapeHtml(String(m.ts || '').slice(11, 19));
+        const base = escapeHtml(m.basename || '');
+        const targetText = m.kind === 'mix' ? '_mix/' : escapeHtml(m.target || '') + '/';
+        const targetClass = m.kind === 'mix' ? 'target mix' : 'target';
+        return `<div class="moves-row"><span>${ts} · ${base}</span><span class="${targetClass}">${targetText}</span></div>`;
+      }).join('');
     }
   }
 
-  async function openPath(field) {
-    const value = $('cp-' + field).value.trim();
-    if (!value) return setFeedback('cp-' + field + '-feedback', '✗ Type a path first or save one.', 'err');
+  // Hook renderNow into the existing pollStatus
+  const _origPoll = pollStatus;
+  pollStatus = async function() {
+    await _origPoll();
+    renderNow(window.__sasiStatus);
+  };
+
+  // Action handlers
+  $('now-open-dump').addEventListener('click', async () => {
+    const dump = window.__sasiStatus?.config?.dumpDir;
+    if (!dump) return;
     try {
       const r = await fetch(API + '/open-folder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: value }),
+        body: JSON.stringify({ path: dump }),
       });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) return setFeedback('cp-' + field + '-feedback', '✗ ' + (j.error || 'open failed'), 'err');
-      setFeedback('cp-' + field + '-feedback', 'Opened in File Explorer: ' + (j.opened || value), 'info');
+      if (!r.ok) console.warn('open-folder failed:', r.status);
     } catch (e) {
-      setFeedback('cp-' + field + '-feedback', '✗ ' + e.message, 'err');
-    }
-  }
-
-  async function pickPath(field) {
-    const inputId = 'cp-' + field;
-    const feedbackId = 'cp-' + field + '-feedback';
-    setFeedback(feedbackId, 'Opening folder picker…', 'info');
-    try {
-      const kind = field === 'dump' ? 'dump' : 'target';
-      const r = await fetch(API + '/pick-folder?kind=' + kind, { method: 'POST' });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) return setFeedback(feedbackId, '✗ ' + (j.error || 'picker failed'), 'err');
-      if (j.cancelled || !j.path) return setFeedback(feedbackId, 'Picker closed without selection.', 'info');
-      let pickedPath = j.path;
-      if (field === 'root') {
-        // Auto-append /Recording unless the path already ends with "recording"
-        const trimmed = pickedPath.replace(/[\\/]+$/, '');
-        pickedPath = /[\\/]recording$/i.test(trimmed) ? trimmed : trimmed + '/Recording';
-      }
-      $(inputId).value = pickedPath;
-      markDirty(field);
-      if (field === 'root') {
-        const el = $(inputId);
-        el.focus();
-        el.setSelectionRange(el.value.length, el.value.length);
-        setFeedback(feedbackId, '✓ Auto-filled with /Recording. Edit if you want a different name, then SAVE PATH.', 'ok');
-      } else {
-        setFeedback(feedbackId, '✓ Folder selected. Click SAVE PATH to apply.', 'ok');
-      }
-    } catch (e) {
-      setFeedback(feedbackId, '✗ ' + e.message, 'err');
-    }
-  }
-
-  $('cp-dump-save').onclick  = () => savePath('dump');
-  $('cp-root-save').onclick  = () => savePath('root');
-  $('cp-dump-open').onclick  = () => openPath('dump');
-  $('cp-root-open').onclick  = () => openPath('root');
-  $('cp-dump-pick').onclick  = () => pickPath('dump');
-  $('cp-root-pick').onclick  = () => pickPath('root');
-
-  // ─── Lua path banner: copy path / open containing folder ──────────────
-  $('cp-lua-copy').addEventListener('click', async () => {
-    const path = $('cp-lua-path').value;
-    if (!path || path.startsWith('(')) return;
-    try {
-      await navigator.clipboard.writeText(path);
-      const fb = $('cp-lua-copy-feedback');
-      fb.textContent = '✓ copied — paste into OBS: Tools → Scripts → +';
-      setTimeout(() => { fb.textContent = ''; }, 4000);
-    } catch (e) {
-      // Fallback: select the input so user can ctrl+c
-      $('cp-lua-path').select();
-      $('cp-lua-copy-feedback').textContent = 'select-and-copy fallback (Ctrl+C)';
+      console.warn('open-folder error:', e);
     }
   });
-  $('cp-lua-open').addEventListener('click', async () => {
-    const folder = $('cp-lua-path').value;
-    if (!folder || folder.startsWith('(')) return;
-    try {
-      await fetch(API + '/open-folder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: folder }),
-      });
-    } catch {}
+  $('now-restart').addEventListener('click', async () => {
+    if (!confirm('Restart the watcher?')) return;
+    try { await fetch(API + '/restart', { method: 'POST' }); }
+    catch (e) { console.warn('restart error (expected if watcher already exiting):', e); }
   });
 
-  // ─── OBS Recording Folder (single-pick convenience) ───────────────────
-  function setRecRootFeedback(msg, tone) {
-    const el = $('cp-recroot-feedback');
-    el.textContent = msg || '';
-    el.className = 'cp-feedback' + (tone ? ' ' + tone : '');
-  }
-  $('cp-recroot-pick').addEventListener('click', async () => {
-    setRecRootFeedback('Opening folder picker…', 'info');
-    try {
-      const r = await fetch(API + '/pick-folder?kind=recording-root', { method: 'POST' });
-      const j = await r.json();
-      if (j.cancelled) { setRecRootFeedback('Picker cancelled.', 'info'); return; }
-      if (j.error) { setRecRootFeedback('Picker error: ' + j.error, 'err'); return; }
-      const root = j.path;
-      if (!confirm('Set recording folder to:\n\n' + root + '\n\nWill create:\n  ' + root + '/_dump/  (where OBS writes)\n  ' + root + '/recording/  (organized output)\n\nWatcher will restart. Continue?')) {
-        setRecRootFeedback('Cancelled.', 'info'); return;
-      }
-      setRecRootFeedback('Saving + creating subfolders…', 'work');
-      const sr = await fetch(API + '/set-recording-root', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ root }),
-      });
-      const sj = await sr.json();
-      if (sj.ok) {
-        setRecRootFeedback('✓ Set. Watcher restarting.', 'ok');
-        try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
-      } else {
-        setRecRootFeedback('Save failed: ' + (sj.error || 'unknown'), 'err');
-      }
-    } catch (e) {
-      setRecRootFeedback('Failed: ' + e.message, 'err');
-    }
-  });
-  $('cp-recroot-open').addEventListener('click', async () => {
-    // Open the parent of dumpDir (which is the recording root we set)
-    const dumpVal = $('cp-dump').value;
-    if (!dumpVal) return;
-    const parent = dumpVal.replace(/[\\/]_dump\/?$/, '').replace(/[\\/]+$/, '');
-    if (!parent) return;
-    try {
-      await fetch(API + '/open-folder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: parent }),
-      });
-    } catch {}
-  });
-  $('cp-open-log').onclick = async () => {
-    try { await fetch(API + '/open-log', { method: 'POST' }); } catch {}
-  };
-
-  // keepMkv toggle: PUT /config + brief status feedback
-  $('cp-keep-mkv').addEventListener('change', async (e) => {
-    const status = $('cp-keep-mkv-status');
-    status.textContent = 'saving…';
-    status.style.color = '#888';
-    try {
-      const r = await fetch(API + '/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keepMkv: e.target.checked }),
-      });
-      if (!r.ok) throw new Error('http ' + r.status);
-      try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
-      status.textContent = e.target.checked ? '✓ Will keep MKVs (watcher restarting)' : '✓ Will discard MKVs after pairing (watcher restarting)';
-      status.style.color = '#10b981';
-      setTimeout(() => { status.textContent = ''; }, 4000);
-      setTimeout(poll, 3000);
-    } catch (err) {
-      status.textContent = '✗ ' + err.message;
-      status.style.color = '#ff5555';
-    }
-  });
-
-  // ─── MKV cleanup checklist ─────────────────────────────────────────────
-  let mkvFiles = []; // [{path, name, size, gameFolder}]
-
-  function updateMkvButtons() {
-    const checked = $('cp-mkv-list').querySelectorAll('input[type=checkbox]:checked').length;
-    $('cp-mkv-recycle').disabled = checked === 0;
-    $('cp-mkv-recycle').textContent = checked > 0
-      ? '♻ RECYCLE SELECTED (' + checked + ')'
-      : '♻ RECYCLE SELECTED';
-  }
-
-  async function refreshMkvList() {
-    try {
-      const r = await fetch(API + '/list-recordings');
-      if (!r.ok) throw new Error('http ' + r.status);
-      const j = await r.json();
-      // Flatten: collect every .mkv file across all game folders
-      mkvFiles = [];
-      for (const g of (j.games || [])) {
-        for (const f of (g.files || [])) {
-          if (f.format === 'mkv' || f.name.toLowerCase().endsWith('.mkv')) {
-            mkvFiles.push({ ...f, gameFolder: g.name });
-          }
-        }
-      }
-      mkvFiles.sort((a, b) => b.mtime - a.mtime); // newest first
-      $('cp-mkv-count').textContent = mkvFiles.length + ' file' + (mkvFiles.length === 1 ? '' : 's');
-      if (mkvFiles.length === 0) {
-        $('cp-mkv-list').innerHTML = '<div style="padding:10px;color:#888">No MKV files in target — all clean.</div>';
-        ['cp-mkv-all','cp-mkv-none','cp-mkv-recycle'].forEach(id => $(id).disabled = true);
-        return;
-      }
-      $('cp-mkv-list').innerHTML = mkvFiles.map((f, i) => {
-        return '<label data-idx="' + i + '" style="display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;padding:5px 10px;border-top:1px solid #1a1a1a;align-items:center;cursor:pointer">' +
-          '<input type="checkbox" data-mkv-idx="' + i + '">' +
-          '<span style="color:#888;font-family:monospace;min-width:90px">' + escapeHtml(f.gameFolder) + '</span>' +
-          '<code style="color:#bbb;font-family:monospace;word-break:break-all">' + escapeHtml(f.name) + '</code>' +
-          '<span style="color:#888;font-size:.85em">' + fmtBytes(f.size) + '</span>' +
-          '</label>';
-      }).join('');
-      ['cp-mkv-all','cp-mkv-none'].forEach(id => $(id).disabled = false);
-      updateMkvButtons();
-    } catch {
-      $('cp-mkv-list').innerHTML = '<div style="padding:10px;color:#888">watcher offline</div>';
-      ['cp-mkv-all','cp-mkv-none','cp-mkv-recycle'].forEach(id => $(id).disabled = true);
-    }
-  }
-
-  $('cp-mkv-list').addEventListener('change', (e) => {
-    if (e.target.type === 'checkbox') updateMkvButtons();
-  });
-  $('cp-mkv-all').onclick = () => {
-    $('cp-mkv-list').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
-    updateMkvButtons();
-  };
-  $('cp-mkv-none').onclick = () => {
-    $('cp-mkv-list').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
-    updateMkvButtons();
-  };
-  $('cp-mkv-recycle').onclick = async () => {
-    const checked = [...$('cp-mkv-list').querySelectorAll('input[type=checkbox]:checked')];
-    if (checked.length === 0) return;
-    const targets = checked.map(cb => mkvFiles[parseInt(cb.dataset.mkvIdx, 10)]).filter(Boolean);
-    const totalSize = targets.reduce((acc, f) => acc + f.size, 0);
-    if (!confirm('Send ' + targets.length + ' file(s) to Recycle Bin?\n\n' +
-                 'Total: ' + fmtBytes(totalSize) + '\n\n' +
-                 'Recoverable from Windows Recycle Bin until you empty it.')) return;
-    $('cp-mkv-recycle').disabled = true;
-    $('cp-mkv-recycle').textContent = 'RECYCLING…';
-    let ok = 0, fail = 0;
-    for (const f of targets) {
-      try {
-        const r = await fetch(API + '/recycle-file', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: f.path }),
-        });
-        if (r.ok) ok++; else fail++;
-      } catch { fail++; }
-    }
-    alert('✓ Recycled ' + ok + ' file(s)' + (fail ? ' (' + fail + ' failed)' : ''));
-    refreshMkvList();
-  };
-
-  // Refresh the MKV list whenever /status updates installDir or paths change.
-  // The simplest hook: tag a load on init + every time the recordings refresh.
-  setInterval(refreshMkvList, 8000);
-
-  // ─── Service control: START / STOP / RESTART ───────────────────────────
-  $('cp-start').onclick = () => {
-    $('cp-launch-status').style.display = 'block';
-    $('cp-launch-detail').textContent = 'Sent launch request. Waiting for the watcher to come online…';
-    const a = document.createElement('a');
-    a.href = 'clip-prep://start';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => a.remove(), 1000);
-    setTimeout(poll, 2500);
-    setTimeout(poll, 5000);
-    setTimeout(poll, 9000);
-    setTimeout(() => {
-      if ($('cp-start').disabled === false) {
-        $('cp-launch-detail').innerHTML =
-          'Still offline. The browser may have blocked the prompt. ' +
-          'If you haven\'t re-run install.bat since the URL protocol was added, ' +
-          'do that once (uninstall.bat → install.bat).';
-      }
-    }, 12000);
-  };
-  $('cp-stop').onclick = async () => {
-    try { await fetch(API + '/stop', { method: 'POST' }); } catch {}
-    setTimeout(poll, 1500);
-  };
-  $('cp-restart').onclick = async () => {
-    try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
-    setTimeout(poll, 3500);
-    setTimeout(poll, 6000);
-  };
-
-  // ─── Uninstall ─────────────────────────────────────────────────────────
-  $('cp-uninstall').onclick = async () => {
-    if (!confirm('Uninstall clip-prep?\n\nRemoves auto-start (registry, Start Menu shortcut, clip-prep:// protocol)\nand stops the watcher.\n\nFiles in Overlay/clip-prep/ stay on disk.\nRe-run install.bat to reinstall.')) return;
-    const fb = $('cp-uninstall-feedback');
-    fb.textContent = 'Uninstalling…';
-    fb.style.color = '#888';
-    try {
-      const r = await fetch(API + '/uninstall', { method: 'POST' });
-      if (!r.ok) throw new Error('uninstall failed');
-      fb.textContent = '✓ Uninstalled. Service stopping.';
-      fb.style.color = '#10b981';
-      setTimeout(poll, 1500);
-    } catch (e) {
-      fb.textContent = '✗ ' + e.message;
-      fb.style.color = '#ff5555';
-    }
-  };
-
-  // ─── Game folders editor ───────────────────────────────────────────────
-  let gamesMap = {};
-  let gamesFilter = '';
-  let gamesRawMode = false;
-
-  const isComplex = (e) => e !== null && typeof e === 'object';
-  const entryFolderText = (e) => typeof e === 'string' ? e : (isComplex(e) ? (e.default || '') : '');
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-  }
-
-  async function fetchGames() {
-    try {
-      const r = await fetch(API + '/games');
-      if (!r.ok) throw new Error('http ' + r.status);
-      const text = await r.text();
-      gamesMap = JSON.parse(text);
-      $('cp-games-raw').value = JSON.stringify(gamesMap, null, 2);
-      renderGamesTable();
-    } catch {
-      $('cp-games-table').innerHTML = '<div style="padding:14px;color:#888">watcher offline — start it to edit game folders</div>';
-      ['cp-games-add-toggle','cp-games-export','cp-games-import-btn'].forEach(id => $(id).disabled = true);
-      return;
-    }
-    ['cp-games-add-toggle','cp-games-export','cp-games-import-btn'].forEach(id => $(id).disabled = false);
-  }
-
-  function renderGamesTable() {
-    const filter = gamesFilter.toLowerCase();
-    const rows = Object.keys(gamesMap)
-      .filter(exe => !filter || exe.toLowerCase().includes(filter) || (entryFolderText(gamesMap[exe]) || '').toLowerCase().includes(filter))
-      .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    if (rows.length === 0) {
-      $('cp-games-table').innerHTML = '<div style="padding:14px;color:#888">no entries match filter</div>';
-      return;
-    }
-    $('cp-games-table').innerHTML = rows.map(exe => {
-      const entry = gamesMap[exe];
-      const complex = isComplex(entry);
-      const folder = entryFolderText(entry);
-      const tag = complex ? '<span class="row-tag" title="has if_running rules">RULES</span>' : '';
-      const inputClass = complex ? 'complex' : '';
-      const inputAttrs = complex ? 'readonly' : '';
-      // For simple rows: input + tiny status dot. No SAVE button - autosave on
-      // blur/Enter when value changes. RULES rows still use the JSON modal.
-      return '<div class="cp-games-row" data-exe="' + escapeHtml(exe) + '">' +
-        '<code title="' + escapeHtml(exe) + '">' + escapeHtml(exe) + '</code>' +
-        '<input type="text" class="' + inputClass + '" value="' + escapeHtml(folder) + '" ' + inputAttrs + ' data-exe="' + escapeHtml(exe) + '" data-saved="' + escapeHtml(folder) + '">' +
-        tag +
-        (complex
-          ? '<button data-action="raw" data-exe="' + escapeHtml(exe) + '" title="Edit JSON">JSON</button>'
-          : '<span class="row-status" data-exe-status="' + escapeHtml(exe) + '" style="font-size:.75em;color:#666;width:54px;text-align:center"></span>') +
-        '<button class="del" data-action="del" data-exe="' + escapeHtml(exe) + '" title="Delete entry">✕</button>' +
-        '</div>';
-    }).join('');
-  }
-
-  // Auto-save a simple row on blur or Enter, only if the value changed.
-  async function autosaveRow(input) {
-    if (input.classList.contains('complex')) return;
-    const exe = input.dataset.exe;
-    const newFolder = (input.value || '').trim();
-    const savedFolder = input.dataset.saved || '';
-    if (newFolder === savedFolder) return;
-    const status = $('cp-games-table').querySelector('span[data-exe-status="' + CSS.escape(exe) + '"]');
-    if (!newFolder) {
-      input.value = savedFolder;
-      if (status) { status.textContent = 'empty'; status.style.color = '#d66'; setTimeout(() => { status.textContent = ''; }, 1500); }
-      return;
-    }
-    if (status) { status.textContent = 'saving…'; status.style.color = '#FFD700'; }
-    const next = { ...gamesMap, [exe]: newFolder };
-    if (await saveGamesMap(next)) {
-      input.dataset.saved = newFolder;
-      if (status) { status.textContent = '✓ saved'; status.style.color = '#10b981'; setTimeout(() => { status.textContent = ''; }, 1500); }
-    } else {
-      if (status) { status.textContent = '✗ failed'; status.style.color = '#d66'; }
-    }
-  }
-  $('cp-games-table').addEventListener('blur', (ev) => {
-    if (ev.target.matches && ev.target.matches('input[data-exe]')) autosaveRow(ev.target);
-  }, true);
-  $('cp-games-table').addEventListener('keydown', (ev) => {
-    if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('input[data-exe]')) {
-      ev.preventDefault();
-      ev.target.blur();
-    }
-  });
-
-  async function saveGamesMap(newMap) {
-    try {
-      const r = await fetch(API + '/games', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newMap),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        setFeedback('cp-games-feedback', '✗ ' + (err.error || 'save failed'), 'err');
-        return false;
-      }
-      gamesMap = newMap;
-      $('cp-games-raw').value = JSON.stringify(gamesMap, null, 2);
-      $('cp-games-dirty').style.display = 'none';
-      $('cp-games-raw-save').disabled = true;
-      return true;
-    } catch (e) {
-      setFeedback('cp-games-feedback', '✗ ' + e.message, 'err');
-      return false;
-    }
-  }
-
-  $('cp-games-table').addEventListener('click', async (ev) => {
-    const btn = ev.target.closest('button');
-    if (!btn) return;
-    const action = btn.dataset.action;
-    const exe = btn.dataset.exe;
-    if (!action || !exe) return;
-    if (action === 'save') {
-      const input = $('cp-games-table').querySelector('input[data-exe="' + CSS.escape(exe) + '"]');
-      const newFolder = (input.value || '').trim();
-      if (!newFolder) return setFeedback('cp-games-feedback', '✗ Folder name cannot be empty.', 'err');
-      const next = { ...gamesMap, [exe]: newFolder };
-      if (await saveGamesMap(next)) {
-        setFeedback('cp-games-feedback', '✓ ' + exe + ' → "' + newFolder + '"', 'ok');
-        renderGamesTable();
-      }
-    } else if (action === 'del') {
-      if (!confirm('Delete mapping "' + exe + '"?\n\nFolders already created from this mapping stay on disk; only the rule is removed.')) return;
-      const next = { ...gamesMap };
-      delete next[exe];
-      if (await saveGamesMap(next)) {
-        setFeedback('cp-games-feedback', '✓ Removed ' + exe, 'ok');
-        renderGamesTable();
-      }
-    } else if (action === 'raw') {
-      gamesRawMode = true;
-      $('cp-games-raw-panel').style.display = 'block';
-      $('cp-games-toggle-raw').textContent = 'TABLE';
-      const lines = $('cp-games-raw').value.split('\n');
-      const lineIdx = lines.findIndex(l => l.includes('"' + exe + '"'));
-      if (lineIdx >= 0) {
-        const ta = $('cp-games-raw');
-        const pos = lines.slice(0, lineIdx).join('\n').length;
-        ta.focus();
-        ta.setSelectionRange(pos, pos + lines[lineIdx].length);
-      }
-    }
-  });
-
-  $('cp-games-filter').addEventListener('input', (e) => {
-    gamesFilter = e.target.value;
-    renderGamesTable();
-  });
-  $('cp-games-toggle-raw').addEventListener('click', () => {
-    gamesRawMode = !gamesRawMode;
-    $('cp-games-raw-panel').style.display = gamesRawMode ? 'block' : 'none';
-    $('cp-games-toggle-raw').textContent = gamesRawMode ? 'TABLE' : 'RAW JSON';
-  });
-  $('cp-games-raw').addEventListener('input', () => {
-    $('cp-games-raw-save').disabled = false;
-    $('cp-games-dirty').style.display = 'inline';
-  });
-  $('cp-games-raw-save').addEventListener('click', async () => {
-    let parsed;
-    try { parsed = JSON.parse($('cp-games-raw').value); }
-    catch (e) { return setFeedback('cp-games-feedback', '✗ Invalid JSON: ' + e.message, 'err'); }
-    if (await saveGamesMap(parsed)) {
-      setFeedback('cp-games-feedback', '✓ Saved ' + Object.keys(parsed).length + ' entries', 'ok');
-      renderGamesTable();
-    }
-  });
-
-  // Inline ADD form
-  $('cp-games-add-toggle').addEventListener('click', () => {
-    const panel = $('cp-games-add-panel');
-    const isOpen = panel.style.display !== 'none';
-    panel.style.display = isOpen ? 'none' : 'block';
-    if (!isOpen) {
-      $('cp-games-add-exe').value = '';
-      $('cp-games-add-folder').value = '';
-      $('cp-games-add-exe').focus();
-    }
-  });
-  $('cp-games-add-cancel').addEventListener('click', () => {
-    $('cp-games-add-panel').style.display = 'none';
-    $('cp-games-add-exe').value = '';
-    $('cp-games-add-folder').value = '';
-  });
-  $('cp-games-add-confirm').addEventListener('click', async () => {
-    const exe = $('cp-games-add-exe').value.trim();
-    const folder = $('cp-games-add-folder').value.trim();
-    if (!exe) return setFeedback('cp-games-feedback', '✗ Executable name is required.', 'err');
-    if (!folder) return setFeedback('cp-games-feedback', '✗ Folder name is required.', 'err');
-    if (gamesMap[exe] !== undefined && !confirm('"' + exe + '" already exists — overwrite?')) return;
-    const next = { ...gamesMap, [exe]: folder };
-    if (await saveGamesMap(next)) {
-      setFeedback('cp-games-feedback', '✓ Added ' + exe + ' → "' + folder + '"', 'ok');
-      $('cp-games-add-exe').value = '';
-      $('cp-games-add-folder').value = '';
-      $('cp-games-add-panel').style.display = 'none';
-      renderGamesTable();
-    }
-  });
-  ['cp-games-add-exe', 'cp-games-add-folder'].forEach(id => {
-    $(id).addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); $('cp-games-add-confirm').click(); }
-      if (e.key === 'Escape') { e.preventDefault(); $('cp-games-add-cancel').click(); }
-    });
-  });
-
-  // Export
-  $('cp-games-export').addEventListener('click', () => {
-    const json = JSON.stringify(gamesMap, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'games-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setFeedback('cp-games-feedback', '✓ Exported ' + Object.keys(gamesMap).length + ' entries', 'ok');
-  });
-
-  // Import
-  $('cp-games-import-btn').addEventListener('click', () => $('cp-games-import-file').click());
-  $('cp-games-import-file').addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    let parsed;
-    try { parsed = JSON.parse(await file.text()); }
-    catch (err) { return setFeedback('cp-games-feedback', '✗ Invalid JSON file: ' + err.message, 'err'); }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return setFeedback('cp-games-feedback', '✗ Imported file is not a JSON object.', 'err');
-    }
-    const choice = confirm('Import ' + Object.keys(parsed).length + ' entries from "' + file.name + '"?\n\nOK = REPLACE everything (your current ' + Object.keys(gamesMap).length + ' entries get wiped)\nCancel = MERGE (imported entries override on conflicts)');
-    const next = choice ? parsed : { ...gamesMap, ...parsed };
-    if (await saveGamesMap(next)) {
-      setFeedback('cp-games-feedback', '✓ ' + (choice ? 'Replaced' : 'Merged') + ': ' + Object.keys(next).length + ' entries total', 'ok');
-      renderGamesTable();
-    }
-  });
-
-  // ─── Mix recordings list + split controls ─────────────────────────────
-  function fmtBytes(b) {
-    if (!b) return '0';
-    if (b > 1e9) return (b / 1e9).toFixed(1) + ' GB';
-    if (b > 1e6) return (b / 1e6).toFixed(0) + ' MB';
-    return (b / 1e3).toFixed(0) + ' KB';
-  }
-  function fmtDur(sec) {
-    if (!sec) return '—';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return m + 'm ' + s + 's';
-  }
-
-  // Auto-poll the mix list at this interval whenever any file is in-progress.
-  // Survives dashboard refreshes — the watcher reports in-progress state via
-  // /list-mix, so the UI re-syncs on every load + interval tick.
-  let mixAutoTimer = null;
-  function ensureMixAutoRefresh(anyInProgress) {
-    if (anyInProgress && !mixAutoTimer) {
-      mixAutoTimer = setInterval(refreshMixList, 4000);
-    } else if (!anyInProgress && mixAutoTimer) {
-      clearInterval(mixAutoTimer);
-      mixAutoTimer = null;
-    }
-  }
-
-  async function refreshMixList() {
-    try {
-      const r = await fetch(API + '/list-mix');
-      if (!r.ok) throw new Error('http ' + r.status);
-      const j = await r.json();
-      if (!j.files || j.files.length === 0) {
-        $('cp-mix-list').innerHTML = '<div style="padding:14px;color:#888">No mix recordings yet. Multi-game sessions land here.</div>';
-        ensureMixAutoRefresh(false);
-        return;
-      }
-      let anyInProgress = false;
-      $('cp-mix-list').innerHTML = j.files.map(f => {
-        let tag, btn;
-        if (f.in_progress) {
-          anyInProgress = true;
-          tag = '<span style="font-size:.7em;color:#10b981;border:1px solid #10b981;padding:2px 6px;border-radius:10px;animation:cppulse 1.5s ease-in-out infinite">SPLITTING…</span>';
-          btn = '<button class="btn sm" disabled>SPLITTING…</button>';
-        } else if (f.split) {
-          tag = '<span style="font-size:.7em;color:#10b981;border:1px solid #10b981;padding:2px 6px;border-radius:10px">SPLIT</span>';
-          btn = '<button class="btn sm" data-delete="' + escapeHtml(f.basename) + '" style="background:rgba(255,68,68,.1);border-color:#553;color:#d66" title="Move original mix file (mkv+mp4+json) to Recycle Bin. Segments stay.">DELETE ORIGINAL</button>';
-        } else {
-          tag = '<span style="font-size:.7em;color:#FFD700;border:1px solid #5a4a10;padding:2px 6px;border-radius:10px">PENDING</span>';
-          btn = '<button class="btn sm" data-split="' + escapeHtml(f.basename) + '">SPLIT</button>';
-        }
-        return '<div style="padding:8px 10px;border-bottom:1px solid #1a1a1a;display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center">' +
-          '<div><code style="color:#ccc;font-size:.85em">' + escapeHtml(f.basename) + '</code><br>' +
-          '<span style="font-size:.75em;color:#888">' + escapeHtml(f.games.join(' + ') || '(no games)') + '  ·  ' + fmtDur(f.duration_sec) + '  ·  ' + fmtBytes(f.size_bytes) + '</span></div>' +
-          tag + btn + '</div>';
-      }).join('');
-      ensureMixAutoRefresh(anyInProgress);
-    } catch (e) {
-      $('cp-mix-list').innerHTML = '<div style="padding:14px;color:#888">watcher offline — start it to load mix list</div>';
-      ensureMixAutoRefresh(false);
-    }
-  }
-
-  $('cp-mix-list').addEventListener('click', async (ev) => {
-    // Delete-original handler (visible on split rows)
-    const delBtn = ev.target.closest('button[data-delete]');
-    if (delBtn) {
-      const basename = delBtn.dataset.delete;
-      if (!confirm('Delete original mix file?\n\n' + basename + '\n\nThe .mkv, .mp4, and sidecar move to Recycle Bin (recoverable).\nThe split segments in game folders are kept.\n\nProceed?')) return;
-      delBtn.disabled = true;
-      delBtn.textContent = 'DELETING…';
-      try {
-        const r = await fetch(API + '/delete-mix', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ basename }),
-        });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          setFeedback('cp-mix-feedback', '✗ ' + (j.error || 'delete failed'), 'err');
-          delBtn.disabled = false;
-          delBtn.textContent = 'DELETE ORIGINAL';
-          return;
-        }
-        setFeedback('cp-mix-feedback', '✓ ' + (j.recycled || 0) + ' file(s) sent to Recycle Bin.', 'ok');
-        refreshMixList();
-      } catch (e) {
-        setFeedback('cp-mix-feedback', '✗ ' + e.message, 'err');
-        delBtn.disabled = false;
-        delBtn.textContent = 'DELETE ORIGINAL';
-      }
-      return;
-    }
-
-    const btn = ev.target.closest('button[data-split]');
-    if (!btn) return;
-    const basename = btn.dataset.split;
-    const precise = $('cp-mix-precise').checked;
-    setFeedback('cp-mix-feedback', 'Splitting ' + basename + ' (' + (precise ? 'precise re-encode — slow' : 'stream copy — fast') + ')…', 'info');
-    // Optimistically refresh — the server will mark this file in_progress
-    // immediately, and the polling will keep us in sync even if the user
-    // refreshes the page mid-split.
-    refreshMixList();
-    try {
-      const r = await fetch(API + '/split-mix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ basename, precise }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        setFeedback('cp-mix-feedback', '✗ ' + (j.error || 'split failed'), 'err');
-        refreshMixList();
-        return;
-      }
-      setFeedback('cp-mix-feedback', '✓ Split into ' + j.segments.length + ' segment(s).', 'ok');
-      refreshMixList();
-    } catch (e) {
-      setFeedback('cp-mix-feedback', '✗ ' + e.message, 'err');
-      refreshMixList();
-    }
-  });
-
-  $('cp-mix-refresh').addEventListener('click', refreshMixList);
-
-  // ─── OBS Bundle: export / import / restore ────────────────────────────
-  function setBundleStatus(msg, tone) {
-    const el = $('cp-bundle-status');
-    if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
-    el.style.display = 'block';
-    el.textContent = msg;
-    el.style.color = tone === 'err' ? '#ff5555' : tone === 'ok' ? '#10b981' : tone === 'work' ? '#FFD700' : '#aaa';
-  }
-  function fmtBytes(n) {
-    if (n < 1024) return n + ' B';
-    if (n < 1024*1024) return (n/1024).toFixed(0) + ' KB';
-    return (n/1024/1024).toFixed(1) + ' MB';
+  // === OBS tab ===
+  const obsOutput = $('obs-output');
+  function setObsOutput(text, kind) {
+    obsOutput.classList.remove('err', 'ok');
+    if (kind) obsOutput.classList.add(kind);
+    obsOutput.textContent = text;
+    obsOutput.classList.add('show');
   }
   async function pickFolder(kind) {
-    try {
-      const r = await fetch(API + '/pick-folder?kind=' + kind, { method: 'POST' });
-      const j = await r.json();
-      if (j.cancelled) return null;
-      if (j.error) { setBundleStatus('Picker error: ' + j.error, 'err'); return null; }
-      return j.path;
-    } catch (e) {
-      setBundleStatus('Picker failed: ' + e.message, 'err');
-      return null;
-    }
+    const r = await fetch(API + '/pick-folder?kind=' + kind, { method: 'POST' });
+    const j = await r.json();
+    return j.cancelled ? null : j.path;
   }
-  $('cp-bundle-export').addEventListener('click', async () => {
+  $('obs-export').addEventListener('click', async () => {
     const out = await pickFolder('output');
     if (!out) return;
-    if (!confirm('Export OBS bundle to:\n\n' + out + '\n\nThis will overwrite anything currently in that folder. Make sure OBS is closed. Continue?')) return;
-    setBundleStatus('Exporting... (this can take 30-60s, longer with many plugins)', 'work');
-    $('cp-bundle-export').disabled = true;
+    setObsOutput('Exporting bundle to ' + out + '...', null);
     try {
       const r = await fetch(API + '/export-obs-bundle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ outputDir: out }),
       });
-      const j = await r.json();
-      if (j.ok) {
-        setBundleStatus('Export complete:\n' + out + '\n\n' + (j.output || ''), 'ok');
-      } else {
-        setBundleStatus('Export failed:\n' + (j.error || j.output || 'unknown error'), 'err');
-      }
-    } catch (e) {
-      setBundleStatus('Export failed: ' + e.message, 'err');
-    } finally {
-      $('cp-bundle-export').disabled = false;
-    }
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Export failed', 'err');
+      else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
+    } catch (e) { setObsOutput('Export failed: ' + e.message, 'err'); }
   });
-  $('cp-bundle-import').addEventListener('click', async () => {
+  $('obs-import').addEventListener('click', async () => {
     const bundle = await pickFolder('bundle');
     if (!bundle) return;
-    if (!confirm('Import OBS bundle from:\n\n' + bundle + '\n\nThis will overwrite your OBS scenes, profiles, plugin settings, and auto-install bundled plugin DLLs. Your current state is auto-backed-up first. Make sure OBS is closed. Continue?')) return;
-    setBundleStatus('Importing... (creates a backup first, then restores. Can take 30-60s.)', 'work');
-    $('cp-bundle-import').disabled = true;
+    setObsOutput('Importing bundle from ' + bundle + '...', null);
     try {
       const r = await fetch(API + '/import-obs-bundle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bundlePath: bundle }),
       });
-      const j = await r.json();
-      if (j.ok) {
-        const luaFolder = $('cp-lua-path').value || '%LOCALAPPDATA%\\clip-prep\\obs';
-        setBundleStatus(
-          'Import complete.\n\n' +
-          (j.output || '') +
-          '\n\nNEXT STEP: open OBS, Tools → Scripts → + → paste this folder path\n' +
-          'into the file picker address bar, then select game-tracker.lua:\n' +
-          '  ' + luaFolder + '\n' +
-          '(scroll up - the yellow banner has a COPY button.)',
-          'ok'
-        );
-        refreshBackupsList();
-      } else {
-        setBundleStatus('Import failed:\n' + (j.error || j.output || 'unknown error'), 'err');
-      }
-    } catch (e) {
-      setBundleStatus('Import failed: ' + e.message, 'err');
-    } finally {
-      $('cp-bundle-import').disabled = false;
-    }
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Import failed', 'err');
+      else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
+    } catch (e) { setObsOutput('Import failed: ' + e.message, 'err'); }
+  });
+  $('obs-register-lua').addEventListener('click', async () => {
+    setObsOutput('Registering game-tracker.lua...', null);
+    try {
+      const r = await fetch(API + '/register-lua', { method: 'POST' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Register failed', 'err');
+      else setObsOutput(j.output || 'Done.', 'ok');
+    } catch (e) { setObsOutput('Register failed: ' + e.message, 'err'); }
   });
 
-  async function refreshBackupsList() {
-    const target = $('cp-bundle-backups');
-    target.innerHTML = '<div style="padding:6px;color:#888;font-size:.85em">Loading...</div>';
+  function fmtBytes(n) {
+    if (!n) return '0 B';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
+    return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  }
+  async function refreshBackups() {
+    const target = $('obs-backups');
     try {
       const r = await fetch(API + '/list-obs-backups');
       const j = await r.json();
       const backups = j.backups || [];
       if (backups.length === 0) {
-        target.innerHTML = '<div style="padding:6px;color:#888;font-size:.85em">No auto-backups yet. They appear here after each Import.</div>';
+        target.innerHTML = '<div class="backup-empty">No auto-backups yet. They appear after each Import.</div>';
         return;
       }
       target.innerHTML = backups.map(b => {
-        const ts = b.modified.replace('T', ' ').replace(/\..+/, '');
-        const isPreRestore = b.name.endsWith('-pre-restore');
-        return '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;padding:6px 8px;border-bottom:1px solid #1a1a1a;align-items:center;font-size:.85em">'
-          + '<div><code style="color:#aaa">' + b.name + '</code>'
-          + (isPreRestore ? ' <span style="color:#FFD700;font-size:.85em">(pre-restore)</span>' : '')
-          + '<br><span style="color:#666;font-size:.85em">' + ts + ' · ' + b.fileCount + ' files · ' + fmtBytes(b.sizeBytes) + '</span></div>'
-          + '<button class="btn sm" data-restore="' + b.name + '" style="font-size:.75em">RESTORE</button>'
-          + '<button class="btn sm" data-recycle="' + b.name + '" style="font-size:.75em;background:rgba(255,68,68,.1);border-color:#553;color:#d66">DELETE</button>'
-          + '</div>';
+        const ts = escapeHtml(String(b.modified || '').replace('T', ' ').replace(/\..+/, ''));
+        const safeName = escapeHtml(b.name || '');
+        return `<div class="backup-row">
+          <div>
+            <div class="backup-name">${safeName}</div>
+            <div class="backup-meta">${ts} · ${b.fileCount || 0} files · ${escapeHtml(fmtBytes(b.sizeBytes))}</div>
+          </div>
+          <button class="btn btn-secondary" data-restore="${safeName}" style="font-size: 10px; padding: 6px 12px">Restore</button>
+          <button class="btn btn-destructive" data-recycle="${safeName}" style="font-size: 10px; padding: 6px 12px">Delete</button>
+        </div>`;
       }).join('');
       target.querySelectorAll('[data-restore]').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const name = e.target.getAttribute('data-restore');
-          if (!confirm('Restore from ' + name + '?\n\nYour current OBS state will be saved as a new pre-restore backup first, so this is reversible.')) return;
-          setBundleStatus('Restoring from ' + name + '...', 'work');
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.restore;
+          if (!confirm('Restore from ' + name + '?\n\nYour current OBS state will be saved as a new pre-restore backup first.')) return;
+          setObsOutput('Restoring from ' + name + '...', null);
           try {
             const r = await fetch(API + '/restore-obs-backup', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name }),
             });
             const j = await r.json();
-            if (j.ok) {
-              setBundleStatus('Restored ' + j.restored + ' leaf(s) from ' + name + '.\nSafety backup: ' + j.safetyBackup, 'ok');
-              refreshBackupsList();
-            } else {
-              setBundleStatus('Restore failed: ' + (j.error || 'unknown'), 'err');
-            }
-          } catch (e) {
-            setBundleStatus('Restore failed: ' + e.message, 'err');
-          }
+            if (!r.ok) setObsOutput('Restore failed: ' + (j.error || 'unknown'), 'err');
+            else { setObsOutput('Restored. Safety backup: ' + j.safetyBackup, 'ok'); refreshBackups(); }
+          } catch (e) { setObsOutput('Restore failed: ' + e.message, 'err'); }
         });
       });
       target.querySelectorAll('[data-recycle]').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const name = e.target.getAttribute('data-recycle');
-          if (!confirm('Send ' + name + ' to the Recycle Bin? (Recoverable.)')) return;
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.recycle;
+          if (!confirm('Send ' + name + ' to the Recycle Bin?')) return;
           try {
             const r = await fetch(API + '/delete-obs-backup', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name }),
             });
             const j = await r.json();
-            if (j.ok) refreshBackupsList();
-            else setBundleStatus('Delete failed: ' + (j.error || 'unknown'), 'err');
-          } catch (e) {
-            setBundleStatus('Delete failed: ' + e.message, 'err');
-          }
+            if (!r.ok) setObsOutput('Delete failed: ' + (j.error || 'unknown'), 'err');
+            else refreshBackups();
+          } catch (e) { setObsOutput('Delete failed: ' + e.message, 'err'); }
         });
       });
     } catch (e) {
-      target.innerHTML = '<div style="padding:6px;color:#ff5555;font-size:.85em">Failed to load backups: ' + e.message + '</div>';
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
     }
   }
-  $('cp-bundle-refresh-backups').addEventListener('click', refreshBackupsList);
+  $('obs-refresh-backups').addEventListener('click', refreshBackups);
+  refreshBackups();
 
-  poll();
-  pollLog();
-  fetchGames();
-  refreshMixList();
-  refreshMkvList();
-  refreshBackupsList();
-  setInterval(poll, 3000);
-  setInterval(pollLog, 3000);
-})();
+  // === Recordings tab ===
+  async function refreshRecordings() {
+    const target = $('rec-games');
+    try {
+      const r = await fetch(API + '/list-recordings');
+      const j = await r.json();
+      const games = j.games || [];
+      if (games.length === 0) {
+        target.innerHTML = '<div class="backup-empty">No recordings yet.</div>';
+        return;
+      }
+      target.innerHTML = games.map(g => {
+        const safeName = escapeHtml(g.name);
+        return `<div class="game-card" data-game="${safeName}">
+          <div class="game-head">
+            <div>
+              <div class="game-name">${safeName}</div>
+              <div class="game-meta">${g.fileCount} files · ${escapeHtml(fmtBytes(g.totalSize))}</div>
+            </div>
+            <div class="game-caret">▶</div>
+          </div>
+          <div class="game-files">
+            ${(g.files || []).map(f => `
+              <div class="file-row">
+                <span class="name">${escapeHtml(f.name)}</span>
+                <span class="size">${escapeHtml(fmtBytes(f.size))}</span>
+                <button class="file-recycle" data-recycle="${escapeHtml(f.path)}" title="Recycle">🗑</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+      }).join('');
+      target.querySelectorAll('.game-head').forEach(h => {
+        h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+      });
+      target.querySelectorAll('[data-recycle]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Send to Recycle Bin?\n' + btn.dataset.recycle)) return;
+          await fetch(API + '/recycle-file', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: btn.dataset.recycle }),
+          });
+          refreshRecordings();
+        });
+      });
+    } catch (e) {
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  async function refreshMix() {
+    const target = $('rec-mix');
+    try {
+      const r = await fetch(API + '/list-mix');
+      const j = await r.json();
+      const files = j.files || [];
+      if (files.length === 0) {
+        target.innerHTML = '<div class="backup-empty">No mix recordings.</div>';
+        return;
+      }
+      target.innerHTML = files.map(f => {
+        const safeBase = escapeHtml(f.basename);
+        const dur = Math.round(f.duration_sec || 0);
+        const mins = Math.floor(dur / 60);
+        const secs = dur % 60;
+        const games = (f.games || []).map(escapeHtml).join(', ');
+        let statusBadge;
+        if (f.in_progress) statusBadge = '<span class="mix-status in-progress">SPLITTING</span>';
+        else if (f.split) statusBadge = '<span class="mix-status split">SPLIT</span>';
+        else statusBadge = '<span class="mix-status unsplit">UNSPLIT</span>';
+        return `<div class="mix-row">
+          <div>
+            <div class="mix-name">${safeBase}</div>
+            <div class="mix-meta">${mins}m ${secs}s · ${games || '—'} · ${escapeHtml(fmtBytes(f.size_bytes))}</div>
+          </div>
+          ${statusBadge}
+          <button class="btn btn-secondary" data-split="${safeBase}" style="font-size: 10px; padding: 6px 12px" ${f.split || f.in_progress ? 'disabled' : ''}>Split</button>
+          <button class="btn btn-destructive" data-delmix="${safeBase}" data-split-state="${f.split ? 'split' : 'unsplit'}" style="font-size: 10px; padding: 6px 12px" ${f.split ? '' : 'disabled'}>Delete</button>
+        </div>`;
+      }).join('');
+      target.querySelectorAll('[data-split]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (btn.disabled) return;
+          btn.disabled = true; btn.textContent = '...';
+          try {
+            const r = await fetch(API + '/split-mix', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ basename: btn.dataset.split }),
+            });
+            const j = await r.json();
+            if (!r.ok) alert('Split failed: ' + (j.error || 'unknown'));
+          } catch (e) { alert('Split failed: ' + e.message); }
+          refreshMix();
+        });
+      });
+      target.querySelectorAll('[data-delmix]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (btn.disabled) return;
+          if (btn.dataset.splitState !== 'split') return; // defense: only delete after split
+          if (!confirm('Send original mix file to Recycle Bin?')) return;
+          await fetch(API + '/delete-mix', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ basename: btn.dataset.delmix }),
+          });
+          refreshMix();
+        });
+      });
+    } catch (e) {
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  $('rec-refresh').addEventListener('click', () => { refreshRecordings(); refreshMix(); });
+  refreshRecordings();
+  refreshMix();
+  setInterval(refreshMix, 8000); // mix list updates faster — splits resolve mid-session
+
+  // === Settings tab ===
+  function setCfgStatus(text, kind) {
+    const el = $('cfg-status');
+    el.textContent = text;
+    el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+  }
+  // Populate paths from poll results
+  function renderSettings(s) {
+    if (!s) return;
+    $('cfg-dump').value = s.config?.dumpDir || '';
+    $('cfg-target').value = s.config?.targetRoot || '';
+  }
+  // Hook into poll
+  const _origPoll2 = pollStatus;
+  pollStatus = async function() {
+    await _origPoll2();
+    renderSettings(window.__sasiStatus);
+  };
+
+  $('cfg-dump-pick').addEventListener('click', async () => {
+    const p = await pickFolder('dump');
+    if (p) $('cfg-dump').value = p;
+  });
+  $('cfg-target-pick').addEventListener('click', async () => {
+    const p = await pickFolder('target');
+    if (p) $('cfg-target').value = p;
+  });
+  $('cfg-save').addEventListener('click', async () => {
+    const dump = $('cfg-dump').value.trim();
+    const target = $('cfg-target').value.trim();
+    if (!dump || !target) { setCfgStatus('Both folders required', 'err'); return; }
+    setCfgStatus('Saving...', null);
+    try {
+      const r = await fetch(API + '/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dumpDir: dump, targetRoot: target }),
+      });
+      const j = await r.json();
+      if (!r.ok) { setCfgStatus(j.error || 'Save failed', 'err'); return; }
+      setCfgStatus('Saved. Restarting watcher to apply...', 'ok');
+      try { await fetch(API + '/restart', { method: 'POST' }); }
+      catch (e) { /* expected — watcher exits before response drains */ }
+    } catch (e) { setCfgStatus('Save failed: ' + e.message, 'err'); }
+  });
+
+  // Games editor
+  async function loadGames() {
+    try {
+      const r = await fetch(API + '/games');
+      $('games-text').value = await r.text();
+      $('games-status').textContent = '';
+      $('games-status').style.color = '';
+    } catch (e) {
+      $('games-status').textContent = 'Failed to load: ' + e.message;
+      $('games-status').style.color = 'var(--accent-rec)';
+    }
+  }
+  $('games-save').addEventListener('click', async () => {
+    let parsed;
+    try { parsed = JSON.parse($('games-text').value); }
+    catch (e) { $('games-status').textContent = 'Invalid JSON: ' + e.message; $('games-status').style.color = 'var(--accent-rec)'; return; }
+    try {
+      const r = await fetch(API + '/games', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed),
+      });
+      if (!r.ok) throw new Error('http ' + r.status);
+      $('games-status').textContent = 'Saved.';
+      $('games-status').style.color = 'var(--accent-online)';
+    } catch (e) {
+      $('games-status').textContent = 'Save failed: ' + e.message;
+      $('games-status').style.color = 'var(--accent-rec)';
+    }
+  });
+  loadGames();
+
+  // Danger zone
+  $('cfg-restart').addEventListener('click', async () => {
+    if (!confirm('Restart the watcher?')) return;
+    try { await fetch(API + '/restart', { method: 'POST' }); } catch {}
+  });
+  $('cfg-stop').addEventListener('click', async () => {
+    if (!confirm('Stop the watcher? It will not auto-restart until you launch it again.')) return;
+    try { await fetch(API + '/stop', { method: 'POST' }); } catch {}
+  });
+  $('cfg-uninstall').addEventListener('click', async () => {
+    if (!confirm('Remove auto-start entirely? Files stay; only the Windows login auto-start is removed.')) return;
+    try {
+      const r = await fetch(API + '/uninstall', { method: 'POST' });
+      if (r.ok) alert('Uninstalled. The watcher will not auto-start on next login.');
+    } catch (e) { alert('Uninstall failed: ' + e.message); }
+  });
 </script>
 </body>
 </html>
