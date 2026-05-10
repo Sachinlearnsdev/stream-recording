@@ -128,6 +128,47 @@
   .moves-row .target { color: var(--text-primary); }
   .moves-row .target.mix { color: var(--accent-warn); }
   .moves-empty { color: var(--text-muted); font-style: italic; padding: var(--sp-2) 0; }
+
+  /* Sections — used in OBS, Recordings, Settings */
+  .section { margin-bottom: var(--sp-6); }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+  .section-title { font-size: 9px; letter-spacing: 0.18em; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+  .section-hint { color: var(--text-muted); font-size: var(--text-small); margin-bottom: var(--sp-3); line-height: 1.6; }
+
+  /* Output box for long-running script results */
+  .output-box {
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    padding: var(--sp-3);
+    font-family: var(--font-mono); font-size: var(--text-mono);
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    max-height: 320px; overflow: auto;
+    display: none;
+  }
+  .output-box.show { display: block; }
+  .output-box.err { color: var(--accent-rec); }
+  .output-box.ok { color: var(--accent-online); }
+
+  /* Backup list rows */
+  .backup-list { display: flex; flex-direction: column; gap: var(--sp-1); }
+  .backup-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--sp-3);
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-page);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    font-size: var(--text-small);
+  }
+  .backup-name { color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .backup-meta { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
+  .backup-empty { color: var(--text-muted); padding: var(--sp-3); text-align: center; }
+
+  .row { display: flex; gap: var(--sp-2); }
 </style>
 </head>
 <body>
@@ -212,7 +253,31 @@
         <div class="page-eyebrow">Studio</div>
         <div class="page-title">OBS</div>
       </div>
-      <p class="t-small">OBS content goes here in Task 4.</p>
+
+      <div class="section">
+        <div class="section-title">Bundle</div>
+        <div class="section-hint"><strong>Close OBS</strong> before either operation — it locks browser-source state.</div>
+        <div class="row" style="margin-bottom: var(--sp-3)">
+          <button class="btn btn-secondary" id="obs-export" style="flex:1">Export Bundle</button>
+          <button class="btn btn-secondary" id="obs-import" style="flex:1">Import Bundle</button>
+        </div>
+        <div class="row" style="margin-bottom: var(--sp-3); align-items: center">
+          <button class="btn btn-secondary" id="obs-register-lua">Register Lua in OBS</button>
+          <span class="t-small" style="color: var(--text-muted)">Wires game-tracker.lua into every scene collection. Re-run after creating a new collection.</span>
+        </div>
+        <div class="output-box" id="obs-output"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Auto-backups</div>
+          <button class="btn btn-secondary" id="obs-refresh-backups" style="font-size: 10px; padding: 6px 12px">Refresh</button>
+        </div>
+        <div class="section-hint">Each Import auto-saves your current OBS state here first. Restore to undo a previous import.</div>
+        <div class="backup-list" id="obs-backups">
+          <div class="backup-empty">Loading...</div>
+        </div>
+      </div>
     </section>
     <section class="panel" data-panel="keys">
       <div class="page-head">
@@ -369,6 +434,124 @@
     try { await fetch(API + '/restart', { method: 'POST' }); }
     catch (e) { console.warn('restart error (expected if watcher already exiting):', e); }
   });
+
+  // === OBS tab ===
+  const obsOutput = $('obs-output');
+  function setObsOutput(text, kind) {
+    obsOutput.classList.remove('err', 'ok');
+    if (kind) obsOutput.classList.add(kind);
+    obsOutput.textContent = text;
+    obsOutput.classList.add('show');
+  }
+  async function pickFolder(kind) {
+    const r = await fetch(API + '/pick-folder?kind=' + kind, { method: 'POST' });
+    const j = await r.json();
+    return j.cancelled ? null : j.path;
+  }
+  $('obs-export').addEventListener('click', async () => {
+    const out = await pickFolder('output');
+    if (!out) return;
+    setObsOutput('Exporting bundle to ' + out + '...', null);
+    try {
+      const r = await fetch(API + '/export-obs-bundle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outputDir: out }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Export failed', 'err');
+      else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
+    } catch (e) { setObsOutput('Export failed: ' + e.message, 'err'); }
+  });
+  $('obs-import').addEventListener('click', async () => {
+    const bundle = await pickFolder('bundle');
+    if (!bundle) return;
+    setObsOutput('Importing bundle from ' + bundle + '...', null);
+    try {
+      const r = await fetch(API + '/import-obs-bundle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bundlePath: bundle }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Import failed', 'err');
+      else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
+    } catch (e) { setObsOutput('Import failed: ' + e.message, 'err'); }
+  });
+  $('obs-register-lua').addEventListener('click', async () => {
+    setObsOutput('Registering game-tracker.lua...', null);
+    try {
+      const r = await fetch(API + '/register-lua', { method: 'POST' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) setObsOutput(j.output || j.error || 'Register failed', 'err');
+      else setObsOutput(j.output || 'Done.', 'ok');
+    } catch (e) { setObsOutput('Register failed: ' + e.message, 'err'); }
+  });
+
+  function fmtBytes(n) {
+    if (!n) return '0 B';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
+    return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  }
+  async function refreshBackups() {
+    const target = $('obs-backups');
+    try {
+      const r = await fetch(API + '/list-obs-backups');
+      const j = await r.json();
+      const backups = j.backups || [];
+      if (backups.length === 0) {
+        target.innerHTML = '<div class="backup-empty">No auto-backups yet. They appear after each Import.</div>';
+        return;
+      }
+      target.innerHTML = backups.map(b => {
+        const ts = escapeHtml(String(b.modified || '').replace('T', ' ').replace(/\..+/, ''));
+        const safeName = escapeHtml(b.name || '');
+        return `<div class="backup-row">
+          <div>
+            <div class="backup-name">${safeName}</div>
+            <div class="backup-meta">${ts} · ${b.fileCount || 0} files · ${escapeHtml(fmtBytes(b.sizeBytes))}</div>
+          </div>
+          <button class="btn btn-secondary" data-restore="${safeName}" style="font-size: 10px; padding: 6px 12px">Restore</button>
+          <button class="btn btn-destructive" data-recycle="${safeName}" style="font-size: 10px; padding: 6px 12px">Delete</button>
+        </div>`;
+      }).join('');
+      target.querySelectorAll('[data-restore]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.restore;
+          if (!confirm('Restore from ' + name + '?\n\nYour current OBS state will be saved as a new pre-restore backup first.')) return;
+          setObsOutput('Restoring from ' + name + '...', null);
+          try {
+            const r = await fetch(API + '/restore-obs-backup', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name }),
+            });
+            const j = await r.json();
+            if (!r.ok) setObsOutput('Restore failed: ' + (j.error || 'unknown'), 'err');
+            else { setObsOutput('Restored. Safety backup: ' + j.safetyBackup, 'ok'); refreshBackups(); }
+          } catch (e) { setObsOutput('Restore failed: ' + e.message, 'err'); }
+        });
+      });
+      target.querySelectorAll('[data-recycle]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.recycle;
+          if (!confirm('Send ' + name + ' to the Recycle Bin?')) return;
+          try {
+            const r = await fetch(API + '/delete-obs-backup', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name }),
+            });
+            const j = await r.json();
+            if (!r.ok) setObsOutput('Delete failed: ' + (j.error || 'unknown'), 'err');
+            else refreshBackups();
+          } catch (e) { setObsOutput('Delete failed: ' + e.message, 'err'); }
+        });
+      });
+    } catch (e) {
+      target.innerHTML = `<div class="backup-empty">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+  $('obs-refresh-backups').addEventListener('click', refreshBackups);
+  refreshBackups();
 </script>
 </body>
 </html>
