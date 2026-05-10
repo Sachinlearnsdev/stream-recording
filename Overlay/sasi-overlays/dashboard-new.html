@@ -707,7 +707,7 @@
           </div>
           ${statusBadge}
           <button class="btn btn-secondary" data-split="${safeBase}" style="font-size: 10px; padding: 6px 12px" ${f.split || f.in_progress ? 'disabled' : ''}>Split</button>
-          <button class="btn btn-destructive" data-delmix="${safeBase}" style="font-size: 10px; padding: 6px 12px" ${f.split ? '' : 'disabled'}>Delete</button>
+          <button class="btn btn-destructive" data-delmix="${safeBase}" data-split-state="${f.split ? 'split' : 'unsplit'}" style="font-size: 10px; padding: 6px 12px" ${f.split ? '' : 'disabled'}>Delete</button>
         </div>`;
       }).join('');
       target.querySelectorAll('[data-split]').forEach(btn => {
@@ -728,6 +728,7 @@
       target.querySelectorAll('[data-delmix]').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (btn.disabled) return;
+          if (btn.dataset.splitState !== 'split') return; // defense: only delete after split
           if (!confirm('Send original mix file to Recycle Bin?')) return;
           await fetch(API + '/delete-mix', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
