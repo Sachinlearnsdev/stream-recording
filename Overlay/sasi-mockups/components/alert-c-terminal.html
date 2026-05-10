@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Alert — Terminal Readout (log stream)</title>
+<style>
+:root {
+  --red:#FF2200; --orange:#FF7700; --gold:#FFD700;
+  --term-green:#00ff9c;
+  --term-cyan:#5cf;
+  --term-grey:#6b7280;
+  --term-muted:rgba(255,255,255,.45);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'JetBrains Mono','Fira Code','Consolas','Courier New',monospace;
+  color:#fff;
+}
+
+.stage {
+  position:absolute; top:80px; left:80px;
+  width:540px; min-height:260px;
+  padding:22px 26px;
+  border:1px dashed rgba(255,255,255,.08);
+  border-radius:10px;
+}
+.stage-label {
+  position:absolute; top:10px; left:14px;
+  font-size:9px; font-weight:900; letter-spacing:4px;
+  color:rgba(255,255,255,.15); text-transform:uppercase;
+  font-family:'Inter',Arial,sans-serif;
+}
+
+/* ═════════ TERMINAL WINDOW ═════════ */
+.term {
+  width:100%;
+  background:rgba(0,0,0,.84);
+  border:1px solid rgba(255,34,0,.38);
+  border-radius:8px;
+  box-shadow:
+    0 18px 50px rgba(0,0,0,.55),
+    0 0 60px rgba(255,34,0,.1),
+    inset 0 0 30px rgba(0,0,0,.55);
+  overflow:hidden;
+  position:relative;
+  opacity:0; transform:translateY(8px);
+  animation:termIn .4s ease forwards;
+}
+@keyframes termIn { to { opacity:1; transform:translateY(0); } }
+
+/* Scanlines */
+.term::after {
+  content:''; position:absolute; inset:0;
+  background:repeating-linear-gradient(180deg, transparent 0, transparent 2px, rgba(255,255,255,.025) 2px, rgba(255,255,255,.025) 3px);
+  pointer-events:none; z-index:20;
+}
+/* Top brand line */
+.term::before {
+  content:''; position:absolute; top:0; left:10px; right:10px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+  z-index:21;
+}
+
+/* ═════════ HEADER ═════════ */
+.term-head {
+  display:flex; align-items:center;
+  padding:11px 16px 10px;
+  background:rgba(255,255,255,.03);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  position:relative;
+}
+.dots { display:flex; gap:7px; }
+.dot { width:10px; height:10px; border-radius:50%; border:1px solid rgba(0,0,0,.35); }
+.dot.red { background:#ff5f56; }
+.dot.yel { background:#ffbd2e; }
+.dot.grn { background:#27c93f; }
+.term-title {
+  position:absolute; left:50%; transform:translateX(-50%);
+  font-size:10px; letter-spacing:2px; text-transform:uppercase;
+  color:rgba(255,255,255,.42);
+}
+.term-stat {
+  margin-left:auto;
+  display:flex; align-items:center; gap:6px;
+  padding:3px 9px 3px 7px;
+  background:rgba(0,255,156,.08);
+  border:1px solid rgba(0,255,156,.32);
+  border-radius:3px;
+  font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--term-green);
+}
+.stat-dot {
+  width:6px; height:6px; border-radius:50%; background:var(--term-green);
+  box-shadow:0 0 6px var(--term-green);
+  animation:blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+/* ═════════ BODY ═════════ */
+.term-body {
+  padding:14px 18px 12px;
+  font-size:12px; line-height:1.5;
+  position:relative;
+}
+
+.boot {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:12px;
+  margin-bottom:10px;
+  padding-bottom:9px;
+  border-bottom:1px dashed rgba(255,255,255,.08);
+}
+.boot-left { color:var(--term-green); text-shadow:0 0 6px rgba(0,255,156,.4); }
+.boot-left .cmd { color:#fff; font-weight:700; }
+.boot-right {
+  font-size:10px; color:var(--term-muted);
+  display:flex; align-items:center; gap:6px;
+}
+.boot-right::before {
+  content:''; width:5px; height:5px; border-radius:50%;
+  background:var(--term-green); box-shadow:0 0 4px var(--term-green);
+}
+
+/* Log stream — 2 old rows + 1 big featured row at the bottom */
+.log {
+  display:flex; flex-direction:column;
+  gap:0;
+  min-height:120px;
+  position:relative;
+}
+
+.log-row {
+  display:flex; align-items:center; gap:12px;
+  padding:2px 8px 2px 10px;
+  border-radius:3px;
+  position:relative;
+  opacity:.5;
+  transition:
+    font-size .45s ease,
+    padding .45s ease,
+    gap .45s ease,
+    opacity .45s ease,
+    background .45s ease;
+}
+.log-row.enter { animation:rowIn .35s ease; }
+@keyframes rowIn { from { opacity:0; transform:translateY(6px); } }
+
+.log-row .ts   { flex-shrink:0; width:58px; }
+.log-row .chip { flex-shrink:0; }
+.log-row .user { flex-shrink:0; min-width:110px; }
+.log-row .meta { flex:1; min-width:0; }
+
+/* Aging — only 2 old rows visible above featured */
+.log-row.old   { opacity:.45; }
+.log-row.older { opacity:.22; }
+
+/* ═══ FEATURED — the newest alert, bigger + highlighted ═══ */
+.log-row.featured {
+  font-size:17px;
+  padding:13px 14px 13px 16px;
+  gap:16px;
+  opacity:1;
+  background:linear-gradient(90deg, rgba(255,34,0,.22), rgba(255,34,0,0) 70%);
+  margin-top:6px;
+}
+.log-row.featured::before {
+  content:''; position:absolute; left:0; top:7px; bottom:7px; width:3px;
+  background:var(--red);
+  box-shadow:0 0 9px var(--red), 0 0 18px rgba(255,34,0,.55);
+  border-radius:2px;
+}
+.log-row.featured .ts    { width:84px; font-size:15px; }
+.log-row.featured .chip  { font-size:12px; padding:3px 12px; min-width:88px; }
+.log-row.featured .user  { font-size:18px; }
+.log-row.featured .meta  { font-size:17px; }
+
+.ts    { color:var(--term-muted); font-size:10px; transition:font-size .45s ease, width .45s ease; }
+.user  {
+  color:#fff;
+  padding:0 2px;
+  font-size:11px;
+  border-bottom:1px dashed var(--orange);
+  transition:font-size .45s ease;
+}
+.meta  { color:var(--gold); font-weight:600; font-size:11px; transition:font-size .45s ease; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Event chip */
+.chip {
+  display:inline-block;
+  padding:1px 7px;
+  font-size:9px; font-weight:900; letter-spacing:1.2px;
+  border-radius:3px;
+  text-transform:uppercase;
+  text-align:center;
+  min-width:62px;
+  border:1px solid currentColor;
+  transition:font-size .45s ease, padding .45s ease, min-width .45s ease;
+}
+.chip.follow { color:var(--orange);    background:rgba(255,119,0,.1);  box-shadow:0 0 6px rgba(255,119,0,.25); }
+.chip.sub    { color:var(--gold);      background:rgba(255,215,0,.1);  box-shadow:0 0 6px rgba(255,215,0,.25); }
+.chip.cheer  { color:var(--term-cyan); background:rgba(85,204,255,.1); box-shadow:0 0 6px rgba(85,204,255,.25); }
+.chip.tip    { color:var(--term-green);background:rgba(0,255,156,.1);  box-shadow:0 0 6px rgba(0,255,156,.25); }
+.chip.raid   { color:var(--red);       background:rgba(255,34,0,.12);  box-shadow:0 0 6px rgba(255,34,0,.25); }
+
+/* Prompt line at bottom */
+.prompt-line {
+  margin-top:10px;
+  padding-top:8px;
+  border-top:1px dashed rgba(255,255,255,.08);
+  display:flex; align-items:center; gap:8px;
+  font-size:11px;
+  color:var(--term-muted);
+}
+.prompt-line .arrow { color:var(--term-green); text-shadow:0 0 6px rgba(0,255,156,.4); }
+.prompt-line .msg   { color:#fff; }
+.cursor {
+  display:inline-block; width:8px; height:15px;
+  background:var(--term-green); vertical-align:-2px; margin-left:4px;
+  animation:blink .7s step-end infinite;
+  box-shadow:0 0 8px var(--term-green);
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <span class="stage-label">★ Alert Frame</span>
+
+  <div class="term" id="term">
+    <div class="term-head">
+      <div class="dots">
+        <span class="dot red"></span>
+        <span class="dot yel"></span>
+        <span class="dot grn"></span>
+      </div>
+      <div class="term-title">sasi@streams &mdash; alerts.log</div>
+      <div class="term-stat">
+        <span class="stat-dot"></span>
+        <span>CONNECTED</span>
+      </div>
+    </div>
+
+    <div class="term-body">
+      <div class="boot">
+        <div class="boot-left">$ <span class="cmd">alerts.listen</span>()</div>
+        <div class="boot-right">pid 2847 &middot; yt+twitch &middot; 3 listeners</div>
+      </div>
+
+      <div class="log" id="log"></div>
+
+      <div class="prompt-line">
+        <span class="arrow">&gt;</span>
+        <span>waiting for next event</span>
+        <span class="cursor"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const log = document.getElementById('log');
+const MAX_ROWS = 3;
+
+const EVENTS = [
+  { chip:'follow', type:'FOLLOW', user:'ember_92',    meta:'+1 follower' },
+  { chip:'sub',    type:'SUB',    user:'mikhail',     meta:'tier 1 · month 3' },
+  { chip:'cheer',  type:'CHEER',  user:'cozyfox',     meta:'500 bits' },
+  { chip:'tip',    type:'TIP',    user:'raven_b',     meta:'₹1,250' },
+  { chip:'raid',   type:'RAID',   user:'jules',       meta:'48 viewers' },
+  { chip:'follow', type:'FOLLOW', user:'kai_h',       meta:'+1 follower' },
+  { chip:'sub',    type:'SUB',    user:'sora',        meta:'tier 2 · new' },
+  { chip:'cheer',  type:'CHEER',  user:'tanvi',       meta:'1,000 bits' },
+  { chip:'tip',    type:'TIP',    user:'rex_',        meta:'₹500' },
+];
+
+let eventIdx = 0;
+
+function formatTime(offsetSeconds) {
+  const d = new Date(Date.now() - (offsetSeconds || 0) * 1000);
+  return d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+function buildRow(e, ts) {
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = `
+    <span class="ts">${ts}</span>
+    <span class="chip ${e.chip}">${e.type}</span>
+    <span class="user">@${e.user}</span>
+    <span class="meta">${e.meta}</span>
+  `;
+  return row;
+}
+
+function applyTiers() {
+  // Newest row (last child) is featured. Only 2 old rows above it.
+  const rows = Array.from(log.children);
+  rows.forEach((r, i) => {
+    r.classList.remove('featured', 'old', 'older');
+    const pos = rows.length - 1 - i; // 0 = newest
+    if (pos === 0)      r.classList.add('featured');
+    else if (pos === 1) r.classList.add('old');
+    else                r.classList.add('older');
+  });
+}
+
+function pushEvent() {
+  const e = EVENTS[eventIdx % EVENTS.length];
+  eventIdx++;
+
+  const row = buildRow(e, formatTime());
+  row.classList.add('enter');
+  log.appendChild(row);
+  // Clean up enter animation class after it runs so it doesn't replay
+  setTimeout(() => row.classList.remove('enter'), 400);
+
+  applyTiers();
+
+  while (log.children.length > MAX_ROWS) {
+    log.firstChild.remove();
+  }
+}
+
+// Seed 3 initial rows (2 old + 1 featured)
+function seed() {
+  const seedEvents = EVENTS.slice(0, 3);
+  seedEvents.forEach((e, i) => {
+    const ageSec = (seedEvents.length - i) * 45;
+    log.appendChild(buildRow(e, formatTime(ageSec)));
+  });
+  eventIdx = seedEvents.length;
+  applyTiers();
+}
+
+seed();
+// Next event after a brief pause, then keep rolling
+setTimeout(pushEvent, 1800);
+setInterval(pushEvent, 3800);
+</script>
+
+</body>
+</html>

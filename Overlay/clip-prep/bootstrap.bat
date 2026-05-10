@@ -137,8 +137,8 @@ if exist "!_DASH_DIR!\dashboard.html" (
     if not exist "!INSTALL_DIR!\assets" mkdir "!INSTALL_DIR!\assets"
     robocopy "!_DASH_DIR!\assets" "!INSTALL_DIR!\assets" /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
   )
-  rem  Copy overlay scenes/components/lib so dashboard can iframe-preview them
-  for %%D in (scenes components lib) do (
+  rem  Copy overlay scenes/components/lib/stingers so dashboard + OBS can use them
+  for %%D in (scenes components lib stingers) do (
     if exist "!_DASH_DIR!\%%D" (
       if not exist "!INSTALL_DIR!\%%D" mkdir "!INSTALL_DIR!\%%D"
       robocopy "!_DASH_DIR!\%%D" "!INSTALL_DIR!\%%D" /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul

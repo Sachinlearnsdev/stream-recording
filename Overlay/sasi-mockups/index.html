@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Breaking News — Mockup Gallery</title>
+<script src="../config.js"></script>
+<script src="../secrets.js"></script>
+<style>
+:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; --bg:#050005; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#050005; color:#fff;
+  font-family:'Arial Black', Impact, Arial, sans-serif;
+  min-height:100vh;
+  padding:60px 40px;
+}
+h1 {
+  font-size:32px; letter-spacing:6px; color:var(--red);
+  text-shadow:0 0 18px rgba(255,34,0,.4);
+  margin-bottom:10px;
+}
+.sub {
+  font-size:12px; letter-spacing:5px;
+  color:rgba(255,255,255,.4); text-transform:uppercase;
+  margin-bottom:40px;
+}
+.grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(480px,1fr));
+  gap:30px;
+}
+.card {
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.28);
+  border-radius:10px;
+  box-shadow:0 0 20px rgba(255,34,0,.08);
+  padding:24px; position:relative;
+  transition:transform .2s ease, border-color .2s ease;
+}
+.card::before {
+  content:''; position:absolute; top:0; left:12px; right:12px; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,34,0,.5),transparent);
+}
+.card:hover { transform:translateY(-2px); border-color:rgba(255,34,0,.55); }
+.label {
+  font-size:9px; letter-spacing:5px; color:var(--orange);
+  text-transform:uppercase; margin-bottom:6px;
+}
+.title {
+  font-size:22px; letter-spacing:3px; color:#fff;
+  margin-bottom:10px;
+}
+.desc {
+  font-size:13px; font-weight:400; color:rgba(255,255,255,.65);
+  line-height:1.5; margin-bottom:18px;
+  font-family:'Inter','Segoe UI',Arial,sans-serif;
+}
+.open {
+  display:inline-block; padding:10px 18px;
+  background:rgba(255,34,0,.12);
+  border:1px solid rgba(255,34,0,.5);
+  border-radius:6px;
+  color:var(--red); text-decoration:none;
+  font-size:11px; letter-spacing:3px;
+  transition:background .2s ease;
+}
+.open:hover { background:rgba(255,34,0,.25); }
+.note {
+  margin-top:40px; padding:18px 22px;
+  background:rgba(255,119,0,.06);
+  border-left:2px solid var(--orange);
+  border-radius:4px;
+  font-family:'Inter','Segoe UI',Arial,sans-serif;
+  font-size:13px; line-height:1.6;
+  color:rgba(255,255,255,.75);
+}
+.note b { color:var(--orange); letter-spacing:1px; }
+</style>
+</head>
+<body>
+
+<h1>BREAKING NEWS · MOCKUPS</h1>
+<div class="sub">Side-by-side variants for review</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">Current</div>
+    <div class="title">Live Version</div>
+    <div class="desc">The current production breaking-news scene after brand-consistency fixes were applied. Starting point for comparison.</div>
+    <a class="open" href="../scenes/breaking-news.html" target="_blank">OPEN &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="label">Variant A</div>
+    <div class="title">Wide Cinematic</div>
+    <div class="desc">Thinner 60px breaking bar, larger cam (1600&times;820), narrower side column. Priority on the visual feed. Best for big-moment moments where the cam is the story.</div>
+    <a class="open" href="./variant-a-cinematic.html" target="_blank">OPEN &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="label">Variant B</div>
+    <div class="title">Anchor Desk</div>
+    <div class="desc">Full-width 100px breaking bar with prominent rotating headline. Cam is centered and smaller; side panel becomes a vertical brand column on the left. More newsroom, less gamecast.</div>
+    <a class="open" href="./variant-b-anchor.html" target="_blank">OPEN &rarr;</a>
+  </div>
+</div>
+
+<div class="note">
+  <b>How to review:</b> Open each in a new tab at 1920&times;1080 (or maximise and zoom to fit). All three share the same components &mdash; breaking bar + badge, live badge, cam frame with 4 corner ticks, alert zone, 3 side blocks, bottom ticker &mdash; only the layout and proportions differ. Pick the one you want to promote, or cherry-pick pieces from each and I will merge.
+</div>
+
+<h1 style="margin-top:80px;">COMPONENTS · REDESIGN v2</h1>
+<div class="sub">Terminal alert (redesigned) + scrolling strips for sub/likes</div>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="label">Alerts</div>
+    <div class="title">Terminal Readout v2</div>
+    <div class="desc">Terminal window with a structured multi-line event card &mdash; colored event chips per type (FOLLOW / SUB / CHEER / TIP / RAID), box-drawing tree lines, glowing dashed username, live <code>CONNECTED</code> status indicator. Cycles through all 5 event types every 4.2s.</div>
+    <a class="open" href="./components/alert-c-terminal.html" target="_blank">OPEN &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="label">Subscribe</div>
+    <div class="title">Scrolling Strip</div>
+    <div class="desc">Full-width 110px strip across the bottom of the screen. Repeating bell/star icons and big bold text scroll left-to-right at a fast pace ("SUBSCRIBE", "Ring the Bell", "NEVER MISS A STREAM", "@sasi_streams"). Red + gold brand tokens, corner L-ticks, traveling scan pulse.</div>
+    <a class="open" href="./components/subscribe-scroll-strip.html" target="_blank">OPEN &rarr;</a>
+  </div>
+
+  <div class="card">
+    <div class="label">Likes</div>
+    <div class="title">Scrolling Strip</div>
+    <div class="desc">Same skeleton as the subscribe strip but orange-accented, with beating heart icons and likes copy ("SMASH LIKE", "HIT THAT HEART", "DROP A LIKE"). Shows how the strip template works as a shared component for both events &mdash; swap colors + content, same scroll behaviour.</div>
+    <a class="open" href="./components/likes-scroll-strip.html" target="_blank">OPEN &rarr;</a>
+  </div>
+
+</div>
+
+<div class="note">
+  <b>Shared template:</b> both scroll strips use the exact same markup + CSS skeleton &mdash; only the accent color and icon/text content differ. When you pick a direction, we promote this to one reusable scroll-strip component and swap content via config, so there isn't duplicate code.
+  <br><br>
+  <b>Long messages:</b> upstream platforms cap message length, so the designs just need to wrap gracefully. The terminal alert shows event meta only, not user-typed messages, so long input is a non-issue.
+</div>
+
+</body>
+</html>

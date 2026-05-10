@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Terminal Alert — Current vs Compact</title>
+<style>
+:root {
+  --red:#FF2200; --orange:#FF7700; --gold:#FFD700;
+  --term-green:#00ff9c;
+  --term-cyan:#5cf;
+  --term-muted:rgba(255,255,255,.45);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Inter',Arial,sans-serif;
+  color:#fff;
+}
+
+/* Page layout — two columns with labels */
+.page {
+  position:absolute; inset:0;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:40px;
+  padding:60px 60px;
+  align-items:start;
+}
+.col { display:flex; flex-direction:column; gap:20px; }
+.col-head {
+  display:flex; align-items:baseline; gap:14px;
+}
+.col-tag {
+  font-size:10px; font-weight:900; letter-spacing:5px;
+  color:var(--orange); text-transform:uppercase;
+  padding:4px 10px;
+  background:rgba(255,119,0,.1);
+  border:1px solid rgba(255,119,0,.35);
+  border-radius:3px;
+}
+.col-title {
+  font-size:22px; font-weight:900; letter-spacing:2px;
+  color:#fff; text-transform:uppercase;
+  text-shadow:0 0 14px rgba(255,34,0,.35);
+}
+.col-meta {
+  font-size:11px; font-weight:600; color:rgba(255,255,255,.4);
+  letter-spacing:1px; font-family:'JetBrains Mono','Consolas',monospace;
+}
+.col-note {
+  font-size:12px; color:rgba(255,255,255,.55);
+  line-height:1.55;
+  max-width:520px;
+}
+.col-note b { color:var(--orange); }
+
+/* Mock alert-frame boxes (show the space the terminal needs to fit in) */
+.slot {
+  border:1px dashed rgba(255,255,255,.1);
+  border-radius:8px;
+  padding:16px 16px 16px 16px;
+  position:relative;
+}
+.slot-label {
+  position:absolute; top:-9px; left:14px;
+  padding:1px 8px;
+  background:#050005;
+  font-size:8px; font-weight:900; letter-spacing:3px;
+  color:rgba(255,255,255,.35); text-transform:uppercase;
+}
+
+/* ═════════ FONT for both terminals ═════════ */
+.term, .term-compact {
+  font-family:'JetBrains Mono','Fira Code','Consolas','Courier New',monospace;
+}
+
+/* ═════════ CURRENT — full terminal ═════════ */
+.term {
+  width:540px;
+  background:rgba(0,0,0,.84);
+  border:1px solid rgba(255,34,0,.38);
+  border-radius:8px;
+  box-shadow:0 18px 50px rgba(0,0,0,.55), 0 0 60px rgba(255,34,0,.1), inset 0 0 30px rgba(0,0,0,.55);
+  overflow:hidden;
+  position:relative;
+}
+.term::after {
+  content:''; position:absolute; inset:0;
+  background:repeating-linear-gradient(180deg, transparent 0, transparent 2px, rgba(255,255,255,.025) 2px, rgba(255,255,255,.025) 3px);
+  pointer-events:none; z-index:20;
+}
+.term::before {
+  content:''; position:absolute; top:0; left:10px; right:10px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+  z-index:21;
+}
+.term-head {
+  display:flex; align-items:center;
+  padding:11px 16px 10px;
+  background:rgba(255,255,255,.03);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  position:relative;
+}
+.term .dots { display:flex; gap:7px; }
+.term .dot { width:10px; height:10px; border-radius:50%; border:1px solid rgba(0,0,0,.35); }
+.term .dot.red { background:#ff5f56; }
+.term .dot.yel { background:#ffbd2e; }
+.term .dot.grn { background:#27c93f; }
+.term-title {
+  position:absolute; left:50%; transform:translateX(-50%);
+  font-size:10px; letter-spacing:2px; text-transform:uppercase;
+  color:rgba(255,255,255,.42);
+}
+.term-stat {
+  margin-left:auto;
+  display:flex; align-items:center; gap:6px;
+  padding:3px 9px 3px 7px;
+  background:rgba(0,255,156,.08);
+  border:1px solid rgba(0,255,156,.32);
+  border-radius:3px;
+  font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--term-green);
+}
+.stat-dot {
+  width:6px; height:6px; border-radius:50%; background:var(--term-green);
+  box-shadow:0 0 6px var(--term-green);
+  animation:blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+.term-body {
+  padding:14px 18px 12px;
+  font-size:12px; line-height:1.5;
+}
+.boot {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:12px;
+  margin-bottom:10px;
+  padding-bottom:9px;
+  border-bottom:1px dashed rgba(255,255,255,.08);
+}
+.boot-left { color:var(--term-green); text-shadow:0 0 6px rgba(0,255,156,.4); }
+.boot-left .cmd { color:#fff; font-weight:700; }
+.boot-right {
+  font-size:10px; color:var(--term-muted);
+  display:flex; align-items:center; gap:6px;
+}
+.boot-right::before {
+  content:''; width:5px; height:5px; border-radius:50%;
+  background:var(--term-green); box-shadow:0 0 4px var(--term-green);
+}
+.term .log { display:flex; flex-direction:column; gap:0; min-height:120px; }
+
+.term .log-row {
+  display:flex; align-items:center; gap:12px;
+  padding:2px 8px 2px 10px;
+  border-radius:3px; position:relative;
+  opacity:.5;
+  transition:font-size .45s ease, padding .45s ease, gap .45s ease, opacity .45s ease, background .45s ease;
+}
+.term .log-row .ts   { flex-shrink:0; width:58px; font-size:10px; color:var(--term-muted); }
+.term .log-row .chip { flex-shrink:0; }
+.term .log-row .user { flex-shrink:0; min-width:110px; font-size:11px; color:#fff; padding:0 2px; border-bottom:1px dashed var(--orange); }
+.term .log-row .meta { flex:1; min-width:0; font-size:11px; color:var(--gold); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.term .log-row.old   { opacity:.45; }
+.term .log-row.older { opacity:.22; }
+.term .log-row.featured {
+  font-size:17px; padding:13px 14px 13px 16px; gap:16px; opacity:1;
+  background:linear-gradient(90deg, rgba(255,34,0,.22), rgba(255,34,0,0) 70%);
+  margin-top:6px;
+}
+.term .log-row.featured::before {
+  content:''; position:absolute; left:0; top:7px; bottom:7px; width:3px;
+  background:var(--red); box-shadow:0 0 9px var(--red), 0 0 18px rgba(255,34,0,.55);
+  border-radius:2px;
+}
+.term .log-row.featured .ts   { width:84px; font-size:15px; }
+.term .log-row.featured .chip { font-size:12px; padding:3px 12px; min-width:88px; }
+.term .log-row.featured .user { font-size:18px; }
+.term .log-row.featured .meta { font-size:17px; }
+
+.term .prompt-line {
+  margin-top:10px; padding-top:8px;
+  border-top:1px dashed rgba(255,255,255,.08);
+  display:flex; align-items:center; gap:8px;
+  font-size:11px; color:var(--term-muted);
+}
+.term .prompt-line .arrow { color:var(--term-green); text-shadow:0 0 6px rgba(0,255,156,.4); }
+.cursor {
+  display:inline-block; width:8px; height:15px;
+  background:var(--term-green); vertical-align:-2px; margin-left:4px;
+  animation:blink .7s step-end infinite;
+  box-shadow:0 0 8px var(--term-green);
+}
+
+/* ═════════ COMPACT — fits 370 × 110 scene slot ═════════ */
+.term-compact {
+  width:370px;
+  background:rgba(0,0,0,.84);
+  border:1px solid rgba(255,34,0,.38);
+  border-radius:6px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5), 0 0 24px rgba(255,34,0,.08);
+  overflow:hidden;
+  position:relative;
+  padding:6px 10px 6px 8px;
+}
+.term-compact::after {
+  content:''; position:absolute; inset:0;
+  background:repeating-linear-gradient(180deg, transparent 0, transparent 2px, rgba(255,255,255,.02) 2px, rgba(255,255,255,.02) 3px);
+  pointer-events:none; z-index:20;
+}
+.term-compact::before {
+  content:''; position:absolute; top:0; left:6px; right:6px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+  z-index:21;
+}
+
+.term-compact .log {
+  display:flex; flex-direction:column; gap:0;
+  position:relative; z-index:1;
+}
+.term-compact .log-row {
+  display:flex; align-items:center; gap:10px;
+  padding:1px 4px 1px 8px;
+  border-radius:3px; position:relative;
+  opacity:.5;
+  font-size:9px; color:rgba(255,255,255,.85);
+  font-family:'JetBrains Mono','Consolas',monospace;
+  transition:font-size .45s ease, padding .45s ease, gap .45s ease, opacity .45s ease, background .45s ease;
+}
+.term-compact .log-row .ts   { flex-shrink:0; width:46px; font-size:9px; color:var(--term-muted); }
+.term-compact .log-row .chip {
+  flex-shrink:0; display:inline-block;
+  padding:0 5px;
+  font-size:8px; font-weight:900; letter-spacing:1px;
+  border-radius:2px; text-transform:uppercase;
+  min-width:50px; text-align:center;
+  border:1px solid currentColor;
+}
+.term-compact .log-row .user { flex-shrink:0; min-width:86px; font-size:10px; color:#fff; padding:0 1px; border-bottom:1px dashed var(--orange); }
+.term-compact .log-row .meta { flex:1; min-width:0; font-size:9px; color:var(--gold); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.term-compact .log-row.old   { opacity:.4; }
+.term-compact .log-row.older { opacity:.2; }
+.term-compact .log-row.featured {
+  font-size:13px; padding:6px 6px 6px 10px; gap:12px; opacity:1;
+  background:linear-gradient(90deg, rgba(255,34,0,.22), rgba(255,34,0,0) 70%);
+  margin-top:3px;
+}
+.term-compact .log-row.featured::before {
+  content:''; position:absolute; left:0; top:4px; bottom:4px; width:2px;
+  background:var(--red); box-shadow:0 0 6px var(--red), 0 0 12px rgba(255,34,0,.55);
+  border-radius:2px;
+}
+.term-compact .log-row.featured .ts   { width:60px; font-size:11px; }
+.term-compact .log-row.featured .chip { font-size:9px; padding:2px 8px; min-width:62px; }
+.term-compact .log-row.featured .user { font-size:13px; min-width:100px; }
+.term-compact .log-row.featured .meta { font-size:12px; }
+
+/* Shared chip colors */
+.chip.follow { color:var(--orange);    background:rgba(255,119,0,.1);  box-shadow:0 0 6px rgba(255,119,0,.25); }
+.chip.sub    { color:var(--gold);      background:rgba(255,215,0,.1);  box-shadow:0 0 6px rgba(255,215,0,.25); }
+.chip.cheer  { color:var(--term-cyan); background:rgba(85,204,255,.1); box-shadow:0 0 6px rgba(85,204,255,.25); }
+.chip.tip    { color:var(--term-green);background:rgba(0,255,156,.1);  box-shadow:0 0 6px rgba(0,255,156,.25); }
+.chip.raid   { color:var(--red);       background:rgba(255,34,0,.12);  box-shadow:0 0 6px rgba(255,34,0,.25); }
+
+/* Stage/slot outlines */
+.current-slot, .compact-slot { }
+.current-slot .slot-label::after { content:' · 540 × ~240'; color:rgba(255,255,255,.2); }
+.compact-slot .slot-label::after { content:' · 370 × ~110  (fits existing alert-frame)'; color:rgba(255,255,255,.2); }
+
+/* Footer note */
+.footer {
+  position:absolute; bottom:40px; left:60px; right:60px;
+  padding:18px 22px;
+  background:rgba(255,119,0,.06);
+  border-left:2px solid var(--orange);
+  border-radius:4px;
+  font-family:'Inter',Arial,sans-serif;
+  font-size:13px; line-height:1.55;
+  color:rgba(255,255,255,.75);
+}
+.footer b { color:var(--orange); letter-spacing:1px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ═══ LEFT: CURRENT ═══ -->
+  <div class="col">
+    <div class="col-head">
+      <span class="col-tag">A</span>
+      <span class="col-title">Current</span>
+      <span class="col-meta">540 × ~240</span>
+    </div>
+    <div class="col-note">Full terminal chrome: header with traffic-light dots, <b>CONNECTED</b> badge, boot line, event log with featured hero row, and prompt line. Too big to fit the existing scene alert-frames (370 × 110). Would need <b>Option B</b> — enlarge those slots in each scene.</div>
+    <div class="slot current-slot">
+      <div class="slot-label">terminal — full</div>
+      <div class="term" id="termFull">
+        <div class="term-head">
+          <div class="dots">
+            <span class="dot red"></span><span class="dot yel"></span><span class="dot grn"></span>
+          </div>
+          <div class="term-title">sasi@streams &mdash; alerts.log</div>
+          <div class="term-stat">
+            <span class="stat-dot"></span><span>CONNECTED</span>
+          </div>
+        </div>
+        <div class="term-body">
+          <div class="boot">
+            <div class="boot-left">$ <span class="cmd">alerts.listen</span>()</div>
+            <div class="boot-right">pid 2847 &middot; yt+twitch</div>
+          </div>
+          <div class="log" id="logFull"></div>
+          <div class="prompt-line">
+            <span class="arrow">&gt;</span>
+            <span>waiting for next event</span>
+            <span class="cursor"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT: COMPACT ═══ -->
+  <div class="col">
+    <div class="col-head">
+      <span class="col-tag">B</span>
+      <span class="col-title">Compact</span>
+      <span class="col-meta">370 × ~110</span>
+    </div>
+    <div class="col-note">Chrome stripped: no header, no boot line, no prompt. Just 3 log rows (1 featured + 2 old) inside a dark box with a red top hairline + scan lines. <b>Drops right into the current scene alert-frames</b> with zero layout changes. Loses the "dev console" identity but keeps the log aesthetic.</div>
+    <div class="slot compact-slot">
+      <div class="slot-label">terminal — compact</div>
+      <div class="term-compact" id="termCompact">
+        <div class="log" id="logCompact"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <b>How to choose:</b> the <b>Full</b> version reads as a developer dashboard — richer, more character, but needs the scene alert-zones enlarged to ~540×240 (Option B, touches 4-5 scene files). The <b>Compact</b> version is just the log itself — less personality but drops in with zero scene surgery (Option C). Pick one and I'll wire it up.
+</div>
+
+<script>
+// ─── Shared event rotation feeds both terminals so they stay in sync ───
+const EVENTS = [
+  { chip:'follow', type:'FOLLOW', user:'ember_92', meta:'+1 follower' },
+  { chip:'sub',    type:'SUB',    user:'mikhail',  meta:'tier 1 · month 3' },
+  { chip:'cheer',  type:'CHEER',  user:'cozyfox',  meta:'500 bits' },
+  { chip:'tip',    type:'TIP',    user:'raven_b',  meta:'₹1,250' },
+  { chip:'raid',   type:'RAID',   user:'jules',    meta:'48 viewers' },
+  { chip:'follow', type:'FOLLOW', user:'kai_h',    meta:'+1 follower' },
+  { chip:'sub',    type:'SUB',    user:'sora',     meta:'tier 2 · new' },
+];
+
+function formatTime(offsetSec) {
+  const d = new Date(Date.now() - (offsetSec || 0) * 1000);
+  return d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+function buildRow(e, ts) {
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = `
+    <span class="ts">${ts}</span>
+    <span class="chip ${e.chip}">${e.type}</span>
+    <span class="user">@${e.user}</span>
+    <span class="meta">${e.meta}</span>
+  `;
+  return row;
+}
+
+function applyTiers(logEl) {
+  const rows = Array.from(logEl.children);
+  rows.forEach((r, i) => {
+    r.classList.remove('featured', 'old', 'older');
+    const pos = rows.length - 1 - i;
+    if (pos === 0)      r.classList.add('featured');
+    else if (pos === 1) r.classList.add('old');
+    else                r.classList.add('older');
+  });
+}
+
+function seed(logEl) {
+  EVENTS.slice(0, 3).forEach((e, i) => {
+    const ageSec = (3 - i) * 45;
+    logEl.appendChild(buildRow(e, formatTime(ageSec)));
+  });
+  applyTiers(logEl);
+}
+
+const logFull    = document.getElementById('logFull');
+const logCompact = document.getElementById('logCompact');
+seed(logFull);
+seed(logCompact);
+
+let idx = 3;
+function tick() {
+  const e = EVENTS[idx % EVENTS.length];
+  idx++;
+  const ts = formatTime();
+
+  [logFull, logCompact].forEach(logEl => {
+    const row = buildRow(e, ts);
+    logEl.appendChild(row);
+    applyTiers(logEl);
+    while (logEl.children.length > 3) logEl.firstChild.remove();
+  });
+}
+
+setInterval(tick, 3400);
+</script>
+
+</body>
+</html>

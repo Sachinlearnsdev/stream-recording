@@ -16,3 +16,8 @@ obs-export-*/
 # Overlay secrets (API keys) — never commit
 Overlay/sasi-overlays/secrets.js
 Overlay/sasi-overlays/lib/secrets.js
+
+# Loose dump folders from drag-and-drop accidents (fresh OBS bundle exports
+# should land at a chosen output dir, not the repo root)
+/Overlays/
+* (2)*

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Breaking News — Variant A: Wide Cinematic</title>
+<script src="../config.js"></script>
+<script src="../secrets.js"></script>
+<style>
+:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; --bg:#050005; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Arial Black', Impact, Arial, sans-serif;
+  color:#fff;
+}
+
+@keyframes fadeIn      { from{opacity:0} to{opacity:1} }
+@keyframes slideUp     { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideDown   { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulseRed    { 0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5)} 50%{opacity:.35;box-shadow:0 0 3px var(--red)} }
+@keyframes tickerScroll{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+/* ─ BREAKING BAR — thinner (60px) ─ */
+.breaking-bar {
+  position:absolute; top:0; left:0; right:0;
+  height:60px;
+  background:rgba(0,0,0,.82);
+  border-bottom:1px solid rgba(255,34,0,.28);
+  box-shadow:0 4px 24px rgba(255,34,0,.1);
+  display:flex; align-items:center;
+  z-index:20;
+  opacity:0; animation:slideDown .8s ease forwards;
+}
+.breaking-bar::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+}
+.breaking-bar::after {
+  content:''; position:absolute; bottom:-1px; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+  box-shadow:0 0 10px var(--red);
+}
+.breaking-badge {
+  display:flex; align-items:center; gap:10px;
+  margin-left:30px;
+  padding:9px 16px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  position:relative;
+}
+.breaking-badge::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+}
+.breaking-dot {
+  width:9px; height:9px; border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 8px var(--red), 0 0 16px rgba(255,34,0,.5);
+  animation:pulseRed 1.2s ease-in-out infinite;
+}
+.breaking-text {
+  font-size:16px; font-weight:900; letter-spacing:5px;
+  color:var(--red);
+  text-shadow:0 0 12px rgba(255,34,0,.35);
+}
+.breaking-headline {
+  flex:1;
+  padding:0 180px 0 30px;
+  font-size:22px; font-weight:900; letter-spacing:2px;
+  color:#fff;
+  text-transform:uppercase;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 2px 6px rgba(0,0,0,.7);
+  opacity:.92;
+}
+
+/* ─ LIVE BADGE (top-right, below bar) ─ */
+.live-badge {
+  position:absolute; top:14px; right:30px;
+  display:flex; align-items:center; gap:8px;
+  padding:8px 14px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  z-index:25;
+  opacity:0; animation:fadeIn .8s ease .5s forwards;
+}
+.live-badge::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+}
+.live-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 8px var(--red), 0 0 16px rgba(255,34,0,.5);
+  animation:pulseRed 1.2s ease-in-out infinite;
+}
+.live-text {
+  font-size:12px; font-weight:900; letter-spacing:4px;
+  color:var(--red);
+}
+
+/* ─ CAM FRAME — wide cinematic ─ */
+.cam-frame {
+  position:absolute;
+  left:50px; top:92px;
+  width:1600px; height:820px;
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(255,34,0,.3);
+  border-radius:10px;
+  box-shadow:0 0 40px rgba(255,34,0,.18), inset 0 0 40px rgba(0,0,0,.5);
+  opacity:0; animation:slideUp .8s ease .3s forwards;
+}
+.cam-frame::before {
+  content:''; position:absolute; top:0; left:12px; right:12px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+}
+.cam-corner {
+  position:absolute;
+  width:24px; height:24px;
+  border:2px solid var(--orange);
+  box-shadow:0 0 8px var(--orange);
+}
+.cam-corner.tl { top:-1px; left:-1px; border-right:none; border-bottom:none; }
+.cam-corner.tr { top:-1px; right:-1px; border-left:none; border-bottom:none; }
+.cam-corner.bl { bottom:-1px; left:-1px; border-right:none; border-top:none; }
+.cam-corner.br { bottom:-1px; right:-1px; border-left:none; border-top:none; }
+
+.cam-label {
+  position:absolute; top:18px; left:24px;
+  display:flex; align-items:center; gap:8px;
+  padding:6px 12px;
+  background:rgba(0,0,0,.7);
+  border-radius:4px;
+  border-left:2px solid var(--red);
+}
+.cam-label-dot {
+  width:6px; height:6px; border-radius:50%;
+  background:var(--red);
+  animation:pulseRed 1.2s ease-in-out infinite;
+}
+.cam-label-text { font-size:10px; font-weight:900; letter-spacing:3px; color:#fff; }
+
+/* Alert Zone inside cam (bottom-left) */
+.alert-zone-wrap {
+  position:absolute;
+  left:24px; bottom:24px;
+  width:370px; height:110px;
+  z-index:30;
+  opacity:0; animation:slideUp .8s ease .9s forwards;
+}
+.alert-zone-wrap .alert-frame {
+  position:relative;
+  width:100%; height:100%;
+  border:1px dashed rgba(255,34,0,.3);
+  border-radius:8px;
+  background:rgba(0,0,0,.4);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:5px;
+}
+.alert-zone-wrap .alert-frame::before,
+.alert-zone-wrap .alert-frame::after {
+  content:''; position:absolute;
+  background:var(--orange); box-shadow:0 0 6px var(--orange);
+}
+.alert-zone-wrap .alert-frame::before { width:14px; height:1.5px; top:0; right:0; }
+.alert-zone-wrap .alert-frame::after  { width:1.5px; height:14px; top:0; right:0; }
+.alert-label { font-size:9px; font-weight:900; letter-spacing:5px; color:rgba(255,119,0,.5); text-transform:uppercase; }
+.alert-sub { font-size:8px; font-weight:700; letter-spacing:3px; color:rgba(255,255,255,.25); text-transform:uppercase; }
+
+/* ─ RIGHT SIDE PANEL — narrower ─ */
+.side-panel {
+  position:absolute;
+  right:30px; top:92px;
+  width:210px; height:820px;
+  display:flex; flex-direction:column; gap:12px;
+  opacity:0; animation:slideUp .8s ease .4s forwards;
+}
+.side-block {
+  background:rgba(8,0,2,.85);
+  border:1px solid rgba(255,34,0,.3);
+  border-radius:8px;
+  padding:16px 18px;
+  position:relative;
+}
+.side-block::before {
+  content:''; position:absolute; top:0; left:10px; right:10px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+}
+.side-block-label {
+  font-size:8px; font-weight:900; letter-spacing:4px;
+  color:var(--orange); text-transform:uppercase;
+  margin-bottom:6px;
+}
+.side-block-value {
+  font-size:16px; font-weight:900; letter-spacing:1px;
+  color:#fff;
+  text-shadow:0 0 12px rgba(255,34,0,.4);
+  line-height:1.2;
+}
+.side-block-sub {
+  font-size:10px; font-weight:700;
+  color:rgba(255,255,255,.5);
+  margin-top:3px;
+}
+.headlines-block { flex:1; display:flex; flex-direction:column; }
+.headlines-list { flex:1; overflow:hidden; display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+.headline-item {
+  padding:8px 10px;
+  background:rgba(255,34,0,.05);
+  border-left:2px solid var(--red);
+  border-radius:3px;
+}
+.headline-num { font-size:8px; font-weight:900; letter-spacing:2px; color:var(--orange); }
+.headline-text { font-size:11px; font-weight:700; color:#fff; margin-top:3px; line-height:1.35; }
+
+/* ─ BOTTOM TICKER ─ */
+.ticker-bar {
+  position:absolute; bottom:0; left:0; right:0;
+  height:52px;
+  background:rgba(0,0,0,.82);
+  border-top:1px solid rgba(255,34,0,.22);
+  box-shadow:0 -4px 20px rgba(255,34,0,.1);
+  display:flex; align-items:center;
+  z-index:20;
+  opacity:0; animation:slideUp .8s ease .5s forwards;
+}
+.ticker-bar::before {
+  content:''; position:absolute; top:-1px; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+  box-shadow:0 0 10px var(--red);
+}
+.ticker-label {
+  display:flex; align-items:center;
+  margin-left:24px;
+  padding:7px 14px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  position:relative;
+}
+.ticker-label::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+}
+.ticker-label-text { font-size:10px; font-weight:900; letter-spacing:4px; color:var(--red); }
+
+.ticker-content { flex:1; overflow:hidden; position:relative; height:100%; display:flex; align-items:center; }
+.ticker-track {
+  display:flex; align-items:center;
+  animation:tickerScroll 45s linear infinite;
+  white-space:nowrap;
+  padding-left:40px;
+}
+.ticker-item {
+  display:inline-flex; align-items:center; gap:14px;
+  padding:0 32px;
+  font-size:14px; font-weight:700; color:rgba(255,255,255,.72); letter-spacing:1px;
+}
+.ticker-item .sep { color:var(--orange); }
+</style>
+</head>
+<body>
+
+<div class="breaking-bar">
+  <div class="breaking-badge">
+    <div class="breaking-dot"></div>
+    <span class="breaking-text">BREAKING</span>
+  </div>
+  <div class="breaking-headline">SASI STREAMS GOES LIVE — VIEWERS REPORT EXTREME ENTERTAINMENT</div>
+</div>
+
+<div class="live-badge">
+  <div class="live-dot"></div>
+  <span class="live-text">LIVE</span>
+</div>
+
+<div class="cam-frame">
+  <div class="cam-corner tl"></div>
+  <div class="cam-corner tr"></div>
+  <div class="cam-corner bl"></div>
+  <div class="cam-corner br"></div>
+  <div class="cam-label">
+    <div class="cam-label-dot"></div>
+    <span class="cam-label-text">LIVE FROM STUDIO</span>
+  </div>
+  <div class="alert-zone-wrap">
+    <div class="alert-frame">
+      <span class="alert-label">Alert Zone</span>
+      <span class="alert-sub">Waiting for alerts</span>
+    </div>
+  </div>
+</div>
+
+<div class="side-panel">
+  <div class="side-block">
+    <div class="side-block-label">★ Anchor</div>
+    <div class="side-block-value">SASI STREAMS</div>
+    <div class="side-block-sub">LIVE — Stream Studio</div>
+  </div>
+  <div class="side-block">
+    <div class="side-block-label">★ Topic</div>
+    <div class="side-block-value">TODAY'S BROADCAST</div>
+  </div>
+  <div class="side-block headlines-block">
+    <div class="side-block-label">★ Stories</div>
+    <div class="headlines-list">
+      <div class="headline-item"><div class="headline-num">STORY 01</div><div class="headline-text">Stream views explode as community grows</div></div>
+      <div class="headline-item"><div class="headline-num">STORY 02</div><div class="headline-text">New games dropping next week</div></div>
+      <div class="headline-item"><div class="headline-num">STORY 03</div><div class="headline-text">Chat volume hits all-time high</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="ticker-bar">
+  <div class="ticker-label">
+    <span class="ticker-label-text">★ NEWS TICKER</span>
+  </div>
+  <div class="ticker-content">
+    <div class="ticker-track">
+      <div class="ticker-item">🔴 LIVE: Stream in progress <span class="sep">★</span></div>
+      <div class="ticker-item">Sasi Streams broadcasting LIVE <span class="sep">★</span></div>
+      <div class="ticker-item">Subscribe to get notified for next broadcast <span class="sep">★</span></div>
+      <div class="ticker-item">Follow on YouTube + Twitch + Instagram <span class="sep">★</span></div>
+      <div class="ticker-item">🔴 LIVE: Stream in progress <span class="sep">★</span></div>
+      <div class="ticker-item">Sasi Streams broadcasting LIVE <span class="sep">★</span></div>
+      <div class="ticker-item">Subscribe to get notified for next broadcast <span class="sep">★</span></div>
+      <div class="ticker-item">Follow on YouTube + Twitch + Instagram <span class="sep">★</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
