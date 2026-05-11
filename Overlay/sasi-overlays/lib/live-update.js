@@ -1,77 +1,32 @@
 // ============================================================
-//  SASI STUDIO — Live update framework
-//  Scenes call registerLiveUpdater(key, fn) at load time.
-//  When the dashboard writes to localStorage['sasi_<key>'],
-//  the storage event fires here and we call the registered fn.
+//  SASI STUDIO - live-update stub (v2.1)
+//
+//  The dashboard's in-page live editor was removed because it never
+//  propagated to OBS (separate browser, separate localStorage). Scenes
+//  still call registerLiveUpdater() / applyLiveUpdaters() from their
+//  initialization scripts, so this file provides no-op stubs so they
+//  don't error.
+//
+//  To change overlay text now: edit sasi-overlays/lib/config.js (or the
+//  scene HTML directly) in your code editor, then refresh the OBS
+//  Browser Source.
 // ============================================================
 
 (function () {
-  const handlers = new Map(); // sasi_key -> [fn, fn, ...]
+  // No-op: scenes register handlers but nothing fires them anymore.
+  window.registerLiveUpdater = function (_key, _fn) {};
 
-  // Register a handler for a specific localStorage key (without sasi_ prefix).
-  // Multiple handlers can register for the same key.
-  window.registerLiveUpdater = function (key, fn) {
-    const fullKey = 'sasi_' + key;
-    if (!handlers.has(fullKey)) handlers.set(fullKey, []);
-    handlers.get(fullKey).push(fn);
-  };
+  // No-op: previously read sasi_<key> values from localStorage and applied
+  // them. Now scenes just use SASI_CONFIG defaults directly from config.js.
+  window.applyLiveUpdaters = function () {};
 
-  // Apply current localStorage values immediately (so a freshly-loaded scene
-  // reflects the dashboard's saved state without waiting for a change event).
-  window.applyLiveUpdaters = function () {
-    for (const [fullKey, fns] of handlers.entries()) {
-      const value = localStorage.getItem(fullKey);
-      if (value !== null) {
-        for (const fn of fns) {
-          try { fn(value); } catch (e) { console.warn('[live-update] handler for ' + fullKey + ' threw:', e); }
-        }
-      }
-    }
-  };
-
-  // Internal: dispatch a value to all handlers registered for a key.
-  function fireHandlers(key, value) {
-    const fns = handlers.get(key);
-    if (!fns) return;
-    for (const fn of fns) {
-      try { fn(value); } catch (err) { console.warn('[live-update] handler for ' + key + ' threw:', err); }
-    }
-  }
-
-  // Path A: native storage events (fires across same-origin windows on http://).
-  window.addEventListener('storage', function (e) {
-    if (!e.key) return;
-    fireHandlers(e.key, e.newValue);
-  });
-
-  // Path B: postMessage from the dashboard. Used because synthetic StorageEvents
-  // constructed in the parent realm arrive with null e.key in Chromium, AND
-  // because storage events don't fire reliably across file:// iframes. The
-  // dashboard's broadcastChange() pushes a message of shape:
-  //   { __sasi: true, type: 'sasi-live', key: 'sasi_<name>', newValue: <string> }
-  window.addEventListener('message', function (e) {
-    const d = e.data;
-    if (!d || d.__sasi !== true || d.type !== 'sasi-live') return;
-    if (typeof d.key !== 'string') return;
-    fireHandlers(d.key, d.newValue);
-  });
-
-  // Convenience helpers for common patterns
+  // Convenience helpers kept as identity stubs so any scene that grabs
+  // them as variables (e.g. `const t = liveUpdate.text('#x')`) doesn't
+  // crash. They return a function that does nothing.
   window.liveUpdate = {
-    text: (selector) => (value) => {
-      document.querySelectorAll(selector).forEach(el => { el.textContent = value || ''; });
-    },
-    cssVar: (varName) => (value) => {
-      if (value) document.documentElement.style.setProperty(varName, value);
-    },
-    show: (selector) => (value) => {
-      const visible = (value === 'true' || value === true);
-      document.querySelectorAll(selector).forEach(el => { el.style.display = visible ? '' : 'none'; });
-    },
-    attr: (selector, attrName) => (value) => {
-      document.querySelectorAll(selector).forEach(el => { el.setAttribute(attrName, value || ''); });
-    },
+    text:   (_sel) => (_v) => {},
+    cssVar: (_var) => (_v) => {},
+    show:   (_sel) => (_v) => {},
+    attr:   (_sel, _a) => (_v) => {},
   };
-
-  console.log('[live-update] framework loaded');
 })();

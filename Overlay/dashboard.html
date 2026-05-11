@@ -475,70 +475,20 @@
       <div class="scene-grid" id="stinger-grid" style="margin-bottom:var(--sp-4)"></div>
       <div class="field-hint" id="stinger-status" style="min-height:1.2em;margin-bottom:var(--sp-4)"></div>
 
-      <div class="editor-row">
-        <div class="editor-form">
-          <div class="editor-eyebrow" id="editor-title">SELECTED · STARTING SOON</div>
-          <div id="editor-fields"></div>
+      <div class="editor-eyebrow" style="margin-bottom:var(--sp-2);margin-top:var(--sp-4)">Inspector · click any tile above to load it here</div>
+      <div class="section-hint" style="margin-bottom:var(--sp-2)">Read-only preview at 1920×1080 OBS canvas size (scaled to fit). To CHANGE overlay text, edit <code>sasi-overlays/lib/config.js</code> in your editor and refresh the OBS Browser Source. Live in-dashboard editing was removed — it never propagated to OBS anyway (separate browser, separate localStorage).</div>
+      <div class="editor-preview" style="margin-bottom:var(--sp-4)">
+        <div class="preview-toolbar">
+          <button class="preview-btn" id="preview-reload" title="Reload preview (e.g. after editing the file in your code editor)">↻ Reload</button>
         </div>
-        <div class="editor-preview">
-          <div class="preview-toolbar">
-            <button class="preview-btn" id="preview-reload" title="Reload preview (needed for color/theme/font changes)">↻ Reload</button>
-          </div>
-          <iframe id="editor-preview-iframe" src="sasi-overlays/scenes/starting-soon.html"></iframe>
-        </div>
+        <iframe id="editor-preview-iframe" src="sasi-overlays/scenes/starting-soon.html"></iframe>
       </div>
 
       <div class="common-section">
-        <div class="editor-eyebrow">Common · applies to all scenes</div>
-        <div class="common-grid">
-          <div class="common-tile">
-            <div class="common-tile-label">Colors (red · orange · gold)</div>
-            <div class="color-row">
-              <input type="color" data-key="cRed"    value="#FF2200" title="Red (primary)">
-              <input type="color" data-key="cOrange" value="#FF7700" title="Orange (secondary)">
-              <input type="color" data-key="cGold"   value="#FFD700" title="Gold (accent)">
-            </div>
-          </div>
-          <div class="common-tile">
-            <div class="common-tile-label">Background <span class="reload-tag">reload to apply</span></div>
-            <select data-key="background" data-reload="1">
-              <option value="hexgrid">hexgrid</option>
-              <option value="particles">particles</option>
-              <option value="ember">ember</option>
-              <option value="matrix">matrix</option>
-              <option value="minimal">minimal</option>
-              <option value="random" selected>random</option>
-            </select>
-          </div>
-          <div class="common-tile">
-            <div class="common-tile-label">Glitch effect <span class="reload-tag">reload to apply</span></div>
-            <label class="toggle-row" style="padding:4px 8px"><input type="checkbox" data-key="glitchToggle" data-reload="1"><span>Enabled</span></label>
-          </div>
-          <div class="common-tile">
-            <div class="common-tile-label">Ticker speed (sec) <span class="reload-tag">reload to apply</span></div>
-            <input type="number" data-key="tickerSpeed" min="10" max="60" value="28" data-reload="1">
-          </div>
-        </div>
-      </div>
-
-      <div class="common-section">
-        <div class="editor-eyebrow">Brand</div>
-        <div class="section-hint" style="margin-bottom:var(--sp-2)">These override the active channel's brand text live (no reload). Logo upload replaces <code>sasi-overlays/assets/Sasi_Streams_logo.png</code> in the active theme.</div>
-        <div class="common-grid" style="grid-template-columns: 1fr 1fr 1fr">
-          <div class="common-tile">
-            <div class="common-tile-label">Channel name</div>
-            <input type="text" data-key="brand_name" placeholder="SASI STREAMS">
-          </div>
-          <div class="common-tile">
-            <div class="common-tile-label">Tagline</div>
-            <input type="text" data-key="brand_tagline" placeholder="LIVE STREAM">
-          </div>
-          <div class="common-tile">
-            <div class="common-tile-label">Logo (PNG/JPG)</div>
-            <input type="file" id="upload-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="font-size:var(--text-small);color:var(--text-secondary);width:100%">
-            <div class="field-hint" id="upload-logo-status" style="min-height:1.2em;font-size:10px"></div>
-          </div>
-        </div>
+        <div class="editor-eyebrow">Brand logo</div>
+        <div class="section-hint" style="margin-bottom:var(--sp-2)">Replaces <code>sasi-overlays/assets/Sasi_Streams_logo.png</code> in the active theme. The text Channel name + Tagline live in <code>sasi-secrets.js</code> per channel — edit them on the Keys &amp; Channels tab.</div>
+        <input type="file" id="upload-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="font-size:var(--text-small);color:var(--text-secondary)">
+        <div class="field-hint" id="upload-logo-status" style="min-height:1.2em;font-size:10px"></div>
       </div>
 
       <div class="advanced-accordion" id="adv-overlay-tools" style="margin-top:var(--sp-4)">
@@ -1111,27 +1061,12 @@ const COMPONENT_LABELS = {
   'sample-test.html': '▶ Sample Test',
 };
 
-// Component editor fields (mirrors SCENE_FIELDS shape).
-const COMPONENT_FIELDS = {
-  'subscribe': [
-    { key: 'sub_items', type: 'text', label: 'Scrolling text', placeholder: 'SUBSCRIBE' },
-  ],
-  'likes': [
-    { key: 'likes_items', type: 'text', label: 'Scrolling text', placeholder: 'LIKE' },
-  ],
-  'nametag': [
-    { key: 'nametag', type: 'text', label: 'Name (empty = use brand name)', placeholder: '' },
-  ],
-  'webcam': [
-    { key: 'webcam_label', type: 'text', label: 'Label below cam (empty = hide)', placeholder: 'LIVE' },
-  ],
-  'terminal-alerts': [
-    { key: 'term_title', type: 'text', label: 'Header title', placeholder: 'sasi@streams — alerts.log' },
-  ],
-  'sample-test': [
-    { key: 'sample_comp_text', type: 'text', label: 'Component value text', placeholder: 'EDIT ME' },
-  ],
-};
+// Note: SCENE_FIELDS / COMPONENT_FIELDS / renderEditor / broadcastChange were
+// removed in the v2.1 simplification pass. They drove the in-dashboard live
+// editor that pushed text changes to local preview iframes via postMessage.
+// The editor was removed because it never propagated to OBS (separate browser,
+// separate localStorage). To change overlay text, edit lib/config.js (or the
+// scene HTML directly) in your code editor and refresh the OBS Browser Source.
 
 // Build a tile grid (used for both scenes and components — same UI).
 // kind: 'scene' or 'component' — drives data-kind attr + folder path.
@@ -1252,139 +1187,24 @@ window.__activeKind = 'scene';
 buildSceneGrid();
 window.addEventListener('resize', () => { scaleSceneThumbs(); scaleEditorPreview(); });
 
-// Per-scene field definitions
-const SCENE_FIELDS = {
-  'starting-soon': [
-    { key: 'ss_badge',     type: 'text',   label: 'Badge',           placeholder: 'STARTING SOON' },
-    { key: 'ss_topText',   type: 'text',   label: 'Top text',        placeholder: 'Stream' },
-    { key: 'ss_mainText',  type: 'text',   label: 'Main text',       placeholder: 'STARTING' },
-    { key: 'ss_countdown', type: 'number', label: 'Countdown (min)', placeholder: '5', requiresReload: true },
-    { key: 'ss_nextStream',type: 'text',   label: 'Next stream',     placeholder: 'FRIDAY · 8PM' },
-    { key: 'ss_clock',     type: 'toggle', label: 'Show clock' },
-    { key: 'ss_ticker',    type: 'toggle', label: 'Show ticker' },
-  ],
-  'brb': [
-    { key: 'brb_badge',    type: 'text',   label: 'Badge',                       placeholder: 'BRB' },
-    { key: 'brb_mainText', type: 'text',   label: 'Main text (\\n for line break)', placeholder: 'BE RIGHT\\nBACK', requiresReload: true },
-    { key: 'brb_subtext',  type: 'text',   label: 'Subtext',                     placeholder: 'grabbing something, back in a moment' },
-    { key: 'brb_tagline',  type: 'text',   label: 'Tagline',                     placeholder: 'BE RIGHT BACK' },
-    { key: 'brb_clock',    type: 'toggle', label: 'Show clock' },
-    { key: 'brb_ticker',   type: 'toggle', label: 'Show ticker' },
-  ],
-  'stream-ending': [
-    { key: 'end_badge',   type: 'text',   label: 'Badge',     placeholder: 'OFFLINE' },
-    { key: 'end_tagline', type: 'text',   label: 'Tagline',   placeholder: 'SEE YOU NEXT TIME' },
-    { key: 'end_thanks',  type: 'text',   label: 'Thanks',    placeholder: 'Thanks for' },
-    { key: 'end_main',    type: 'text',   label: 'Main text', placeholder: 'WATCHING' },
-    { key: 'end_sub',     type: 'text',   label: 'Sub text',  placeholder: 'SEE YOU SOON' },
-    { key: 'end_ticker',  type: 'toggle', label: 'Show ticker' },
-  ],
-  'overlay': [
-    { key: 'brand_name',    type: 'text', label: 'Channel name (also brand)', placeholder: 'SASI STREAMS' },
-    { key: 'brand_tagline', type: 'text', label: 'Tagline',                   placeholder: 'LIVE STREAM' },
-  ],
-  'just-chatting': [
-    { key: 'brand_name', type: 'text', label: 'Channel name', placeholder: 'SASI STREAMS' },
-  ],
-  'sample-test': [
-    { key: 'sample_badge', type: 'text', label: 'Top badge', placeholder: '▶ SAMPLE TEST' },
-    { key: 'sample_main',  type: 'text', label: 'Big text',  placeholder: 'SCENE' },
-    { key: 'sample_sub',   type: 'text', label: 'Subtitle',  placeholder: 'EDIT TO VERIFY LIVE UPDATES' },
-  ],
-};
-
-// Broadcast a localStorage change to all overlay iframes (they don't get
-// storage events from the same window — we manually dispatch).
-function broadcastChange(key, value) {
-  // Persist for new iframes / page reloads.
-  localStorage.setItem('sasi_' + key, value);
-
-  // Push to all live iframes. We use postMessage instead of synthetic StorageEvent
-  // because Chrome's StorageEvent constructor is realm-bound — when constructed
-  // in the parent window and dispatched into the iframe, e.key/newValue arrive
-  // null and live-update.js's listener bails. postMessage has no such issue.
-  const msg = { __sasi: true, type: 'sasi-live', key: 'sasi_' + key, newValue: value };
-  const send = (win) => {
-    if (!win) return;
-    try { win.postMessage(msg, '*'); } catch {}
-  };
-  send(document.getElementById('editor-preview-iframe')?.contentWindow);
-  document.querySelectorAll('.scene-thumb iframe').forEach(iframe => send(iframe.contentWindow));
-}
-
-function renderEditor(sceneName, kind) {
-  // Look up fields in BOTH maps — depends on what kind of tile is active
-  const k = kind || window.__activeKind || 'scene';
-  const fieldsMap = k === 'component' ? COMPONENT_FIELDS : SCENE_FIELDS;
-  const labelsMap = k === 'component' ? COMPONENT_LABELS : SCENE_LABELS;
-  const fields = fieldsMap[sceneName] || [];
-  const container = document.getElementById('editor-fields');
-  const friendlyName = labelsMap[sceneName + '.html'] || sceneName.toUpperCase().replace(/-/g, ' ');
-  document.getElementById('editor-title').textContent = 'SELECTED · ' + friendlyName.toUpperCase() + (k === 'component' ? ' · component' : '');
-
-  if (fields.length === 0) {
-    container.innerHTML = '<div class="placeholder-card" style="padding:var(--sp-4);text-align:left"><div class="placeholder-title" style="font-size:var(--text-body)">Custom layout</div><div class="placeholder-desc" style="margin:0;text-align:left">Live preview is on the right. To make text fields editable here, the file needs to call <code>registerLiveUpdater()</code> from <code>lib/live-update.js</code> for each editable element. See an existing scene like <code>starting-soon.html</code> for the pattern.</div></div>';
-    return;
-  }
-
-  container.innerHTML = fields.map(f => {
-    const stored = localStorage.getItem('sasi_' + f.key) || '';
-    if (f.type === 'toggle') {
-      const checked = stored === 'true' ? 'checked' : '';
-      return `<div class="field"><label class="toggle-row">
-        <input type="checkbox" data-key="${f.key}" ${checked}>
-        <span>${f.label}</span>
-      </label></div>`;
-    }
-    const inputType = f.type === 'number' ? 'number' : 'text';
-    const reloadTag = f.requiresReload ? '<span class="reload-tag">reload to apply</span>' : '';
-    const reloadAttr = f.requiresReload ? ' data-reload="1"' : '';
-    return `<div class="field">
-      <label>${f.label} ${reloadTag}</label>
-      <input type="${inputType}" data-key="${f.key}"${reloadAttr} value="${stored.replace(/"/g, '&quot;')}" placeholder="${f.placeholder.replace(/"/g, '&quot;')}">
-    </div>`;
-  }).join('');
-
-  // Wire each input
-  container.querySelectorAll('[data-key]').forEach(input => {
-    const key = input.dataset.key;
-    const isToggle = input.type === 'checkbox';
-    const debounceMs = isToggle ? 0 : 200;
-    let t;
-    const fire = () => {
-      let value;
-      if (isToggle) {
-        value = String(input.checked);
-      } else {
-        // Empty field falls back to placeholder so clearing reverts to the
-        // default instead of leaving a blank overlay. Matches what the user
-        // sees in the input UI (the dim placeholder text IS the default).
-        value = input.value.length > 0 ? input.value : (input.placeholder || '');
-      }
-      broadcastChange(key, value);
-    };
-    input.addEventListener(isToggle ? 'change' : 'input', () => {
-      clearTimeout(t);
-      t = setTimeout(fire, debounceMs);
-    });
-  });
-}
-
-// Initial render + scene-change handler
-renderEditor(window.__activeScene, 'scene');
+// Tile click → just load the scene/component into the inspector iframe.
+// No form rendering, no localStorage broadcasts — the inspector is preview-only.
 window.addEventListener('sasi-scene-change', (e) => {
-  // Detail is now an object: { name, kind, folder, file }
-  const d = (e.detail && typeof e.detail === 'object') ? e.detail : { name: e.detail, kind: 'scene', folder: 'sasi-overlays/scenes', file: e.detail + '.html' };
-  renderEditor(d.name, d.kind);
-  document.getElementById('editor-preview-iframe').src = (d.folder || 'scenes') + '/' + (d.file || (d.name + '.html'));
-  setTimeout(scaleEditorPreview, 200);
+  const d = (e.detail && typeof e.detail === 'object')
+    ? e.detail
+    : { name: e.detail, folder: 'sasi-overlays/scenes', file: e.detail + '.html' };
+  const iframe = document.getElementById('editor-preview-iframe');
+  if (iframe) {
+    iframe.src = (d.folder || 'sasi-overlays/scenes') + '/' + (d.file || (d.name + '.html'));
+    setTimeout(scaleEditorPreview, 200);
+  }
 });
 
-// Reload preview button — useful for color/theme/font changes
+// Reload-iframe button — refreshes the inspector after you save edits to
+// lib/config.js or a scene HTML in your code editor.
 document.getElementById('preview-reload').addEventListener('click', () => {
   const iframe = document.getElementById('editor-preview-iframe');
-  iframe.src = iframe.src;
-  // Also reload all grid thumbs so they pick up theme/color changes
+  if (iframe) iframe.src = iframe.src;
   document.querySelectorAll('.scene-thumb iframe').forEach(f => { f.src = f.src; });
   setTimeout(() => { scaleSceneThumbs(); scaleEditorPreview(); }, 200);
 });
@@ -1702,112 +1522,68 @@ async function refreshStingers() {
 
   grid.innerHTML = items.map(s => {
     const sizeKb = Math.round(s.size / 1024);
-    const isPreviewSelected = s.name === activeKey;
-    // OBS-active gets green styling; preview-selected gets neutral outline.
-    // If a tile is both, OBS-active wins.
-    const cls = s.isActive ? ' obs-active' : (isPreviewSelected ? ' preview-selected' : '');
+    const cls = s.isActive ? ' obs-active' : '';
     const stateBadge = s.isActive
       ? '<span style="color:var(--accent-online);font-weight:700;font-size:9px">● OBS ACTIVE</span>'
       : (s.kind === 'html' ? '<span style="color:var(--text-muted);font-size:9px;letter-spacing:0.1em">GENERATOR</span>' : '');
-    return `<div class="scene-card${cls}" data-stinger="${escapeAttr(s.name)}" data-stinger-kind="${s.kind}" data-stinger-rel="${escapeAttr(s.relPath)}">
+    // Inline action button per tile — no separate "click tile then look at editor" pattern.
+    let action = '';
+    if (s.kind === 'webm' && !s.isActive) {
+      action = `<button class="scene-copy-btn" data-stinger-apply="${escapeAttr(s.name)}" title="Make this the OBS Stinger transition source">Make active</button>`;
+    } else if (s.kind === 'html') {
+      action = `<button class="scene-copy-btn" data-stinger-record="${escapeAttr(s.name)}" title="Auto-record this HTML's canvas to a webm, then activate it">Make active</button>`;
+    }
+    return `<div class="scene-card${cls}" data-stinger-rel="${escapeAttr(s.relPath)}" data-stinger-kind="${s.kind}">
       <div class="scene-thumb">${s.kind === 'webm'
         ? `<video src="${escapeAttr(s.relPath)}" muted loop preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`
         : `<iframe data-src="${escapeAttr(s.relPath)}"></iframe>`}</div>
       <div class="scene-label">
         <span class="name" title="${escapeAttr(s.name)}">${escapeAttr(s.name)}</span>
-        ${stateBadge}
+        ${action || stateBadge}
       </div>
-      <div style="font-size:9px;color:var(--text-muted);padding:0 8px 4px">${sizeKb} KB</div>
+      <div style="font-size:9px;color:var(--text-muted);padding:0 8px 4px;display:flex;justify-content:space-between">
+        <span>${sizeKb} KB</span>
+        ${s.kind === 'html' ? '<span>GENERATOR</span>' : ''}
+      </div>
     </div>`;
   }).join('');
 
-  // Card click — preview in the editor iframe + show appropriate action
+  // Tile body click → load in inspector iframe (read-only preview)
   grid.querySelectorAll('.scene-card').forEach(card => {
-    card.addEventListener('click', () => {
-      // Clear preview-selected from other tiles (but not the obs-active marker)
-      // and clear scene/component grids since we're now editing a stinger.
-      grid.querySelectorAll('.scene-card').forEach(c => c.classList.remove('preview-selected'));
-      document.querySelectorAll('#scene-grid .scene-card, #component-grid .scene-card').forEach(c => c.classList.remove('active'));
-      // Only add preview-selected if this isn't already the OBS-active tile.
-      if (!card.classList.contains('obs-active')) card.classList.add('preview-selected');
-      window.__activeStinger = card.dataset.stinger;
-      window.__activeScene = null;
-      const rel = card.dataset.stingerRel;
-      const kind = card.dataset.stingerKind;
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('[data-stinger-apply], [data-stinger-record]')) return;
       const iframe = document.getElementById('editor-preview-iframe');
-      if (iframe) iframe.src = rel;
-      renderStingerActions(card.dataset.stinger, kind, items);
+      if (iframe) iframe.src = card.dataset.stingerRel;
     });
   });
 
-  // Re-load video iframe thumbs (the scene-grid uses data-src→src; do the same for our html iframes)
-  grid.querySelectorAll('iframe[data-src]').forEach(f => { f.src = f.dataset.src; });
-  scaleSceneThumbs();
-}
-
-// Render stinger action buttons in the editor-fields area when a stinger tile is selected.
-function renderStingerActions(name, kind, items) {
-  const container = document.getElementById('editor-fields');
-  const title = document.getElementById('editor-title');
-  if (!container || !title) return;
-  const item = (items || []).find(i => i.name === name);
-  title.textContent = 'SELECTED · STINGER · ' + name;
-  if (!item) {
-    container.innerHTML = `<div class="backup-empty">Stinger not found.</div>`;
-    return;
-  }
-  if (kind === 'html') {
-    container.innerHTML = `
-      <div class="placeholder-card" style="padding:var(--sp-4);text-align:left">
-        <div class="placeholder-title" style="font-size:var(--text-body)">HTML stinger source</div>
-        <div class="placeholder-desc" style="margin:0 0 var(--sp-3);text-align:left">OBS only accepts <code>.webm</code> for transitions. Click <strong>Make active</strong> and the dashboard will record this HTML's canvas animation, save it as a webm, and point OBS's stinger transition at it automatically.</div>
-        <div class="actions">
-          <button class="btn btn-primary" id="stinger-record-btn">Make active</button>
-          <button class="btn btn-secondary" id="stinger-open-generator">Open in new tab</button>
-        </div>
-        <div class="field-hint" id="stinger-record-progress" style="min-height:1.2em;margin-top:var(--sp-2)"></div>
-      </div>`;
-    document.getElementById('stinger-open-generator').addEventListener('click', () => {
-      window.open(item.relPath, '_blank');
-    });
-    document.getElementById('stinger-record-btn').addEventListener('click', () => {
-      recordHtmlStinger(item);
-    });
-    return;
-  }
-  // webm path
-  if (item.isActive) {
-    container.innerHTML = `
-      <div class="placeholder-card" style="padding:var(--sp-4);text-align:left;border-color:var(--accent-online)">
-        <div class="placeholder-title" style="font-size:var(--text-body);color:var(--accent-online)">● ACTIVE STINGER</div>
-        <div class="placeholder-desc" style="margin:0;text-align:left">OBS's Stinger transition points at this file via the stable filename <code>stinger-active.webm</code>. To use a different stinger, pick another tile and click "Make active".</div>
-      </div>`;
-    return;
-  }
-  container.innerHTML = `
-    <div class="placeholder-card" style="padding:var(--sp-4);text-align:left">
-      <div class="placeholder-title" style="font-size:var(--text-body)">Inactive stinger</div>
-      <div class="placeholder-desc" style="margin:0 0 var(--sp-3);text-align:left">Make active = atomic rename: this file becomes <code>stinger-active.webm</code>, and the previous active is archived as <code>stinger-active-archived-&lt;timestamp&gt;.webm</code>. OBS keeps working because the path it points at didn't change — refresh sources to be safe.</div>
-      <div class="actions">
-        <button class="btn btn-primary" id="stinger-apply-btn">Make active</button>
-      </div>
-    </div>`;
-  document.getElementById('stinger-apply-btn').addEventListener('click', async () => {
+  // Webm "Make active" inline button
+  grid.querySelectorAll('[data-stinger-apply]').forEach(btn => btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const name = btn.dataset.stingerApply;
     setStingerStatus('Applying ' + name + '...', null);
     try {
       const r = await fetch(API + '/apply-stinger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: name }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        setStingerStatus('Apply failed: ' + (j.error || 'http ' + r.status), 'err');
-        return;
-      }
-      setStingerStatus('✓ Active stinger is now ' + name + '.' + (j.archivedAs ? ' Previous → ' + j.archivedAs + '.' : '') + ' Refresh OBS browser sources / transition.', 'ok');
-      window.__activeStinger = 'stinger-active.webm';
+      if (!r.ok) { setStingerStatus('Apply failed: ' + (j.error || 'http ' + r.status), 'err'); return; }
+      setStingerStatus('OK Active stinger is now ' + name + '.' + (j.archivedAs ? ' Previous -> ' + j.archivedAs + '.' : '') + ' Refresh OBS browser sources / transition.', 'ok');
       refreshStingers();
-    } catch (e) {
-      setStingerStatus('Apply failed: ' + e.message, 'err');
+    } catch (err) {
+      setStingerStatus('Apply failed: ' + err.message, 'err');
     }
-  });
+  }));
+
+  // HTML "Make active" inline button — auto-record canvas, upload, activate
+  grid.querySelectorAll('[data-stinger-record]').forEach(btn => btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const name = btn.dataset.stingerRecord;
+    const item = items.find(i => i.name === name);
+    if (item) recordHtmlStinger(item);
+  }));
+
+  // Re-load iframe thumbs (data-src -> src)
+  grid.querySelectorAll('iframe[data-src]').forEach(f => { f.src = f.dataset.src; });
+  scaleSceneThumbs();
 }
 
 // ---------------------------------------------------------------
@@ -1828,19 +1604,18 @@ function renderStingerActions(name, kind, items) {
 // same convention; documented in docs/THEME_BUILDING.md.
 // ---------------------------------------------------------------
 async function recordHtmlStinger(item) {
-  const progress = document.getElementById('stinger-record-progress');
-  const btn = document.getElementById('stinger-record-btn');
-  const setProgress = (msg, kind) => {
-    if (!progress) return;
-    progress.textContent = msg;
-    progress.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
-  };
-
+  // Progress reports go through the same #stinger-status div the inline
+  // "Make active" buttons use. No more dedicated #stinger-record-progress
+  // (that used to live inside the removed editor-fields panel).
+  const setProgress = (msg, kind) => setStingerStatus(msg, kind);
+  // No tile-button disable any more — the user CAN double-fire, but each
+  // recordHtmlStinger run is independent and the worst case is two sequential
+  // uploads. Keeping the var so existing `if (btn) ...` guards are safe no-ops.
+  const btn = null;
   if (typeof MediaRecorder === 'undefined') {
-    setProgress('MediaRecorder not supported in this browser — open the HTML directly and record manually.', 'err');
+    setProgress('MediaRecorder not supported in this browser - open the HTML directly and record manually.', 'err');
     return;
   }
-  if (btn) btn.disabled = true;
 
   // 1. Hidden iframe at native canvas resolution. position:fixed + offscreen
   // keeps it out of view but lets requestAnimationFrame drive the canvas inside.
@@ -2009,27 +1784,8 @@ document.getElementById('upload-scene').addEventListener('change', async (e) => 
   e.target.value = '';
 });
 
-// Common controls + brand inputs
-document.querySelectorAll('.common-section [data-key]').forEach(input => {
-  const key = input.dataset.key;
-  const stored = localStorage.getItem('sasi_' + key);
-  if (stored !== null) {
-    if (input.type === 'checkbox') input.checked = stored === 'true';
-    else input.value = stored;
-  }
-  const isToggle = input.type === 'checkbox';
-  const isColor = input.type === 'color';
-  const debounceMs = isColor ? 50 : (isToggle ? 0 : 200);
-  let t;
-  const fire = () => {
-    const value = isToggle ? String(input.checked) : input.value;
-    broadcastChange(key, value);
-  };
-  input.addEventListener(isToggle ? 'change' : 'input', () => {
-    clearTimeout(t);
-    t = setTimeout(fire, debounceMs);
-  });
-});
+// (Common-section live-edit inputs were removed in v2.1 along with the
+//  editor — see comment near former SCENE_FIELDS for context.)
 
 // =========================================================
 // STREAM TAB (recorder + bundle + system)
