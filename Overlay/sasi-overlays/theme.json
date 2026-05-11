@@ -1,0 +1,50 @@
+﻿{
+    "$schema":  "https://raw.githubusercontent.com/Sachinlearnsdev/stream-recording/main/docs/theme-schema.json",
+    "name":  "Sasi Studio Default",
+    "id":  "sasi-default",
+    "author":  "Sasi Streams",
+    "version":  "1.0.0",
+    "contractVersion":  "1.0",
+    "description":  "Default red/orange/gold theme. Heavy tracked-out type, neon accents, broadcast-feel.",
+    "preview":  {
+                    "primary":  "#FF2200",
+                    "secondary":  "#FF7700",
+                    "accent":  "#FFD700",
+                    "bg":  "#050005"
+                },
+    "ships":  {
+                  "scenes":  [
+                                 "starting-soon.html",
+                                 "brb.html",
+                                 "stream-ending.html",
+                                 "overlay.html",
+                                 "just-chatting.html",
+                                 "breaking-news.html",
+                                 "transition.html",
+                                 "bg.html"
+                             ],
+                  "components":  [
+                                     "subscribe.html",
+                                     "likes.html",
+                                     "nametag.html",
+                                     "webcam.html",
+                                     "terminal-alerts.html"
+                                 ],
+                  "lib":  [
+                              "config.js",
+                              "alerts.js",
+                              "chat.js",
+                              "live-update.js",
+                              "effects.css",
+                              "notifications.js",
+                              "bg-all.js",
+                              "secrets.js"
+                          ],
+                  "assets":  [
+                                 "Sasi_Streams_logo.png"
+                             ],
+                  "stingers":  [
+
+                               ]
+              }
+}

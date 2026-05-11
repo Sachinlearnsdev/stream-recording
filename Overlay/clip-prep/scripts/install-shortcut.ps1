@@ -22,26 +22,24 @@ try {
   $lnk.Save()
   Write-Output ('Start Menu shortcut: ' + $startMenuLnk)
 
-  # 2. Desktop shortcut: opens the dashboard in the default browser.
-  # The watcher auto-starts at Windows login; if it's offline the dashboard's
-  # hero card has a Start button.
-  $dashboardPath = Join-Path $WorkingDir 'dashboard.html'
-  if (Test-Path -LiteralPath $dashboardPath) {
-    $desktopDir = [Environment]::GetFolderPath('Desktop')
-    $desktopLnk = Join-Path $desktopDir 'Sasi Studio.lnk'
-    $dlnk = $ws.CreateShortcut($desktopLnk)
-    # Open via cmd /c start so default-browser association is honored.
-    $dlnk.TargetPath       = "$env:windir\System32\cmd.exe"
-    $dlnk.Arguments        = '/c start "" "' + $dashboardPath + '"'
-    $dlnk.WorkingDirectory = $WorkingDir
-    $dlnk.IconLocation     = 'shell32.dll,14'
-    $dlnk.Description      = 'Open the Sasi Studio dashboard'
-    $dlnk.WindowStyle      = 7  # minimized — the cmd window flashes briefly only
-    $dlnk.Save()
-    Write-Output ('Desktop shortcut: ' + $desktopLnk)
-  } else {
-    Write-Output ('Skipped Desktop shortcut: dashboard.html not found at ' + $dashboardPath)
-  }
+  # 2. Desktop shortcut: opens the dashboard URL in the default browser.
+  # We point at http://127.0.0.1:6789/dashboard.html (served by the watcher's
+  # express.static middleware) instead of the file:// path. Reason: file://
+  # iframes are cross-origin in Chromium and that breaks canvas access for
+  # HTML stinger auto-record + several other live-edit features.
+  # The watcher auto-starts at Windows login; if it's offline the URL just
+  # fails to load and the user can hit the Start Menu shortcut to launch it.
+  $desktopDir = [Environment]::GetFolderPath('Desktop')
+  $desktopLnk = Join-Path $desktopDir 'Sasi Studio.lnk'
+  $dlnk = $ws.CreateShortcut($desktopLnk)
+  $dlnk.TargetPath       = "$env:windir\System32\cmd.exe"
+  $dlnk.Arguments        = '/c start "" "http://127.0.0.1:6789/dashboard.html"'
+  $dlnk.WorkingDirectory = $WorkingDir
+  $dlnk.IconLocation     = 'shell32.dll,14'
+  $dlnk.Description      = 'Open the Sasi Studio dashboard'
+  $dlnk.WindowStyle      = 7  # minimized — the cmd window flashes briefly only
+  $dlnk.Save()
+  Write-Output ('Desktop shortcut: ' + $desktopLnk)
 
   exit 0
 } catch {

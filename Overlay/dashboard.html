@@ -85,6 +85,10 @@
   }
   .scene-card:hover { border-color: var(--text-muted); }
   .scene-card.active { border-color: var(--accent-online); }
+  /* Stinger-only: distinguishes "currently being previewed" from "OBS-active". */
+  .scene-card.preview-selected { border-color: var(--text-secondary); }
+  .scene-card.obs-active { border-color: var(--accent-online); }
+  .scene-card.obs-active .scene-label { background: rgba(0,255,133,0.08); color: var(--accent-online); }
   .scene-thumb { position: relative; width: 100%; aspect-ratio: 16/9; overflow: hidden; background: #050005; }
   .scene-thumb iframe {
     width: 1920px; height: 1080px;
@@ -368,6 +372,22 @@
       <div class="page-head"><div class="page-eyebrow">Stream</div><div class="page-title">Go Live</div></div>
 
       <div class="section">
+        <div class="section-head">
+          <div class="section-title">Channel</div>
+          <span class="t-small" style="color:var(--text-muted)">Active: <strong id="ch-active-name" style="color:var(--text-primary)">—</strong></span>
+        </div>
+        <div class="section-hint">Switch between your channels (each has its own brand, theme, and YouTube/Twitch keys). One-click swap = update active channel + apply that channel's theme via folder rename + push brand to overlays. Channels are defined in <code>sasi-secrets.js</code>.</div>
+        <div class="field-row" style="align-items:end">
+          <div class="field" style="flex:1">
+            <label>Switch to</label>
+            <select id="ch-select" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit"></select>
+          </div>
+          <button class="btn btn-primary" id="ch-switch-btn" style="flex:0">Switch</button>
+        </div>
+        <div class="field-hint" id="ch-status" style="margin-top:var(--sp-2)">—</div>
+      </div>
+
+      <div class="section">
         <div class="section-title">Platform</div>
         <div class="platform-row">
           <button class="platform-btn" id="gl-platform-yt" data-platform="youtube">YouTube</button>
@@ -440,27 +460,20 @@
     <section class="panel active" data-panel="overlays">
       <div class="page-head"><div class="page-eyebrow">Stream</div><div class="page-title">Overlays</div></div>
 
-      <div class="advanced-accordion" id="adv-uploads" style="margin-bottom:var(--sp-4)">
-        <div class="advanced-head"><div class="title">▶ Upload custom logo + overlay layouts</div><div class="caret">▶</div></div>
-        <div class="advanced-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)">
-            <div>
-              <div class="section-title">Brand logo</div>
-              <div class="section-hint">Upload a PNG or JPG. Replaces <code>assets/Sasi_Streams_logo.png</code> across all overlays — your logo appears in the top-left of every scene.</div>
-              <input type="file" id="upload-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="font-size:var(--text-small);color:var(--text-secondary)">
-              <div class="field-hint" id="upload-logo-status" style="min-height:1.2em"></div>
-            </div>
-            <div>
-              <div class="section-title">Custom overlay layout</div>
-              <div class="section-hint">Upload an .html file. Saved to <code>scenes/</code>. Returns a <code>file://</code> path — paste it into OBS → Add Source → Browser → URL.</div>
-              <input type="file" id="upload-scene" accept=".html,text/html" style="font-size:var(--text-small);color:var(--text-secondary)">
-              <div class="field-hint" id="upload-scene-status" style="min-height:1.2em;word-break:break-all"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div class="editor-eyebrow" style="margin-bottom:var(--sp-2)">Themes</div>
+      <div class="theme-cards" id="theme-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,220px));gap:var(--sp-3);margin-bottom:var(--sp-3);justify-content:start"></div>
+      <div class="field-hint" id="theme-status" style="margin-bottom:var(--sp-4);min-height:1.2em">Click a card to preview its scenes + components below. The active theme is what OBS sees.</div>
 
+      <div class="editor-eyebrow" style="margin-bottom:var(--sp-2)">Scenes · full-screen overlays</div>
       <div class="scene-grid" id="scene-grid"></div>
+
+      <div class="editor-eyebrow" style="margin-bottom:var(--sp-2);margin-top:var(--sp-4)">Components · standalone OBS browser sources</div>
+      <div class="scene-grid" id="component-grid" style="margin-bottom:var(--sp-4)"></div>
+
+      <div class="editor-eyebrow" style="margin-bottom:var(--sp-2);margin-top:var(--sp-4)">Stingers · OBS scene-transition video</div>
+      <div class="section-hint" style="margin-bottom:var(--sp-2)">OBS Stinger transition points at <code>stingers/stinger-active.webm</code>. Pick another <code>.webm</code> tile → "Make active" atomically renames it (previous active is archived). The <code>.html</code> tiles are GENERATORS — open one in your browser, hit record, download the <code>.webm</code>, drop it into <code>sasi-overlays/stingers/</code>.</div>
+      <div class="scene-grid" id="stinger-grid" style="margin-bottom:var(--sp-4)"></div>
+      <div class="field-hint" id="stinger-status" style="min-height:1.2em;margin-bottom:var(--sp-4)"></div>
 
       <div class="editor-row">
         <div class="editor-form">
@@ -471,7 +484,7 @@
           <div class="preview-toolbar">
             <button class="preview-btn" id="preview-reload" title="Reload preview (needed for color/theme/font changes)">↻ Reload</button>
           </div>
-          <iframe id="editor-preview-iframe" src="scenes/starting-soon.html"></iframe>
+          <iframe id="editor-preview-iframe" src="sasi-overlays/scenes/starting-soon.html"></iframe>
         </div>
       </div>
 
@@ -510,7 +523,8 @@
 
       <div class="common-section">
         <div class="editor-eyebrow">Brand</div>
-        <div class="common-grid" style="grid-template-columns: 1fr 1fr">
+        <div class="section-hint" style="margin-bottom:var(--sp-2)">These override the active channel's brand text live (no reload). Logo upload replaces <code>sasi-overlays/assets/Sasi_Streams_logo.png</code> in the active theme.</div>
+        <div class="common-grid" style="grid-template-columns: 1fr 1fr 1fr">
           <div class="common-tile">
             <div class="common-tile-label">Channel name</div>
             <input type="text" data-key="brand_name" placeholder="SASI STREAMS">
@@ -518,6 +532,34 @@
           <div class="common-tile">
             <div class="common-tile-label">Tagline</div>
             <input type="text" data-key="brand_tagline" placeholder="LIVE STREAM">
+          </div>
+          <div class="common-tile">
+            <div class="common-tile-label">Logo (PNG/JPG)</div>
+            <input type="file" id="upload-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="font-size:var(--text-small);color:var(--text-secondary);width:100%">
+            <div class="field-hint" id="upload-logo-status" style="min-height:1.2em;font-size:10px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="advanced-accordion" id="adv-overlay-tools" style="margin-top:var(--sp-4)">
+        <div class="advanced-head"><div class="title">▶ Advanced · save theme, upload custom HTML</div><div class="caret">▶</div></div>
+        <div class="advanced-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)">
+            <div>
+              <div class="section-title">Save current as new theme</div>
+              <div class="section-hint">Copies the active <code>sasi-overlays/</code> to a new <code>sasi-overlays-&lt;name&gt;/</code> so you can branch, modify, and switch back via the theme cards above.</div>
+              <div class="actions" style="margin-top:var(--sp-3)">
+                <input type="text" id="theme-save-name" placeholder="new theme name (e.g. blue-neon)" style="flex:1;padding:8px 10px;background:var(--bg-page);color:var(--text-primary);border:1px solid var(--bg-divider);border-radius:var(--r-button);font-family:var(--font-mono);font-size:var(--text-mono)">
+                <button class="btn btn-secondary" id="theme-save-btn">Save</button>
+              </div>
+              <div class="field-hint" id="theme-save-status" style="min-height:1.2em;margin-top:var(--sp-2)"></div>
+            </div>
+            <div>
+              <div class="section-title">Upload custom scene HTML</div>
+              <div class="section-hint">Drops an <code>.html</code> file into <code>sasi-overlays/scenes/</code>. Returns a <code>file://</code> path you paste into OBS → Add Source → Browser → URL.</div>
+              <input type="file" id="upload-scene" accept=".html,text/html" style="font-size:var(--text-small);color:var(--text-secondary);margin-top:var(--sp-3)">
+              <div class="field-hint" id="upload-scene-status" style="min-height:1.2em;word-break:break-all"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -861,60 +903,120 @@
     </section>
 
     <section class="panel" data-panel="keys">
-      <div class="page-head"><div class="page-eyebrow">System</div><div class="page-title">Keys</div></div>
+      <div class="page-head"><div class="page-eyebrow">System</div><div class="page-title">Keys &amp; Channels</div></div>
 
       <div class="section">
-        <div class="section-hint">All keys stored locally in <code>secrets.js</code> (your install dir, never committed). Plain-text on disk — only your Windows user can access.</div>
+        <div class="section-hint">All keys stored locally in <code>sasi-secrets.js</code> at your install dir, gitignored. Plain text — only your Windows user can read it. The Go Live tab's Channel switcher uses what you configure here.</div>
       </div>
 
       <div class="key-section">
-        <div class="section-head">
-          <div class="section-title">YouTube API Keys</div>
-          <div class="quota-counter" style="margin:0;padding:4px 10px"><span class="quota-num" id="key-yt-count">0</span><span class="quota-label">keys · ~<span id="key-yt-hours">0</span>h coverage</span></div>
-        </div>
-        <div class="section-hint">Used for chat polling. Each key gives ~10,000 units/day (~12h coverage at 720 polls/day). Multiple keys auto-rotate when one hits quota. Get from Google Cloud Console → enable YouTube Data API v3.</div>
-        <div id="key-yt-list"></div>
-        <div class="key-input-row">
-          <input type="text" id="key-yt-add" placeholder="Paste new YouTube API key">
-          <button class="btn btn-primary" id="key-yt-add-btn" style="flex:0">Add key</button>
-        </div>
-        <div class="field" style="margin-top:var(--sp-3)">
-          <label>Channel ID</label>
-          <input type="text" id="key-yt-channel" placeholder="UCxxxxxxxxxxx" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
-        </div>
-      </div>
-
-      <div class="key-section">
-        <div class="section-title">Twitch IRC username</div>
-        <div class="section-hint">Anonymous IRC connection — only your username is needed. <code>clientId</code>/<code>clientSecret</code> aren't used by the current chat code.</div>
-        <input type="text" id="key-twitch-username" placeholder="your_twitch_username" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono);margin-top:var(--sp-2)">
-      </div>
-
-      <div class="key-section">
-        <div class="section-title">StreamElements JWTs</div>
-        <div class="section-hint">JWT tokens from StreamElements account dashboard. Powers all alerts (super chats, members, gifts, redemptions).</div>
+        <div class="section-title">Shared · StreamElements JWTs</div>
+        <div class="section-hint">One SE account usually covers all your channels, so these JWTs are shared. Powers alerts (super chats, members, gifts, redemptions).</div>
         <div class="field" style="margin-top:var(--sp-3)">
           <label>YouTube account JWT</label>
           <div class="row">
             <input type="password" id="key-se-yt" placeholder="eyJhbGciOiJIUzI1NiIs..." style="flex:1;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
             <button class="btn btn-secondary" id="key-se-yt-show" style="font-size:10px;padding:6px 12px">Show</button>
-            <button class="btn btn-secondary" id="key-se-yt-test" style="font-size:10px;padding:6px 12px">Test</button>
           </div>
-          <div class="field-hint" id="key-se-yt-status"></div>
         </div>
         <div class="field" style="margin-top:var(--sp-3)">
           <label>Twitch account JWT</label>
           <div class="row">
             <input type="password" id="key-se-tw" placeholder="eyJhbGciOiJIUzI1NiIs..." style="flex:1;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
             <button class="btn btn-secondary" id="key-se-tw-show" style="font-size:10px;padding:6px 12px">Show</button>
-            <button class="btn btn-secondary" id="key-se-tw-test" style="font-size:10px;padding:6px 12px">Test</button>
           </div>
-          <div class="field-hint" id="key-se-tw-status"></div>
+        </div>
+      </div>
+
+      <div class="key-section">
+        <div class="section-head">
+          <div class="section-title">Channels</div>
+          <button class="btn btn-secondary" id="ch-add-btn" style="font-size:10px;padding:6px 12px">+ Add channel</button>
+        </div>
+        <div class="section-hint">Each channel has its own brand (logo / name / tagline), YouTube channel + API keys, Twitch username, and preferred theme. YT API keys are per-channel — the system needs the right key for the right channel ID to poll chat. You can re-use the same API key string across channels if you only have one Google Cloud key.</div>
+        <div class="field-row" style="align-items:end;margin-top:var(--sp-3)">
+          <div class="field" style="flex:1">
+            <label>Editing channel</label>
+            <select id="ch-edit-select" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:inherit"></select>
+          </div>
+          <button class="btn btn-destructive" id="ch-delete-btn" style="flex:0">Delete channel</button>
+        </div>
+
+        <div id="ch-edit-form" style="margin-top:var(--sp-4);display:none">
+
+          <div class="common-section" style="margin-top:var(--sp-3)">
+            <div class="editor-eyebrow">Brand</div>
+            <div class="common-grid" style="grid-template-columns:1fr 1fr">
+              <div class="common-tile">
+                <div class="common-tile-label">Channel name (display)</div>
+                <input type="text" id="ch-brand-name" placeholder="SASI STREAMS">
+              </div>
+              <div class="common-tile">
+                <div class="common-tile-label">Tagline</div>
+                <input type="text" id="ch-brand-tagline" placeholder="LIVE STREAM">
+              </div>
+              <div class="common-tile" style="grid-column:1 / span 2">
+                <div class="common-tile-label">Logo path (relative to active theme folder)</div>
+                <input type="text" id="ch-brand-logo" placeholder="assets/Sasi_Streams_logo.png">
+              </div>
+            </div>
+          </div>
+
+          <div class="common-section">
+            <div class="editor-eyebrow">YouTube</div>
+            <div class="field">
+              <label>Channel ID <span style="color:var(--text-muted);font-weight:400">(starts with UC)</span></label>
+              <input type="text" id="ch-yt-channel" placeholder="UCxxxxxxxxxxx" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
+            </div>
+            <div class="field" style="margin-top:var(--sp-3)">
+              <div class="section-head">
+                <label style="margin:0">API keys</label>
+                <span class="t-small" style="color:var(--text-muted)"><span id="ch-yt-count">0</span> keys · ~<span id="ch-yt-hours">0</span>h coverage</span>
+              </div>
+              <div class="section-hint">Each key gives ~10,000 units/day (~12h chat polling). Multiple keys auto-rotate when one hits quota. Get from Google Cloud Console → enable YouTube Data API v3.</div>
+              <div id="ch-yt-list" style="margin-top:var(--sp-2)"></div>
+              <div class="key-input-row">
+                <input type="text" id="ch-yt-add" placeholder="Paste new YouTube API key">
+                <button class="btn btn-primary" id="ch-yt-add-btn" style="flex:0">Add key</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="common-section">
+            <div class="editor-eyebrow">Twitch</div>
+            <div class="field">
+              <label>IRC username <span style="color:var(--text-muted);font-weight:400">(required for chat)</span></label>
+              <input type="text" id="ch-twitch-username" placeholder="your_twitch_username" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
+              <div class="field-hint">Anonymous IRC chat polling — username only.</div>
+            </div>
+            <div class="field" style="margin-top:var(--sp-3)">
+              <label>Client ID <span style="color:var(--text-muted);font-weight:400">(optional — Twitch API)</span></label>
+              <input type="text" id="ch-twitch-client-id" placeholder="(leave blank unless you've registered a Twitch app)" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
+            </div>
+            <div class="field" style="margin-top:var(--sp-3)">
+              <label>Client Secret <span style="color:var(--text-muted);font-weight:400">(optional — Twitch API)</span></label>
+              <div class="row">
+                <input type="password" id="ch-twitch-client-secret" placeholder="(leave blank unless you've registered a Twitch app)" style="flex:1;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)">
+                <button class="btn btn-secondary" id="ch-twitch-client-secret-show" style="font-size:10px;padding:6px 12px">Show</button>
+              </div>
+              <div class="field-hint">Client ID + Secret are reserved for future Twitch-API features (follower events, channel points). Register an app at <code>dev.twitch.tv/console</code> if you want to use them.</div>
+            </div>
+          </div>
+
+          <div class="common-section">
+            <div class="editor-eyebrow">Theme</div>
+            <div class="field">
+              <label>Preferred theme folder</label>
+              <select id="ch-theme" style="width:100%;padding:8px 10px;background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-size:var(--text-mono)"></select>
+              <div class="field-hint">When you switch to this channel in Go Live, this theme gets activated via folder rename.</div>
+            </div>
+          </div>
+
         </div>
       </div>
 
       <div class="actions" style="margin-top:var(--sp-4)">
-        <button class="btn btn-primary" id="key-save">Save all keys</button>
+        <button class="btn btn-primary" id="key-save">Save all changes</button>
         <span class="t-small" id="key-save-status" style="color:var(--text-muted);align-self:center"></span>
       </div>
     </section>
@@ -997,36 +1099,85 @@ const SCENE_LABELS = {
   'breaking-news.html': 'Breaking News',
   'transition.html': 'Transition',
   'bg.html': 'Background',
+  'sample-test.html': '▶ Sample Test',
 };
 
-// Build the grid dynamically — include ALL .html scenes from disk so custom
-// uploads appear as new tiles automatically.
-async function buildSceneGrid() {
-  const grid = document.getElementById('scene-grid');
-  // Try to fetch scene list from the watcher; fall back to the built-in 5.
-  let scenes = [];
-  try {
-    const r = await fetch(API + '/list-scenes');
-    if (r.ok) scenes = (await r.json()).scenes || [];
-  } catch {}
-  if (scenes.length === 0) {
-    // Fallback when watcher has no /list-scenes endpoint (older deploy).
-    scenes = ['starting-soon.html', 'brb.html', 'stream-ending.html', 'overlay.html', 'just-chatting.html']
-      .map(name => ({ name, fileUrl: 'scenes/' + name }));
-  }
-  // Skip bg.html — it's a layered background, not a standalone scene.
-  scenes = scenes.filter(s => s.name !== 'bg.html');
-  const previousActive = window.__activeScene || (scenes[0] && scenes[0].name.replace('.html', ''));
+const COMPONENT_LABELS = {
+  'subscribe.html': 'Subscribe Strip',
+  'likes.html': 'Likes Strip',
+  'nametag.html': 'Name Tag',
+  'webcam.html': 'Webcam Frame',
+  'terminal-alerts.html': 'Terminal Alerts',
+  'sample-test.html': '▶ Sample Test',
+};
 
-  grid.innerHTML = scenes.map(s => {
-    const sceneId = s.name.replace(/\.html?$/i, '');
-    const label = SCENE_LABELS[s.name] || sceneId;
-    const isActive = sceneId === previousActive;
-    // Use the file:// URL if returned by API (for OBS browser source); use relative
-    // src for the iframe preview (relative resolves to file:// when dashboard runs from disk).
-    const previewSrc = 'scenes/' + s.name;
-    const obsUrl = s.fileUrl || ('file:///' + location.pathname.replace(/\/[^/]*$/, '') + '/scenes/' + s.name);
-    return `<div class="scene-card${isActive ? ' active' : ''}" data-scene="${sceneId}" data-file="${escapeAttr(s.name)}" data-obs-url="${escapeAttr(obsUrl)}">
+// Component editor fields (mirrors SCENE_FIELDS shape).
+const COMPONENT_FIELDS = {
+  'subscribe': [
+    { key: 'sub_items', type: 'text', label: 'Scrolling text', placeholder: 'SUBSCRIBE' },
+  ],
+  'likes': [
+    { key: 'likes_items', type: 'text', label: 'Scrolling text', placeholder: 'LIKE' },
+  ],
+  'nametag': [
+    { key: 'nametag', type: 'text', label: 'Name (empty = use brand name)', placeholder: '' },
+  ],
+  'webcam': [
+    { key: 'webcam_label', type: 'text', label: 'Label below cam (empty = hide)', placeholder: 'LIVE' },
+  ],
+  'terminal-alerts': [
+    { key: 'term_title', type: 'text', label: 'Header title', placeholder: 'sasi@streams — alerts.log' },
+  ],
+  'sample-test': [
+    { key: 'sample_comp_text', type: 'text', label: 'Component value text', placeholder: 'EDIT ME' },
+  ],
+};
+
+// Build a tile grid (used for both scenes and components — same UI).
+// kind: 'scene' or 'component' — drives data-kind attr + folder path.
+async function buildTileGrid(kind) {
+  const isScene = kind === 'scene';
+  const gridId = isScene ? 'scene-grid' : 'component-grid';
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const endpoint = isScene ? '/list-scenes' : '/list-components';
+  // Paths are relative to dashboard.html (one level above sasi-overlays/).
+  // Active theme always lives at sasi-overlays/. The Overlays-tab dropdown can
+  // override this via window.__previewTheme to preview an inactive sasi-overlays-<name>/.
+  const themeFolder = window.__previewTheme || 'sasi-overlays';
+  const folder = themeFolder + '/' + (isScene ? 'scenes' : 'components');
+  const labelMap = isScene ? SCENE_LABELS : COMPONENT_LABELS;
+
+  let items = [];
+  try {
+    const qs = themeFolder !== 'sasi-overlays' ? '?theme=' + encodeURIComponent(themeFolder) : '';
+    const r = await fetch(API + endpoint + qs);
+    if (r.ok) {
+      const j = await r.json();
+      items = isScene ? (j.scenes || []) : (j.components || []);
+    }
+  } catch {}
+  if (items.length === 0) {
+    // Fallback when the watcher /list-scenes endpoint isn't deployed yet.
+    // Mirrors the theme contract (mandatory scenes + components) — does NOT
+    // include sample/test files; once you delete a file from disk it should
+    // disappear from the grid, not be resurrected by a hardcoded fallback.
+    const fallback = isScene
+      ? ['starting-soon.html', 'brb.html', 'stream-ending.html', 'overlay.html', 'just-chatting.html']
+      : ['subscribe.html', 'likes.html', 'nametag.html', 'webcam.html'];
+    items = fallback.map(name => ({ name }));
+  }
+  if (isScene) items = items.filter(s => s.name !== 'bg.html'); // bg is layered, not standalone
+
+  const activeKey = window.__activeScene || (items[0] && items[0].name.replace('.html', ''));
+
+  grid.innerHTML = items.map(s => {
+    const id = s.name.replace(/\.html?$/i, '');
+    const label = labelMap[s.name] || id;
+    const isActive = id === activeKey;
+    const previewSrc = folder + '/' + s.name;
+    const obsUrl = s.fileUrl || ('file:///' + location.pathname.replace(/\/[^/]*$/, '') + '/' + folder + '/' + s.name);
+    return `<div class="scene-card${isActive ? ' active' : ''}" data-scene="${id}" data-kind="${kind}" data-folder="${folder}" data-file="${escapeAttr(s.name)}">
       <div class="scene-thumb"><iframe data-src="${escapeAttr(previewSrc)}"></iframe></div>
       <div class="scene-label">
         <span class="name" title="${escapeAttr(label)}">${escapeAttr(label)}</span>
@@ -1035,18 +1186,22 @@ async function buildSceneGrid() {
     </div>`;
   }).join('');
 
-  // Wire scene-card clicks (excluding the copy button)
+  // Wire tile clicks (excluding copy button)
   grid.querySelectorAll('.scene-card').forEach(card => {
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.scene-copy-btn')) return; // copy button handles its own click
-      grid.querySelectorAll('.scene-card').forEach(c => c.classList.remove('active'));
+      if (e.target.closest('.scene-copy-btn')) return;
+      // Clear active across scene+component grids and clear stinger preview-selected —
+      // only one selection across all three grids at a time.
+      document.querySelectorAll('#scene-grid .scene-card, #component-grid .scene-card').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('#stinger-grid .scene-card').forEach(c => c.classList.remove('preview-selected'));
       card.classList.add('active');
       window.__activeScene = card.dataset.scene;
-      window.dispatchEvent(new CustomEvent('sasi-scene-change', { detail: card.dataset.scene }));
+      window.__activeKind = card.dataset.kind;
+      window.__activeStinger = null;
+      window.dispatchEvent(new CustomEvent('sasi-scene-change', { detail: { name: card.dataset.scene, kind: card.dataset.kind, folder: card.dataset.folder, file: card.dataset.file } }));
     });
   });
 
-  // Copy URL buttons
   grid.querySelectorAll('.scene-copy-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -1063,6 +1218,12 @@ async function buildSceneGrid() {
   });
 
   scaleSceneThumbs();
+}
+
+// Backwards-compat wrapper used elsewhere (after upload, etc.)
+async function buildSceneGrid() {
+  await buildTileGrid('scene');
+  await buildTileGrid('component');
 }
 
 function escapeAttr(s) {
@@ -1087,6 +1248,7 @@ function scaleEditorPreview() {
 }
 // Initial active scene + dynamic grid build (replaces static markup)
 window.__activeScene = 'starting-soon';
+window.__activeKind = 'scene';
 buildSceneGrid();
 window.addEventListener('resize', () => { scaleSceneThumbs(); scaleEditorPreview(); });
 
@@ -1124,33 +1286,44 @@ const SCENE_FIELDS = {
   'just-chatting': [
     { key: 'brand_name', type: 'text', label: 'Channel name', placeholder: 'SASI STREAMS' },
   ],
+  'sample-test': [
+    { key: 'sample_badge', type: 'text', label: 'Top badge', placeholder: '▶ SAMPLE TEST' },
+    { key: 'sample_main',  type: 'text', label: 'Big text',  placeholder: 'SCENE' },
+    { key: 'sample_sub',   type: 'text', label: 'Subtitle',  placeholder: 'EDIT TO VERIFY LIVE UPDATES' },
+  ],
 };
 
 // Broadcast a localStorage change to all overlay iframes (they don't get
 // storage events from the same window — we manually dispatch).
 function broadcastChange(key, value) {
+  // Persist for new iframes / page reloads.
   localStorage.setItem('sasi_' + key, value);
-  const ev = (k, v) => new StorageEvent('storage', { key: 'sasi_' + k, newValue: v, storageArea: localStorage });
-  // Editor preview
-  const editor = document.getElementById('editor-preview-iframe');
-  if (editor && editor.contentWindow) {
-    try { editor.contentWindow.dispatchEvent(ev(key, value)); } catch {}
-  }
-  // Grid thumbs
-  document.querySelectorAll('.scene-thumb iframe').forEach(iframe => {
-    if (iframe.contentWindow) {
-      try { iframe.contentWindow.dispatchEvent(ev(key, value)); } catch {}
-    }
-  });
+
+  // Push to all live iframes. We use postMessage instead of synthetic StorageEvent
+  // because Chrome's StorageEvent constructor is realm-bound — when constructed
+  // in the parent window and dispatched into the iframe, e.key/newValue arrive
+  // null and live-update.js's listener bails. postMessage has no such issue.
+  const msg = { __sasi: true, type: 'sasi-live', key: 'sasi_' + key, newValue: value };
+  const send = (win) => {
+    if (!win) return;
+    try { win.postMessage(msg, '*'); } catch {}
+  };
+  send(document.getElementById('editor-preview-iframe')?.contentWindow);
+  document.querySelectorAll('.scene-thumb iframe').forEach(iframe => send(iframe.contentWindow));
 }
 
-function renderEditor(sceneName) {
-  const fields = SCENE_FIELDS[sceneName] || [];
+function renderEditor(sceneName, kind) {
+  // Look up fields in BOTH maps — depends on what kind of tile is active
+  const k = kind || window.__activeKind || 'scene';
+  const fieldsMap = k === 'component' ? COMPONENT_FIELDS : SCENE_FIELDS;
+  const labelsMap = k === 'component' ? COMPONENT_LABELS : SCENE_LABELS;
+  const fields = fieldsMap[sceneName] || [];
   const container = document.getElementById('editor-fields');
-  document.getElementById('editor-title').textContent = 'SELECTED · ' + sceneName.toUpperCase().replace('-', ' ');
+  const friendlyName = labelsMap[sceneName + '.html'] || sceneName.toUpperCase().replace(/-/g, ' ');
+  document.getElementById('editor-title').textContent = 'SELECTED · ' + friendlyName.toUpperCase() + (k === 'component' ? ' · component' : '');
 
   if (fields.length === 0) {
-    container.innerHTML = '<div class="placeholder-card" style="padding:var(--sp-4);text-align:left"><div class="placeholder-title" style="font-size:var(--text-body)">Custom layout</div><div class="placeholder-desc" style="margin:0;text-align:left">Live preview is on the right. To make text fields editable here, the scene HTML needs to call <code>registerLiveUpdater()</code> from <code>lib/live-update.js</code> for each editable element. See an existing scene like <code>starting-soon.html</code> for the pattern.</div></div>';
+    container.innerHTML = '<div class="placeholder-card" style="padding:var(--sp-4);text-align:left"><div class="placeholder-title" style="font-size:var(--text-body)">Custom layout</div><div class="placeholder-desc" style="margin:0;text-align:left">Live preview is on the right. To make text fields editable here, the file needs to call <code>registerLiveUpdater()</code> from <code>lib/live-update.js</code> for each editable element. See an existing scene like <code>starting-soon.html</code> for the pattern.</div></div>';
     return;
   }
 
@@ -1179,7 +1352,15 @@ function renderEditor(sceneName) {
     const debounceMs = isToggle ? 0 : 200;
     let t;
     const fire = () => {
-      const value = isToggle ? String(input.checked) : input.value;
+      let value;
+      if (isToggle) {
+        value = String(input.checked);
+      } else {
+        // Empty field falls back to placeholder so clearing reverts to the
+        // default instead of leaving a blank overlay. Matches what the user
+        // sees in the input UI (the dim placeholder text IS the default).
+        value = input.value.length > 0 ? input.value : (input.placeholder || '');
+      }
       broadcastChange(key, value);
     };
     input.addEventListener(isToggle ? 'change' : 'input', () => {
@@ -1190,11 +1371,12 @@ function renderEditor(sceneName) {
 }
 
 // Initial render + scene-change handler
-renderEditor(window.__activeScene);
+renderEditor(window.__activeScene, 'scene');
 window.addEventListener('sasi-scene-change', (e) => {
-  renderEditor(e.detail);
-  document.getElementById('editor-preview-iframe').src = 'scenes/' + e.detail + '.html';
-  // Re-scale once the new iframe loads
+  // Detail is now an object: { name, kind, folder, file }
+  const d = (e.detail && typeof e.detail === 'object') ? e.detail : { name: e.detail, kind: 'scene', folder: 'sasi-overlays/scenes', file: e.detail + '.html' };
+  renderEditor(d.name, d.kind);
+  document.getElementById('editor-preview-iframe').src = (d.folder || 'scenes') + '/' + (d.file || (d.name + '.html'));
   setTimeout(scaleEditorPreview, 200);
 });
 
@@ -1207,10 +1389,570 @@ document.getElementById('preview-reload').addEventListener('click', () => {
   setTimeout(() => { scaleSceneThumbs(); scaleEditorPreview(); }, 200);
 });
 
-// === Overlays tab — upload handlers ===
-document.querySelectorAll('#adv-uploads .advanced-head').forEach(h =>
+// === Overlays tab — accordion toggle (Advanced section only now) ===
+document.querySelectorAll('#adv-overlay-tools .advanced-head').forEach(h =>
   h.addEventListener('click', () => h.parentElement.classList.toggle('open'))
 );
+
+// === Themes (card grid above the scenes/components) ===
+// Default preview target is the active theme; clicking a card swaps it.
+window.__previewTheme = window.__previewTheme || 'sasi-overlays';
+
+function setThemeStatus(text, kind) {
+  const el = document.getElementById('theme-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+}
+
+function setThemeSaveStatus(text, kind) {
+  const el = document.getElementById('theme-save-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+}
+
+// Hardcoded list of themes the dashboard ships with — used as a fallback when
+// /list-themes 404s (older watcher). Chrome's file:// CORS rules block fetch()
+// for cross-file probing, so we just declare the known themes here instead of
+// trying to discover them. Once the watcher is redeployed and /list-themes
+// works, this list is ignored in favor of the live data.
+const FALLBACK_THEMES = [
+  { folder: 'sasi-overlays',          name: 'active',  id: 'sasi-default', displayName: 'Sasi Default', active: true,  valid: true, missing: [], preview: { primary: '#FF2200', secondary: '#FF7700', accent: '#FFD700', bg: '#050005' } },
+  { folder: 'sasi-overlays-blue',     name: 'blue',    id: 'sasi-blue',    displayName: 'Sasi Blue',    active: false, valid: true, missing: [], preview: { primary: '#0080FF', secondary: '#00BFFF', accent: '#C0C0C0', bg: '#050005' } },
+  { folder: 'sasi-overlays-purple',   name: 'purple',  id: 'sasi-purple',  displayName: 'Sasi Purple',  active: false, valid: true, missing: [], preview: { primary: '#8800FF', secondary: '#FF00C8', accent: '#E0B0FF', bg: '#050005' } },
+  { folder: 'sasi-overlays-minimal',  name: 'minimal', id: 'sasi-minimal', displayName: 'Sasi Minimal', active: false, valid: true, missing: [], preview: { primary: '#FFFFFF', secondary: '#A0A0A0', accent: '#FFFFFF', bg: '#000000' } },
+];
+
+// Convenience: the active record from FALLBACK_THEMES (used elsewhere as a
+// single-card fallback when even the hardcoded list isn't appropriate).
+const FALLBACK_ACTIVE_THEME = FALLBACK_THEMES[0];
+
+async function refreshThemes() {
+  const cards = document.getElementById('theme-cards');
+  if (!cards) return;
+  let themes = [];
+  let endpointMissing = false;
+  let fetchError = null;
+  try {
+    const r = await fetch(API + '/list-themes');
+    if (r.status === 404) {
+      endpointMissing = true;
+    } else {
+      const j = await r.json();
+      themes = j.themes || [];
+    }
+  } catch (e) {
+    fetchError = e.message;
+  }
+
+  // Graceful fallback: when the endpoint is missing or errors, use the
+  // hardcoded FALLBACK_THEMES list. Cards that point to folders the user
+  // doesn't actually have on disk will just show broken iframes — that's
+  // OK; the user can see what themes the dashboard knows about.
+  if (endpointMissing || fetchError) {
+    themes = FALLBACK_THEMES;
+  } else if (themes.length === 0) {
+    themes = [FALLBACK_ACTIVE_THEME];
+  }
+  window.__themesCache = themes;
+
+  if (endpointMissing) {
+    setThemeStatus('Watcher is older than the new themes endpoint — redeploy via bootstrap.bat to enable Save/Apply/Delete. Cards below are the themes the dashboard ships with; click one to preview its scenes.', 'err');
+  } else if (fetchError) {
+    setThemeStatus('Could not load themes: ' + fetchError + '. Showing hardcoded fallback.', 'err');
+  }
+
+  // If __previewTheme no longer exists, snap back to active.
+  if (!themes.find(t => t.folder === window.__previewTheme)) {
+    window.__previewTheme = (themes.find(t => t.active) || themes[0]).folder;
+  }
+
+  cards.innerHTML = themes.map(t => {
+    const valid = t.valid !== false;
+    const selected = t.folder === window.__previewTheme;
+    const colors = t.preview || {};
+    // Best-effort preview swatches: use placeholders if /list-themes doesn't expose colors yet.
+    const swatches = `
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${colors.primary || '#FF2200'};border:1px solid var(--bg-divider)" title="primary"></span>
+        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${colors.secondary || '#FF7700'};border:1px solid var(--bg-divider)" title="secondary"></span>
+        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${colors.accent || '#FFD700'};border:1px solid var(--bg-divider)" title="accent"></span>
+      </div>`;
+    const stateBadge = t.active
+      ? '<span style="color:var(--accent-online);font-weight:700;font-size:10px;letter-spacing:0.1em">● ACTIVE</span>'
+      : (!valid ? '<span style="color:var(--accent-rec);font-weight:700;font-size:10px;letter-spacing:0.1em">⚠ INVALID</span>' : '<span style="color:var(--text-muted);font-size:10px;letter-spacing:0.1em">INACTIVE</span>');
+    const displayName = t.id || (t.active ? 'sasi-default' : t.name);
+    const border = selected ? '2px solid var(--accent-online)' : '1px solid var(--bg-divider)';
+    const opacity = valid ? '1' : '0.5';
+    return `<div class="theme-card${selected ? ' selected' : ''}" data-theme-folder="${escapeAttr(t.folder)}" style="background:var(--bg-card);border:${border};border-radius:var(--r-card);padding:var(--sp-3);cursor:pointer;opacity:${opacity};transition:border-color var(--t-fast)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="color:var(--text-primary);font-weight:700;font-size:var(--text-body);font-family:var(--font-mono)">${escapeAttr(displayName)}</div>
+        ${stateBadge}
+      </div>
+      ${swatches}
+      <div style="color:var(--text-muted);font-size:10px;font-family:var(--font-mono);margin-top:6px;word-break:break-all">${escapeAttr(t.folder)}</div>
+      ${(!valid && t.missing && t.missing.length) ? `<div style="color:var(--accent-rec);font-size:10px;margin-top:4px">Missing: ${t.missing.slice(0,3).map(escapeAttr).join(', ')}${t.missing.length > 3 ? '…' : ''}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Card click: preview this theme's scenes/components
+  cards.querySelectorAll('.theme-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const folder = card.dataset.themeFolder;
+      const t = themes.find(x => x.folder === folder);
+      if (!t || t.valid === false) return;
+      window.__previewTheme = folder;
+      // Update selection styles immediately
+      cards.querySelectorAll('.theme-card').forEach(c => {
+        c.style.border = c.dataset.themeFolder === folder ? '2px solid var(--accent-online)' : '1px solid var(--bg-divider)';
+        c.classList.toggle('selected', c.dataset.themeFolder === folder);
+      });
+      if (t.active) {
+        setThemeStatus('Previewing ACTIVE theme — this is what OBS reads.', 'ok');
+      } else {
+        setThemeStatus(`Previewing inactive "${t.id || t.name}". Below grids are showing this theme's files. Click "Make this theme active" to swap (OBS will switch on browser-source refresh).`, null);
+      }
+      // Rebuild grids with the new theme prefix
+      if (typeof buildSceneGrid === 'function') buildSceneGrid();
+      refreshStingers();
+      renderMakeActiveButton(t);
+    });
+  });
+
+  // Pre-render the action button row under the cards. Keep the redeploy
+  // warning visible (don't overwrite the status with the "Previewing ACTIVE"
+  // message when the user genuinely needs to redeploy).
+  const currentTheme = themes.find(t => t.folder === window.__previewTheme) || themes.find(t => t.active);
+  renderMakeActiveButton(currentTheme);
+  if (!endpointMissing && !fetchError) {
+    if (currentTheme && currentTheme.active) {
+      setThemeStatus('Previewing ACTIVE theme — this is what OBS reads.', 'ok');
+    } else if (currentTheme) {
+      setThemeStatus(`Previewing inactive "${currentTheme.id || currentTheme.name}". Click "Make this theme active" to swap.`, null);
+    }
+  }
+}
+
+// Render/refresh the "Make this theme active" + "Delete" buttons below the theme-status line.
+function renderMakeActiveButton(t) {
+  let row = document.getElementById('theme-action-row');
+  const status = document.getElementById('theme-status');
+  if (!status) return;
+  if (!row) {
+    row = document.createElement('div');
+    row.id = 'theme-action-row';
+    row.className = 'actions';
+    row.style.marginBottom = 'var(--sp-4)';
+    status.parentElement.insertBefore(row, status.nextSibling);
+  }
+  if (!t || t.active) {
+    row.innerHTML = '';
+    return;
+  }
+  if (t.valid === false) {
+    row.innerHTML = `<span class="t-small" style="color:var(--accent-rec);align-self:center">This theme is missing required files — cannot activate.</span>`;
+    return;
+  }
+  row.innerHTML = `
+    <button class="btn btn-primary" id="theme-card-apply">Make this theme active</button>
+    <button class="btn btn-destructive" id="theme-card-delete" style="font-size:10px;padding:6px 12px">Delete theme</button>
+  `;
+  const suffix = t.folder.replace(/^sasi-overlays-?/, '');
+  document.getElementById('theme-card-apply').addEventListener('click', async () => {
+    if (!confirm('Apply theme "' + (t.id || suffix) + '"?\n\nYour current active theme will be archived as sasi-overlays-<id>/ so you can revert.')) return;
+    setThemeStatus('Applying ' + (t.id || suffix) + '...', null);
+    try {
+      const r = await fetch(API + '/apply-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: suffix }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setThemeStatus('Apply failed: ' + (j.error || 'http ' + r.status), 'err'); return; }
+      setThemeStatus('✓ Active theme is now ' + (t.id || suffix) + '. Refresh OBS browser sources.' + (j.archivedAs ? ' Previous → ' + j.archivedAs + '.' : ''), 'ok');
+      window.__previewTheme = 'sasi-overlays';
+      refreshThemes();
+      if (typeof buildSceneGrid === 'function') buildSceneGrid();
+      refreshStingers();
+    } catch (e) { setThemeStatus('Apply failed: ' + e.message, 'err'); }
+  });
+  document.getElementById('theme-card-delete').addEventListener('click', async () => {
+    if (!confirm('Delete theme "' + suffix + '" PERMANENTLY?\n\nFolder ' + t.folder + ' will be removed from disk. There is NO undo.')) return;
+    try {
+      const r = await fetch(API + '/delete-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: suffix }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setThemeStatus('Delete failed: ' + (j.error || 'http ' + r.status), 'err'); return; }
+      setThemeStatus('✓ Deleted ' + t.folder, 'ok');
+      window.__previewTheme = 'sasi-overlays';
+      refreshThemes();
+    } catch (e) { setThemeStatus('Delete failed: ' + e.message, 'err'); }
+  });
+}
+
+document.getElementById('theme-save-btn').addEventListener('click', async () => {
+  const name = document.getElementById('theme-save-name').value.trim();
+  if (!name) { setThemeSaveStatus('Theme name required.', 'err'); return; }
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) { setThemeSaveStatus('Theme name: letters, numbers, dash, underscore only.', 'err'); return; }
+  setThemeSaveStatus('Copying current theme to sasi-overlays-' + name + '... (may take a few seconds)', null);
+  try {
+    const r = await fetch(API + '/save-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { setThemeSaveStatus('Save failed: ' + (j.error || 'http ' + r.status), 'err'); return; }
+    setThemeSaveStatus('✓ Saved as ' + j.savedAs + '. Open Themes above to find it.', 'ok');
+    document.getElementById('theme-save-name').value = '';
+    refreshThemes();
+  } catch (e) { setThemeSaveStatus('Save failed: ' + e.message, 'err'); }
+});
+
+refreshThemes();
+
+// === Stingers (OBS scene-transition picker — tile grid, same pattern as scenes/components) ===
+function setStingerStatus(text, kind) {
+  const el = document.getElementById('stinger-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+}
+
+async function refreshStingers() {
+  const grid = document.getElementById('stinger-grid');
+  if (!grid) return;
+  const themeFolder = window.__previewTheme || 'sasi-overlays';
+
+  // Only the active theme has /list-stingers wired; inactive themes can't be activated
+  // anyway (you'd switch theme first). When previewing an inactive theme, show a hint.
+  if (themeFolder !== 'sasi-overlays') {
+    grid.innerHTML = '<div class="backup-empty" style="grid-column:1 / -1">Switch to this theme (Make this theme active) to manage its stingers.</div>';
+    setStingerStatus('Stinger picker is only available for the active theme.', null);
+    return;
+  }
+
+  let data = null;
+  let endpointMissing = false;
+  try {
+    const r = await fetch(API + '/list-stingers');
+    if (r.status === 404) {
+      endpointMissing = true;
+    } else {
+      data = await r.json();
+    }
+  } catch (e) {
+    endpointMissing = true; // treat fetch-failure same as 404 — fall back to probe
+  }
+
+  if (endpointMissing) {
+    // Hardcoded fallback — the dashboard ships with these stinger files in
+    // sasi-overlays/stingers/. Tiles render even if /list-stingers isn't
+    // deployed; "Make active" buttons won't work but the user can preview +
+    // open generators in a new tab to record their webm.
+    setStingerStatus('Watcher is older than the stinger endpoints — tiles below are the files the dashboard ships with; redeploy via bootstrap.bat to enable Make-active.', 'err');
+    data = { stingers: [] };
+    window.__probeStingerGenerators = [
+      { name: 'stinger.html',        size: 0 },
+      { name: 'stinger-glitch.html', size: 0 },
+    ];
+  } else {
+    window.__probeStingerGenerators = null;
+  }
+  const stingers = (data && data.stingers) || [];
+
+  // Also list .html generators in the same folder so the user can find + open them.
+  // When the probe ran (old watcher), use the html files we already discovered.
+  let generators = [];
+  if (window.__probeStingerGenerators) {
+    generators = window.__probeStingerGenerators;
+  } else {
+    try {
+      const r = await fetch(API + '/list-stinger-generators');
+      if (r.ok) {
+        const j = await r.json();
+        generators = j.generators || [];
+      }
+    } catch {}
+  }
+
+  if (stingers.length === 0 && generators.length === 0) {
+    grid.innerHTML = '<div class="backup-empty" style="grid-column:1 / -1">No files in <code>sasi-overlays/stingers/</code>. Drop <code>.webm</code> transitions or <code>.html</code> generators there, then refresh.</div>';
+    return;
+  }
+
+  // Combine: webms first (active first, archives last), then html generators.
+  const items = [];
+  for (const s of stingers) {
+    if (s.isArchived) continue; // hide archived from main grid
+    items.push({
+      kind: 'webm',
+      name: s.name,
+      fileUrl: s.fileUrl,
+      relPath: 'sasi-overlays/stingers/' + s.name,
+      isActive: s.isActive,
+      size: s.size,
+    });
+  }
+  for (const g of generators) {
+    items.push({
+      kind: 'html',
+      name: g.name,
+      fileUrl: g.fileUrl,
+      relPath: 'sasi-overlays/stingers/' + g.name,
+      isActive: false,
+      size: g.size,
+    });
+  }
+
+  // Active key default: the active webm, else first item.
+  const activeKey = window.__activeStinger || (items.find(i => i.isActive) || items[0] || {}).name;
+
+  grid.innerHTML = items.map(s => {
+    const sizeKb = Math.round(s.size / 1024);
+    const isPreviewSelected = s.name === activeKey;
+    // OBS-active gets green styling; preview-selected gets neutral outline.
+    // If a tile is both, OBS-active wins.
+    const cls = s.isActive ? ' obs-active' : (isPreviewSelected ? ' preview-selected' : '');
+    const stateBadge = s.isActive
+      ? '<span style="color:var(--accent-online);font-weight:700;font-size:9px">● OBS ACTIVE</span>'
+      : (s.kind === 'html' ? '<span style="color:var(--text-muted);font-size:9px;letter-spacing:0.1em">GENERATOR</span>' : '');
+    return `<div class="scene-card${cls}" data-stinger="${escapeAttr(s.name)}" data-stinger-kind="${s.kind}" data-stinger-rel="${escapeAttr(s.relPath)}">
+      <div class="scene-thumb">${s.kind === 'webm'
+        ? `<video src="${escapeAttr(s.relPath)}" muted loop preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`
+        : `<iframe data-src="${escapeAttr(s.relPath)}"></iframe>`}</div>
+      <div class="scene-label">
+        <span class="name" title="${escapeAttr(s.name)}">${escapeAttr(s.name)}</span>
+        ${stateBadge}
+      </div>
+      <div style="font-size:9px;color:var(--text-muted);padding:0 8px 4px">${sizeKb} KB</div>
+    </div>`;
+  }).join('');
+
+  // Card click — preview in the editor iframe + show appropriate action
+  grid.querySelectorAll('.scene-card').forEach(card => {
+    card.addEventListener('click', () => {
+      // Clear preview-selected from other tiles (but not the obs-active marker)
+      // and clear scene/component grids since we're now editing a stinger.
+      grid.querySelectorAll('.scene-card').forEach(c => c.classList.remove('preview-selected'));
+      document.querySelectorAll('#scene-grid .scene-card, #component-grid .scene-card').forEach(c => c.classList.remove('active'));
+      // Only add preview-selected if this isn't already the OBS-active tile.
+      if (!card.classList.contains('obs-active')) card.classList.add('preview-selected');
+      window.__activeStinger = card.dataset.stinger;
+      window.__activeScene = null;
+      const rel = card.dataset.stingerRel;
+      const kind = card.dataset.stingerKind;
+      const iframe = document.getElementById('editor-preview-iframe');
+      if (iframe) iframe.src = rel;
+      renderStingerActions(card.dataset.stinger, kind, items);
+    });
+  });
+
+  // Re-load video iframe thumbs (the scene-grid uses data-src→src; do the same for our html iframes)
+  grid.querySelectorAll('iframe[data-src]').forEach(f => { f.src = f.dataset.src; });
+  scaleSceneThumbs();
+}
+
+// Render stinger action buttons in the editor-fields area when a stinger tile is selected.
+function renderStingerActions(name, kind, items) {
+  const container = document.getElementById('editor-fields');
+  const title = document.getElementById('editor-title');
+  if (!container || !title) return;
+  const item = (items || []).find(i => i.name === name);
+  title.textContent = 'SELECTED · STINGER · ' + name;
+  if (!item) {
+    container.innerHTML = `<div class="backup-empty">Stinger not found.</div>`;
+    return;
+  }
+  if (kind === 'html') {
+    container.innerHTML = `
+      <div class="placeholder-card" style="padding:var(--sp-4);text-align:left">
+        <div class="placeholder-title" style="font-size:var(--text-body)">HTML stinger source</div>
+        <div class="placeholder-desc" style="margin:0 0 var(--sp-3);text-align:left">OBS only accepts <code>.webm</code> for transitions. Click <strong>Make active</strong> and the dashboard will record this HTML's canvas animation, save it as a webm, and point OBS's stinger transition at it automatically.</div>
+        <div class="actions">
+          <button class="btn btn-primary" id="stinger-record-btn">Make active</button>
+          <button class="btn btn-secondary" id="stinger-open-generator">Open in new tab</button>
+        </div>
+        <div class="field-hint" id="stinger-record-progress" style="min-height:1.2em;margin-top:var(--sp-2)"></div>
+      </div>`;
+    document.getElementById('stinger-open-generator').addEventListener('click', () => {
+      window.open(item.relPath, '_blank');
+    });
+    document.getElementById('stinger-record-btn').addEventListener('click', () => {
+      recordHtmlStinger(item);
+    });
+    return;
+  }
+  // webm path
+  if (item.isActive) {
+    container.innerHTML = `
+      <div class="placeholder-card" style="padding:var(--sp-4);text-align:left;border-color:var(--accent-online)">
+        <div class="placeholder-title" style="font-size:var(--text-body);color:var(--accent-online)">● ACTIVE STINGER</div>
+        <div class="placeholder-desc" style="margin:0;text-align:left">OBS's Stinger transition points at this file via the stable filename <code>stinger-active.webm</code>. To use a different stinger, pick another tile and click "Make active".</div>
+      </div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="placeholder-card" style="padding:var(--sp-4);text-align:left">
+      <div class="placeholder-title" style="font-size:var(--text-body)">Inactive stinger</div>
+      <div class="placeholder-desc" style="margin:0 0 var(--sp-3);text-align:left">Make active = atomic rename: this file becomes <code>stinger-active.webm</code>, and the previous active is archived as <code>stinger-active-archived-&lt;timestamp&gt;.webm</code>. OBS keeps working because the path it points at didn't change — refresh sources to be safe.</div>
+      <div class="actions">
+        <button class="btn btn-primary" id="stinger-apply-btn">Make active</button>
+      </div>
+    </div>`;
+  document.getElementById('stinger-apply-btn').addEventListener('click', async () => {
+    setStingerStatus('Applying ' + name + '...', null);
+    try {
+      const r = await fetch(API + '/apply-stinger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: name }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setStingerStatus('Apply failed: ' + (j.error || 'http ' + r.status), 'err');
+        return;
+      }
+      setStingerStatus('✓ Active stinger is now ' + name + '.' + (j.archivedAs ? ' Previous → ' + j.archivedAs + '.' : '') + ' Refresh OBS browser sources / transition.', 'ok');
+      window.__activeStinger = 'stinger-active.webm';
+      refreshStingers();
+    } catch (e) {
+      setStingerStatus('Apply failed: ' + e.message, 'err');
+    }
+  });
+}
+
+// ---------------------------------------------------------------
+// Auto-record an HTML stinger into a webm and (optionally) activate it.
+//
+// Flow:
+//   1. Spin up a hidden iframe sized 1920×1080 pointed at the HTML stinger.
+//   2. Wait for its window to load, then locate its rendering <canvas>
+//      (convention: id="c" — both shipped generators use this).
+//   3. canvas.captureStream(60) → MediaRecorder → record for the HTML's
+//      declared duration (read from window.STINGER_DURATION_MS, or
+//      window.TOTAL, or fall back to 3500ms).
+//   4. Blob → base64 → POST /upload-stinger?activate=true.
+//   5. Refresh the stinger grid.
+//
+// The HTML stingers we ship already draw to a 1920×1080 canvas#c — see
+// sasi-overlays/stingers/stinger.html. New HTML stingers should follow the
+// same convention; documented in docs/THEME_BUILDING.md.
+// ---------------------------------------------------------------
+async function recordHtmlStinger(item) {
+  const progress = document.getElementById('stinger-record-progress');
+  const btn = document.getElementById('stinger-record-btn');
+  const setProgress = (msg, kind) => {
+    if (!progress) return;
+    progress.textContent = msg;
+    progress.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
+  };
+
+  if (typeof MediaRecorder === 'undefined') {
+    setProgress('MediaRecorder not supported in this browser — open the HTML directly and record manually.', 'err');
+    return;
+  }
+  if (btn) btn.disabled = true;
+
+  // 1. Hidden iframe at native canvas resolution. position:fixed + offscreen
+  // keeps it out of view but lets requestAnimationFrame drive the canvas inside.
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-99999px;top:0;width:1920px;height:1080px;overflow:hidden;visibility:hidden;pointer-events:none';
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'width:1920px;height:1080px;border:0;background:#000';
+  iframe.src = item.relPath;
+  host.appendChild(iframe);
+  document.body.appendChild(host);
+
+  // 2. Wait for the iframe's window to load, then poll a few frames for the
+  //    canvas to exist (some stingers create the canvas via JS at startup).
+  setProgress('Loading stinger HTML...');
+  await new Promise(r => iframe.addEventListener('load', r, { once: true }));
+  let canvas = null;
+  let durationMs = 3500;
+  let crossOriginBlocked = false;
+  for (let i = 0; i < 30 && !canvas; i++) {
+    await new Promise(r => setTimeout(r, 50));
+    try {
+      const doc = iframe.contentDocument;
+      canvas = (doc && (doc.getElementById('c') || doc.querySelector('canvas'))) || null;
+    } catch (e) {
+      // SecurityError = cross-origin iframe. Common when dashboard is opened
+      // via file:// — Chromium treats each file:// page as a separate origin.
+      // Detect and report explicitly so the user knows the fix is "open via http".
+      crossOriginBlocked = true;
+      break;
+    }
+  }
+  if (!canvas) {
+    if (crossOriginBlocked || location.protocol === 'file:') {
+      setProgress("Can't reach the iframe's canvas — you're viewing the dashboard via file://, which makes child iframes cross-origin in Chromium. Redeploy the watcher (bootstrap.bat) and open the dashboard via http://127.0.0.1:6789/dashboard.html instead. Then this button will work.", 'err');
+    } else {
+      setProgress('Could not find a <canvas> inside the stinger HTML. Add a #c canvas or set window.STINGER_CANVAS.', 'err');
+    }
+    host.remove();
+    if (btn) btn.disabled = false;
+    return;
+  }
+  try {
+    const w = iframe.contentWindow;
+    if (w && typeof w.STINGER_DURATION_MS === 'number') durationMs = w.STINGER_DURATION_MS;
+    else if (w && typeof w.TOTAL === 'number')          durationMs = w.TOTAL;
+  } catch {}
+  // Pad a bit so the tail of the animation isn't cut off.
+  const recordMs = Math.min(8000, Math.max(1500, durationMs + 400));
+
+  // 3. captureStream + MediaRecorder. Prefer VP9 (smaller); fall back to VP8.
+  let stream;
+  try { stream = canvas.captureStream(60); }
+  catch (e) {
+    setProgress('canvas.captureStream() failed: ' + e.message, 'err');
+    host.remove(); if (btn) btn.disabled = false; return;
+  }
+  let mimeType = 'video/webm;codecs=vp9';
+  if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
+  if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+
+  const chunks = [];
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+  const stopped = new Promise(r => recorder.onstop = r);
+
+  setProgress(`Recording ${(recordMs/1000).toFixed(1)}s @ 1920×1080...`);
+  recorder.start();
+  await new Promise(r => setTimeout(r, recordMs));
+  recorder.stop();
+  await stopped;
+  host.remove();
+
+  const blob = new Blob(chunks, { type: 'video/webm' });
+  if (blob.size === 0) {
+    setProgress('Recording produced no data. The canvas may not be redrawing — try opening the HTML directly to verify it animates.', 'err');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  setProgress(`Encoded ${Math.round(blob.size / 1024)} KB. Uploading...`);
+
+  // 4. base64-encode + POST. FileReader keeps memory predictable for big blobs.
+  const dataBase64 = await new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result).replace(/^data:[^,]+,/, ''));
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(blob);
+  });
+
+  const baseName = item.name.replace(/\.html?$/i, '');
+  const stamp = new Date().toISOString().replace(/[-:T]/g, '').replace(/\..+/, '');
+  const filename = 'stinger-' + baseName + '-' + stamp + '.webm';
+  try {
+    const r = await fetch(API + '/upload-stinger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, dataBase64, activate: true }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      setProgress('Upload failed: ' + (j.error || 'http ' + r.status) + '. (Watcher may be older than /upload-stinger — redeploy via bootstrap.bat.)', 'err');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    setProgress(`OK Saved ${filename} (${j.bytes} bytes) and made active. Refresh OBS browser sources / transition.` + (j.archivedAs ? ' Previous → ' + j.archivedAs + '.' : ''), 'ok');
+    refreshStingers();
+  } catch (e) {
+    setProgress('Upload failed: ' + e.message, 'err');
+  }
+  if (btn) btn.disabled = false;
+}
+
+refreshStingers();
 
 document.getElementById('upload-logo').addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -1835,6 +2577,63 @@ $('cfg-uninstall').addEventListener('click', async () => {
 // GO LIVE TAB
 // =========================================================
 
+// --- Channels (multi-channel switcher) ---
+async function refreshChannels() {
+  const sel = $('ch-select');
+  const activeName = $('ch-active-name');
+  const status = $('ch-status');
+  let data = null;
+  try {
+    const r = await fetch(API + '/list-channels');
+    if (r.ok) data = await r.json();
+  } catch {}
+  if (!data || !data.channels || data.channels.length === 0) {
+    sel.innerHTML = '<option value="">(no channels — edit sasi-secrets.js)</option>';
+    activeName.textContent = '—';
+    status.textContent = 'Channels endpoint unavailable or no channels defined yet.';
+    return;
+  }
+  const active = data.channels.find(c => c.active);
+  activeName.textContent = active ? active.name : '(none)';
+  // Push the active channel's brand to localStorage so overlays update live.
+  if (active) {
+    localStorage.setItem('sasi_brand_name', active.name);
+    localStorage.setItem('sasi_brand_tagline', active.tagline || '');
+    localStorage.setItem('sasi_active_channel', active.key);
+  }
+  sel.innerHTML = data.channels.map(c => {
+    const tag = c.active ? ' (active)' : '';
+    return `<option value="${escapeAttr(c.key)}"${c.active ? ' selected' : ''}>${escapeAttr(c.name)}${tag}</option>`;
+  }).join('');
+  status.textContent = `${data.channels.length} channel${data.channels.length === 1 ? '' : 's'} configured.`;
+}
+$('ch-switch-btn').addEventListener('click', async () => {
+  const key = $('ch-select').value;
+  if (!key) return;
+  const status = $('ch-status');
+  status.textContent = 'Switching...';
+  try {
+    const r = await fetch(API + '/switch-channel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      status.textContent = 'Failed: ' + (j.error || r.statusText);
+      return;
+    }
+    status.textContent = `Switched to ${key}. Theme: ${j.theme}${j.archivedAs ? ' (previous → ' + j.archivedAs + ')' : ''}. Refresh OBS browser sources.`;
+    await refreshChannels();
+    // Theme may have changed — rebuild the scene/component grids so previews
+    // pick up the new theme's HTML.
+    if (typeof buildSceneGrid === 'function') buildSceneGrid();
+  } catch (e) {
+    status.textContent = 'Switch failed: ' + e.message;
+  }
+});
+refreshChannels();
+
 function readPlatform() { return localStorage.getItem('sasi_activePlatform') || 'youtube'; }
 function setPlatform(p) {
   localStorage.setItem('sasi_activePlatform', p);
@@ -2091,7 +2890,7 @@ function fireGameTest(type) {
     c.classList.toggle('active', c.dataset.scene === 'just-chatting');
   });
   window.__activeScene = 'just-chatting';
-  $('editor-preview-iframe').src = 'scenes/just-chatting.html';
+  $('editor-preview-iframe').src = 'sasi-overlays/scenes/just-chatting.html';
   // Fire SASI_NOTIFY into the iframe after it loads
   setTimeout(() => {
     const iframe = $('editor-preview-iframe');
@@ -2120,67 +2919,231 @@ $('game-test-mystery').addEventListener('click', () => fireGameTest('mystery'));
 $('game-test-highlight').addEventListener('click', () => fireGameTest('highlight'));
 
 // =========================================================
-// KEYS TAB
+// KEYS & CHANNELS TAB
 // =========================================================
 
-let keysState = { youtube: { apiKeys: [], channelId: '' }, twitch: { username: '' }, streamelements: { youtube: { jwt: '' }, twitch: { jwt: '' } } };
+// Full multi-channel state, kept in sync with sasi-secrets.js.
+let keysState = {
+  activeChannel: 'sasi-streams',
+  streamelements: { youtube: { jwt: '' }, twitch: { jwt: '' } },
+  channels: {
+    'sasi-streams': {
+      brand: { name: 'SASI STREAMS', tagline: 'LIVE STREAM', logo: 'assets/Sasi_Streams_logo.png' },
+      theme: 'sasi-overlays',
+      youtube: { apiKeys: [], channelId: '' },
+      twitch: { username: '' },
+    },
+  },
+};
+let editingChannel = null; // key of channel currently shown in the edit form
+
 function maskKey(k) {
   if (!k || k.length < 8) return '(empty)';
   return '…' + k.slice(-4);
 }
-function renderKeysList() {
-  $('key-yt-count').textContent = keysState.youtube.apiKeys.length;
-  $('key-yt-hours').textContent = keysState.youtube.apiKeys.length * 12;
-  const list = $('key-yt-list');
-  if (keysState.youtube.apiKeys.length === 0) {
-    list.innerHTML = '<div class="backup-empty">No YouTube API keys yet.</div>';
+
+function getChannel(key) {
+  return keysState.channels && keysState.channels[key];
+}
+
+function renderChannelDropdown() {
+  const sel = $('ch-edit-select');
+  const keys = Object.keys(keysState.channels || {});
+  if (keys.length === 0) {
+    sel.innerHTML = '<option value="">(none — click + Add channel)</option>';
+    $('ch-edit-form').style.display = 'none';
+    $('ch-delete-btn').disabled = true;
+    editingChannel = null;
+    return;
+  }
+  if (!editingChannel || !keys.includes(editingChannel)) {
+    editingChannel = keysState.activeChannel && keys.includes(keysState.activeChannel) ? keysState.activeChannel : keys[0];
+  }
+  sel.innerHTML = keys.map(k => {
+    const isActive = k === keysState.activeChannel;
+    const c = keysState.channels[k];
+    const label = (c.brand && c.brand.name) ? `${c.brand.name} [${k}]` : k;
+    return `<option value="${escapeAttr(k)}"${k === editingChannel ? ' selected' : ''}>${escapeAttr(label)}${isActive ? ' · ACTIVE' : ''}</option>`;
+  }).join('');
+  // Cannot delete the only channel, and cannot delete the active one (would orphan secrets).
+  $('ch-delete-btn').disabled = keys.length <= 1 || editingChannel === keysState.activeChannel;
+  renderChannelForm();
+}
+
+function renderChannelForm() {
+  const c = getChannel(editingChannel);
+  if (!c) { $('ch-edit-form').style.display = 'none'; return; }
+  $('ch-edit-form').style.display = 'block';
+
+  // Brand
+  $('ch-brand-name').value = (c.brand && c.brand.name) || '';
+  $('ch-brand-tagline').value = (c.brand && c.brand.tagline) || '';
+  $('ch-brand-logo').value = (c.brand && c.brand.logo) || '';
+
+  // YouTube
+  c.youtube = c.youtube || { apiKeys: [], channelId: '' };
+  c.youtube.apiKeys = c.youtube.apiKeys || [];
+  $('ch-yt-channel').value = c.youtube.channelId || '';
+  $('ch-yt-count').textContent = c.youtube.apiKeys.length;
+  $('ch-yt-hours').textContent = c.youtube.apiKeys.length * 12;
+  const list = $('ch-yt-list');
+  if (c.youtube.apiKeys.length === 0) {
+    list.innerHTML = '<div class="backup-empty">No YouTube API keys yet for this channel.</div>';
   } else {
-    list.innerHTML = keysState.youtube.apiKeys.map((k, i) => `
+    list.innerHTML = c.youtube.apiKeys.map((k, i) => `
       <div class="key-row">
-        <span>${maskKey(k)}</span>
+        <span>${escapeAttr(maskKey(k))}</span>
         <span class="key-status ok">ACTIVE</span>
         <button class="btn btn-destructive" data-del-key="${i}" style="font-size:9px;padding:4px 8px">Remove</button>
       </div>
     `).join('');
     list.querySelectorAll('[data-del-key]').forEach(btn => btn.addEventListener('click', () => {
-      keysState.youtube.apiKeys.splice(parseInt(btn.dataset.delKey), 1);
-      renderKeysList();
+      c.youtube.apiKeys.splice(parseInt(btn.dataset.delKey), 1);
+      renderChannelForm();
     }));
   }
-  $('key-yt-channel').value = keysState.youtube.channelId || '';
-  $('key-twitch-username').value = keysState.twitch.username || '';
-  $('key-se-yt').value = keysState.streamelements.youtube.jwt || '';
-  $('key-se-tw').value = keysState.streamelements.twitch.jwt || '';
+
+  // Twitch — username is required for chat; clientId/clientSecret reserved for future use
+  c.twitch = c.twitch || { username: '', clientId: '', clientSecret: '' };
+  if (typeof c.twitch.clientId     !== 'string') c.twitch.clientId     = '';
+  if (typeof c.twitch.clientSecret !== 'string') c.twitch.clientSecret = '';
+  $('ch-twitch-username').value      = c.twitch.username || '';
+  $('ch-twitch-client-id').value     = c.twitch.clientId || '';
+  $('ch-twitch-client-secret').value = c.twitch.clientSecret || '';
+
+  // Theme dropdown — populate from /list-themes if available, else just show current
+  const themeSel = $('ch-theme');
+  const current = c.theme || 'sasi-overlays';
+  // Cached themes from refreshThemes()
+  const themes = window.__themesCache || [];
+  const opts = themes.length > 0
+    ? themes.map(t => `<option value="${escapeAttr(t.folder)}"${t.folder === current ? ' selected' : ''}>${escapeAttr(t.id || t.name)}${t.active ? ' · ACTIVE' : ''}</option>`)
+    : [`<option value="${escapeAttr(current)}" selected>${escapeAttr(current)}</option>`];
+  themeSel.innerHTML = opts.join('');
+
+  // Shared SE JWTs (re-bind on form render, since they're outside the form section but values share state)
+  $('key-se-yt').value = (keysState.streamelements && keysState.streamelements.youtube && keysState.streamelements.youtube.jwt) || '';
+  $('key-se-tw').value = (keysState.streamelements && keysState.streamelements.twitch && keysState.streamelements.twitch.jwt) || '';
 }
+
 async function loadKeys() {
   try {
     const r = await fetch(API + '/secrets');
     if (!r.ok) {
-      $('key-save-status').textContent = '/secrets endpoint not available yet (Phase 6 backend pending). Edit secrets.js manually.';
+      $('key-save-status').textContent = '/secrets endpoint not available yet. Edit sasi-secrets.js manually.';
       $('key-save-status').style.color = 'var(--accent-warn)';
       return;
     }
-    keysState = await r.json();
-    renderKeysList();
+    const j = await r.json();
+    // Normalize shape so the form always has something to render.
+    keysState = {
+      activeChannel: j.activeChannel || 'sasi-streams',
+      streamelements: j.streamelements || { youtube: { jwt: '' }, twitch: { jwt: '' } },
+      channels: j.channels || {},
+    };
+    if (Object.keys(keysState.channels).length === 0) {
+      keysState.channels['sasi-streams'] = {
+        brand: { name: 'SASI STREAMS', tagline: 'LIVE STREAM', logo: 'assets/Sasi_Streams_logo.png' },
+        theme: 'sasi-overlays',
+        youtube: { apiKeys: [], channelId: '' },
+        twitch: { username: '' },
+      };
+    }
+    // Also cache themes list for the theme dropdown
+    try {
+      const tr = await fetch(API + '/list-themes');
+      if (tr.ok) {
+        const tj = await tr.json();
+        window.__themesCache = tj.themes || [];
+      }
+    } catch {}
+    renderChannelDropdown();
   } catch (e) {
-    $('key-save-status').textContent = 'Watcher offline.';
+    $('key-save-status').textContent = 'Watcher offline — keys not loaded.';
     $('key-save-status').style.color = 'var(--accent-rec)';
   }
 }
-$('key-yt-add-btn').addEventListener('click', () => {
-  const v = $('key-yt-add').value.trim();
-  if (!v) return;
-  keysState.youtube.apiKeys.push(v);
-  $('key-yt-add').value = '';
-  renderKeysList();
+
+$('ch-edit-select').addEventListener('change', (e) => {
+  editingChannel = e.target.value;
+  renderChannelForm();
+  // Sync delete button enabled-state
+  const keys = Object.keys(keysState.channels || {});
+  $('ch-delete-btn').disabled = keys.length <= 1 || editingChannel === keysState.activeChannel;
 });
-['key-yt-channel','key-twitch-username','key-se-yt','key-se-tw'].forEach(id => {
+
+// Field bindings — write directly into keysState.channels[editingChannel]
+['ch-brand-name','ch-brand-tagline','ch-brand-logo','ch-yt-channel','ch-twitch-username','ch-twitch-client-id','ch-twitch-client-secret'].forEach(id => {
   $(id).addEventListener('input', (e) => {
+    const c = getChannel(editingChannel);
+    if (!c) return;
     const v = e.target.value;
-    if (id === 'key-yt-channel') keysState.youtube.channelId = v;
-    else if (id === 'key-twitch-username') keysState.twitch.username = v;
-    else if (id === 'key-se-yt') keysState.streamelements.youtube.jwt = v;
-    else if (id === 'key-se-tw') keysState.streamelements.twitch.jwt = v;
+    if (id === 'ch-brand-name')      { c.brand = c.brand || {}; c.brand.name = v; }
+    else if (id === 'ch-brand-tagline') { c.brand = c.brand || {}; c.brand.tagline = v; }
+    else if (id === 'ch-brand-logo') { c.brand = c.brand || {}; c.brand.logo = v; }
+    else if (id === 'ch-yt-channel') { c.youtube = c.youtube || {}; c.youtube.channelId = v; }
+    else if (id === 'ch-twitch-username')      { c.twitch = c.twitch || {}; c.twitch.username = v; }
+    else if (id === 'ch-twitch-client-id')     { c.twitch = c.twitch || {}; c.twitch.clientId = v; }
+    else if (id === 'ch-twitch-client-secret') { c.twitch = c.twitch || {}; c.twitch.clientSecret = v; }
+  });
+});
+$('ch-theme').addEventListener('change', (e) => {
+  const c = getChannel(editingChannel);
+  if (c) c.theme = e.target.value;
+});
+
+$('ch-yt-add-btn').addEventListener('click', () => {
+  const c = getChannel(editingChannel);
+  if (!c) return;
+  const v = $('ch-yt-add').value.trim();
+  if (!v) return;
+  c.youtube = c.youtube || { apiKeys: [], channelId: '' };
+  c.youtube.apiKeys = c.youtube.apiKeys || [];
+  c.youtube.apiKeys.push(v);
+  $('ch-yt-add').value = '';
+  renderChannelForm();
+});
+
+$('ch-add-btn').addEventListener('click', () => {
+  const key = prompt('New channel key (kebab-case, e.g. sasi-labs):');
+  if (!key) return;
+  const trimmed = key.trim().toLowerCase();
+  if (!/^[a-z0-9_-]{1,40}$/.test(trimmed)) {
+    alert('Channel key must be lowercase letters, numbers, dash, underscore (1-40 chars).');
+    return;
+  }
+  if (keysState.channels[trimmed]) {
+    alert('Channel "' + trimmed + '" already exists.');
+    return;
+  }
+  keysState.channels[trimmed] = {
+    brand: { name: trimmed.toUpperCase().replace(/-/g, ' '), tagline: 'LIVE STREAM', logo: 'assets/Sasi_Streams_logo.png' },
+    theme: 'sasi-overlays',
+    youtube: { apiKeys: [], channelId: '' },
+    twitch: { username: '', clientId: '', clientSecret: '' },
+  };
+  editingChannel = trimmed;
+  renderChannelDropdown();
+});
+
+$('ch-delete-btn').addEventListener('click', () => {
+  if (!editingChannel) return;
+  if (editingChannel === keysState.activeChannel) {
+    alert('Cannot delete the ACTIVE channel. Switch to a different channel on the Go Live tab first.');
+    return;
+  }
+  if (!confirm('Delete channel "' + editingChannel + '" PERMANENTLY?\n\nAll keys + brand for this channel are removed from sasi-secrets.js. There is NO undo.')) return;
+  delete keysState.channels[editingChannel];
+  editingChannel = null;
+  renderChannelDropdown();
+});
+
+// Shared SE JWT inputs
+['key-se-yt','key-se-tw'].forEach(id => {
+  $(id).addEventListener('input', (e) => {
+    keysState.streamelements = keysState.streamelements || { youtube: { jwt: '' }, twitch: { jwt: '' } };
+    if (id === 'key-se-yt') { keysState.streamelements.youtube = keysState.streamelements.youtube || {}; keysState.streamelements.youtube.jwt = e.target.value; }
+    else                    { keysState.streamelements.twitch = keysState.streamelements.twitch || {}; keysState.streamelements.twitch.jwt = e.target.value; }
   });
 });
 $('key-se-yt-show').addEventListener('click', () => {
@@ -2189,19 +3152,31 @@ $('key-se-yt-show').addEventListener('click', () => {
 $('key-se-tw-show').addEventListener('click', () => {
   const inp = $('key-se-tw'); inp.type = inp.type === 'password' ? 'text' : 'password';
 });
+$('ch-twitch-client-secret-show').addEventListener('click', () => {
+  const inp = $('ch-twitch-client-secret'); inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
 $('key-save').addEventListener('click', async () => {
   $('key-save-status').textContent = 'Saving...';
   $('key-save-status').style.color = 'var(--text-muted)';
   try {
     const r = await fetch(API + '/secrets', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(keysState) });
-    if (!r.ok) { $('key-save-status').textContent = 'Save failed: ' + r.status; $('key-save-status').style.color = 'var(--accent-rec)'; return; }
-    $('key-save-status').textContent = 'Saved. Refresh OBS browser sources to apply.';
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      $('key-save-status').textContent = 'Save failed: ' + (j.error || r.status);
+      $('key-save-status').style.color = 'var(--accent-rec)';
+      return;
+    }
+    $('key-save-status').textContent = 'Saved. Refresh OBS browser sources to apply. Go Live tab Channel switcher now sees the changes.';
     $('key-save-status').style.color = 'var(--accent-online)';
+    // Tell Go Live tab to refresh its Channel section
+    if (typeof refreshChannels === 'function') refreshChannels();
   } catch (e) {
     $('key-save-status').textContent = 'Save failed: ' + e.message;
     $('key-save-status').style.color = 'var(--accent-rec)';
   }
 });
+
 loadKeys();
 </script>
 </body>

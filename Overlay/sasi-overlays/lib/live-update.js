@@ -29,13 +29,31 @@
     }
   };
 
-  // Listen for storage changes from other windows/iframes (the dashboard).
-  window.addEventListener('storage', function (e) {
-    if (!e.key || !handlers.has(e.key)) return;
-    const fns = handlers.get(e.key);
+  // Internal: dispatch a value to all handlers registered for a key.
+  function fireHandlers(key, value) {
+    const fns = handlers.get(key);
+    if (!fns) return;
     for (const fn of fns) {
-      try { fn(e.newValue); } catch (err) { console.warn('[live-update] handler for ' + e.key + ' threw:', err); }
+      try { fn(value); } catch (err) { console.warn('[live-update] handler for ' + key + ' threw:', err); }
     }
+  }
+
+  // Path A: native storage events (fires across same-origin windows on http://).
+  window.addEventListener('storage', function (e) {
+    if (!e.key) return;
+    fireHandlers(e.key, e.newValue);
+  });
+
+  // Path B: postMessage from the dashboard. Used because synthetic StorageEvents
+  // constructed in the parent realm arrive with null e.key in Chromium, AND
+  // because storage events don't fire reliably across file:// iframes. The
+  // dashboard's broadcastChange() pushes a message of shape:
+  //   { __sasi: true, type: 'sasi-live', key: 'sasi_<name>', newValue: <string> }
+  window.addEventListener('message', function (e) {
+    const d = e.data;
+    if (!d || d.__sasi !== true || d.type !== 'sasi-live') return;
+    if (typeof d.key !== 'string') return;
+    fireHandlers(d.key, d.newValue);
   });
 
   // Convenience helpers for common patterns

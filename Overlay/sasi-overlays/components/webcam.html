@@ -122,10 +122,23 @@ switch (wc.position) {
 }
 
 // Label
-if (wc.label) {
-  label.textContent = wc.label;
-} else {
-  label.style.display = 'none';
+function setLabel(v) {
+  const text = v != null ? v : (wc.label || '');
+  if (text) { label.textContent = text; label.style.display = ''; }
+  else { label.style.display = 'none'; }
+}
+setLabel();
+</script>
+
+<script src="../lib/live-update.js"></script>
+<script>
+// Sasi Studio v2 — live updates from dashboard
+if (window.registerLiveUpdater) {
+  registerLiveUpdater('webcam_label', setLabel);
+  registerLiveUpdater('cRed',    liveUpdate.cssVar('--red'));
+  registerLiveUpdater('cOrange', liveUpdate.cssVar('--orange'));
+  registerLiveUpdater('cGold',   liveUpdate.cssVar('--gold'));
+  applyLiveUpdaters();
 }
 </script>
 </body>

@@ -1,5 +1,5 @@
 import express from 'express';
-import { promises as fs, existsSync } from 'node:fs';
+import { promises as fs, existsSync, readFileSync } from 'node:fs';
 import { exec, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
@@ -140,6 +140,31 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
     next();
   });
+
+  // Static file serving for the install dir (dashboard.html, tokens.css, the
+  // sasi-overlays/ theme tree, sasi-secrets.example.js, etc.).
+  //
+  // Why: opening dashboard.html via file:// makes every overlay iframe a
+  // cross-origin frame in Chromium, which breaks:
+  //   - cross-frame DOM access (canvas-capture for HTML stinger auto-record)
+  //   - shared localStorage between dashboard + iframes
+  //   - some fetch() flows for discovery probes
+  // Serving over http://127.0.0.1:6789 makes everything one origin and those
+  // problems disappear. The Start-Menu shortcut should open
+  // http://127.0.0.1:6789/dashboard.html instead of the file:// path.
+  //
+  // index:false so /  doesn't accidentally serve a directory listing; the
+  // user explicitly hits /dashboard.html. dotfiles:'ignore' so we don't expose
+  // .gitignore. We mount AFTER the CSRF middleware on purpose — these are
+  // GETs only and the static middleware doesn't process mutating methods.
+  if (installDir && existsSync(installDir)) {
+    app.use(express.static(installDir, {
+      index: false,
+      dotfiles: 'ignore',
+      maxAge: 0,
+      etag: false,
+    }));
+  }
 
   app.get('/status', (_req, res) => {
     res.json({
@@ -894,31 +919,480 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // GET /list-scenes — returns the user's scene files (built-in + custom)
-  app.get('/list-scenes', async (_req, res) => {
-    if (!overlaysRoot) return res.status(500).json({ error: 'overlaysRoot not configured' });
-    const scenesDir = path.join(overlaysRoot, 'scenes');
+  // Resolve a theme folder argument to an absolute path under installDir.
+  // ?theme=sasi-overlays           → active theme
+  // ?theme=sasi-overlays-blue      → inactive theme
+  // (missing/empty)                → active theme
+  function resolveThemeRoot(theme) {
+    if (!installDir) return null;
+    const t = (theme || 'sasi-overlays').trim();
+    if (!/^sasi-overlays(-[a-zA-Z0-9_-]{1,40})?$/.test(t)) return null;
+    return path.join(installDir, t);
+  }
+
+  async function listOverlayFiles(subdir, themeFolder) {
+    const root = resolveThemeRoot(themeFolder);
+    if (!root) return null;
+    const dir = path.join(root, subdir);
+    if (!existsSync(dir)) return [];
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const items = [];
+    for (const ent of entries) {
+      if (!ent.isFile() || !/\.html?$/i.test(ent.name)) continue;
+      const full = path.join(dir, ent.name);
+      const stat = await fs.stat(full);
+      items.push({
+        name: ent.name,
+        path: full.replace(/\\/g, '/'),
+        fileUrl: 'file:///' + full.replace(/\\/g, '/'),
+        size: stat.size,
+        mtime: stat.mtimeMs,
+      });
+    }
+    items.sort((a, b) => a.name.localeCompare(b.name));
+    return items;
+  }
+
+  // GET /list-scenes?theme=<folder> — defaults to active theme.
+  app.get('/list-scenes', async (req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
     try {
-      if (!existsSync(scenesDir)) return res.json({ scenes: [] });
-      const entries = await fs.readdir(scenesDir, { withFileTypes: true });
-      const scenes = [];
-      for (const ent of entries) {
-        if (!ent.isFile() || !/\.html?$/i.test(ent.name)) continue;
-        const full = path.join(scenesDir, ent.name);
-        const stat = await fs.stat(full);
-        scenes.push({
-          name: ent.name,
-          path: full.replace(/\\/g, '/'),
-          fileUrl: 'file:///' + full.replace(/\\/g, '/'),
-          size: stat.size,
-          mtime: stat.mtimeMs,
-        });
-      }
-      scenes.sort((a, b) => a.name.localeCompare(b.name));
-      res.json({ scenes });
+      const items = await listOverlayFiles('scenes', req.query.theme);
+      if (items === null) return res.status(400).json({ error: 'invalid theme name' });
+      res.json({ scenes: items });
     } catch (err) {
       log.error(`list-scenes failed: ${err.message}`);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /list-components?theme=<folder> — defaults to active theme.
+  app.get('/list-components', async (req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    try {
+      const items = await listOverlayFiles('components', req.query.theme);
+      if (items === null) return res.status(400).json({ error: 'invalid theme name' });
+      res.json({ components: items });
+    } catch (err) {
+      log.error(`list-components failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ===== THEME SYSTEM (Sasi Studio v2) =====
+  // Each theme is a fully self-contained folder under installDir, named
+  // sasi-overlays[-<suffix>]. The folder named exactly "sasi-overlays" is
+  // ACTIVE — that's where OBS browser-source paths point. Swap by atomic
+  // rename: active → sasi-overlays-<old>/, target → sasi-overlays/.
+
+  function isSafeThemeName(name) {
+    // Theme suffix: alphanumerics + dash + underscore, 1-40 chars.
+    if (!name || typeof name !== 'string') return false;
+    if (!/^[a-zA-Z0-9_-]{1,40}$/.test(name)) return false;
+    return true;
+  }
+
+  // Theme contract — files every theme MUST have for OBS browser sources to keep working
+  // when themes are swapped. Themes can ADD more files; they cannot REMOVE these.
+  const THEME_REQUIRED_SCENES = ['starting-soon.html', 'brb.html', 'stream-ending.html', 'overlay.html', 'just-chatting.html'];
+  // terminal-alerts.html is optional (not part of the contract) — user reserves
+  // it for an unrelated project. Themes can include it but don't have to.
+  const THEME_REQUIRED_COMPONENTS = ['subscribe.html', 'likes.html', 'nametag.html', 'webcam.html'];
+
+  function validateTheme(themeFolder) {
+    // Returns { valid: bool, missing: [...] }
+    const missing = [];
+    const scenesDir = path.join(themeFolder, 'scenes');
+    const compsDir = path.join(themeFolder, 'components');
+    if (!existsSync(scenesDir)) missing.push('scenes/');
+    if (!existsSync(compsDir)) missing.push('components/');
+    for (const name of THEME_REQUIRED_SCENES) {
+      if (!existsSync(path.join(scenesDir, name))) missing.push('scenes/' + name);
+    }
+    for (const name of THEME_REQUIRED_COMPONENTS) {
+      if (!existsSync(path.join(compsDir, name))) missing.push('components/' + name);
+    }
+    return { valid: missing.length === 0, missing };
+  }
+
+  // Read theme.json#id (canonical identity) so we can preserve a theme's name
+  // across activation/deactivation. Returns null if missing/invalid.
+  function readThemeId(themeFolder) {
+    try {
+      const manifest = JSON.parse(readFileSync(path.join(themeFolder, 'theme.json'), 'utf8'));
+      if (manifest && typeof manifest.id === 'string' && /^[a-zA-Z0-9_-]{1,40}$/.test(manifest.id)) return manifest.id;
+    } catch {}
+    return null;
+  }
+
+  // Read full theme.json manifest — used by /list-themes to surface preview colors.
+  function readThemeManifest(themeFolder) {
+    try {
+      return JSON.parse(readFileSync(path.join(themeFolder, 'theme.json'), 'utf8'));
+    } catch {}
+    return null;
+  }
+
+  // GET /list-themes — returns all sasi-overlays* folders in installDir.
+  app.get('/list-themes', async (_req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    try {
+      const entries = await fs.readdir(installDir, { withFileTypes: true });
+      const themes = [];
+      for (const ent of entries) {
+        if (!ent.isDirectory()) continue;
+        if (!ent.name.startsWith('sasi-overlays')) continue;
+        const isActive = ent.name === 'sasi-overlays';
+        const suffix = isActive ? '' : ent.name.replace(/^sasi-overlays-?/, '');
+        const full = path.join(installDir, ent.name);
+        const v = validateTheme(full);
+        if (!v.valid && !isActive) continue; // Hide invalid sibling folders, but always show active so user can see what's broken
+        const stat = await fs.stat(full);
+        const manifest = readThemeManifest(full);
+        themes.push({
+          folder: ent.name,
+          name: isActive ? 'active' : suffix,
+          id: (manifest && typeof manifest.id === 'string' && /^[a-zA-Z0-9_-]{1,40}$/.test(manifest.id)) ? manifest.id : null,
+          displayName: (manifest && typeof manifest.name === 'string') ? manifest.name : null,
+          author: (manifest && typeof manifest.author === 'string') ? manifest.author : null,
+          preview: (manifest && typeof manifest.preview === 'object') ? manifest.preview : null,
+          active: isActive,
+          path: full.replace(/\\/g, '/'),
+          mtime: stat.mtimeMs,
+          valid: v.valid,
+          missing: v.missing,
+        });
+      }
+      themes.sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0) || a.name.localeCompare(b.name));
+      res.json({ themes });
+    } catch (err) {
+      log.error(`list-themes failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Internal helper used by both /apply-theme and /switch-channel.
+  // Activates theme at sasi-overlays-<name>/ via atomic rename. The previous
+  // active theme is renamed to sasi-overlays-<its-id>/ so its identity is preserved
+  // (falls back to a timestamped archive when theme.json#id is missing).
+  // Throws on validation failure or rename error.
+  async function applyThemeByName(name) {
+    if (!isSafeThemeName(name)) throw Object.assign(new Error('invalid theme name (alphanumerics + dash/underscore, 1-40 chars)'), { status: 400 });
+    const targetFolder = path.join(installDir, 'sasi-overlays-' + name);
+    const activeFolder = path.join(installDir, 'sasi-overlays');
+    if (!existsSync(targetFolder)) throw Object.assign(new Error('theme folder not found: sasi-overlays-' + name), { status: 404 });
+    const v = validateTheme(targetFolder);
+    if (!v.valid) {
+      throw Object.assign(new Error('theme is missing required files'), {
+        status: 400,
+        missing: v.missing,
+        hint: 'Every theme must contain the standardized scene + component filenames so OBS browser sources stay stable across themes.',
+      });
+    }
+    let archived = null;
+    if (existsSync(activeFolder)) {
+      // Prefer renaming by theme id so identity persists (sasi-overlays/ → sasi-overlays-<id>/).
+      // If theme.json#id is missing or collides with an existing folder, fall back to timestamp.
+      const id = readThemeId(activeFolder);
+      const proposed = id ? path.join(installDir, 'sasi-overlays-' + id) : null;
+      if (proposed && !existsSync(proposed)) {
+        archived = proposed;
+      } else {
+        const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
+        archived = path.join(installDir, 'sasi-overlays-archived-' + stamp);
+      }
+      await fs.rename(activeFolder, archived);
+    }
+    try {
+      await fs.rename(targetFolder, activeFolder);
+    } catch (renameErr) {
+      // Rollback so we don't end up with no active theme.
+      if (archived && existsSync(archived) && !existsSync(activeFolder)) {
+        await fs.rename(archived, activeFolder).catch(() => {});
+      }
+      throw renameErr;
+    }
+    return { active: name, archivedAs: archived ? path.basename(archived) : null };
+  }
+
+  // POST /apply-theme  body: { name }
+  app.post('/apply-theme', async (req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    const name = (req.body && req.body.name) ? String(req.body.name).trim() : '';
+    try {
+      const result = await applyThemeByName(name);
+      log.info(`apply-theme: ${name} now active${result.archivedAs ? ' (previous → ' + result.archivedAs + ')' : ''}`);
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      const status = err.status || 500;
+      log.error(`apply-theme failed: ${err.message}`);
+      const body = { error: err.message };
+      if (err.missing) body.missing = err.missing;
+      if (err.hint) body.hint = err.hint;
+      res.status(status).json(body);
+    }
+  });
+
+  // POST /save-theme  body: { name }
+  // Copies the currently active sasi-overlays/ folder to sasi-overlays-<name>/.
+  // Refuses to overwrite an existing folder of the same name.
+  app.post('/save-theme', async (req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    const name = (req.body && req.body.name) ? String(req.body.name).trim() : '';
+    if (!isSafeThemeName(name)) return res.status(400).json({ error: 'invalid theme name (alphanumerics + dash/underscore, 1-40 chars)' });
+    if (name === 'archived' || name === 'active') return res.status(400).json({ error: 'reserved name' });
+    const activeFolder = path.join(installDir, 'sasi-overlays');
+    const dest = path.join(installDir, 'sasi-overlays-' + name);
+    if (!existsSync(activeFolder)) return res.status(400).json({ error: 'no active theme to save' });
+    if (existsSync(dest)) return res.status(409).json({ error: 'theme already exists: sasi-overlays-' + name + ' (delete it first or pick another name)' });
+    try {
+      await fs.cp(activeFolder, dest, { recursive: true, force: false });
+      log.info(`save-theme: copied active → sasi-overlays-${name}`);
+      res.json({ ok: true, savedAs: 'sasi-overlays-' + name });
+    } catch (err) {
+      log.error(`save-theme failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /delete-theme  body: { name }
+  // Removes a non-active theme folder.
+  app.post('/delete-theme', async (req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    const name = (req.body && req.body.name) ? String(req.body.name).trim() : '';
+    if (!isSafeThemeName(name)) return res.status(400).json({ error: 'invalid theme name' });
+    const target = path.join(installDir, 'sasi-overlays-' + name);
+    if (!existsSync(target)) return res.status(404).json({ error: 'theme not found' });
+    try {
+      await fs.rm(target, { recursive: true, force: true });
+      log.info(`delete-theme: removed sasi-overlays-${name}`);
+      res.json({ ok: true });
+    } catch (err) {
+      log.error(`delete-theme failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ===== STINGERS =====
+  // OBS Stinger transition points at a single filename: stinger-active.webm
+  // (in the active theme's stingers/ folder). Picker = atomic rename:
+  //   target.webm        → stinger-active.webm
+  //   stinger-active.webm → stinger-active-archived-<timestamp>.webm
+  // OBS keeps working because the path it points at didn't change.
+
+  app.get('/list-stingers', async (_req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    const stingersDir = path.join(installDir, 'sasi-overlays', 'stingers');
+    try {
+      if (!existsSync(stingersDir)) return res.json({ stingers: [], active: null });
+      const entries = await fs.readdir(stingersDir, { withFileTypes: true });
+      const stingers = [];
+      let active = null;
+      for (const ent of entries) {
+        if (!ent.isFile() || !/\.webm$/i.test(ent.name)) continue;
+        const full = path.join(stingersDir, ent.name);
+        const stat = await fs.stat(full);
+        const isActive = ent.name === 'stinger-active.webm';
+        const isArchived = ent.name.startsWith('stinger-active-archived-');
+        const item = {
+          name: ent.name,
+          size: stat.size,
+          mtime: stat.mtimeMs,
+          fileUrl: 'file:///' + full.replace(/\\/g, '/'),
+          isActive,
+          isArchived,
+        };
+        if (isActive) active = item;
+        stingers.push(item);
+      }
+      stingers.sort((a, b) => {
+        if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+        if (a.isArchived !== b.isArchived) return a.isArchived ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      });
+      res.json({ stingers, active });
+    } catch (err) {
+      log.error(`list-stingers failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /list-stinger-generators — *.html files in the active theme's stingers/
+  // folder. These are TOOLS users open in their browser to record a webm; they
+  // aren't stingers themselves.
+  app.get('/list-stinger-generators', async (_req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    const stingersDir = path.join(installDir, 'sasi-overlays', 'stingers');
+    try {
+      if (!existsSync(stingersDir)) return res.json({ generators: [] });
+      const entries = await fs.readdir(stingersDir, { withFileTypes: true });
+      const generators = [];
+      for (const ent of entries) {
+        if (!ent.isFile() || !/\.html?$/i.test(ent.name)) continue;
+        const full = path.join(stingersDir, ent.name);
+        const stat = await fs.stat(full);
+        generators.push({
+          name: ent.name,
+          size: stat.size,
+          mtime: stat.mtimeMs,
+          fileUrl: 'file:///' + full.replace(/\\/g, '/'),
+        });
+      }
+      generators.sort((a, b) => a.name.localeCompare(b.name));
+      res.json({ generators });
+    } catch (err) {
+      log.error(`list-stinger-generators failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /upload-stinger  body: { filename, dataBase64, activate? }
+  // Writes the decoded webm into the active theme's stingers/ folder. If
+  // activate=true, also renames it to stinger-active.webm (archiving previous).
+  // Used by the dashboard's "Generate webm + Make active" flow on HTML stingers.
+  app.post('/upload-stinger', async (req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    const { filename, dataBase64, activate } = req.body || {};
+    if (!filename || typeof filename !== 'string') return res.status(400).json({ error: 'filename required' });
+    if (!/^[a-zA-Z0-9._-]+\.webm$/i.test(filename)) return res.status(400).json({ error: 'filename must end .webm and be alphanumerics + dash/underscore/dot' });
+    if (filename === 'stinger-active.webm') return res.status(400).json({ error: 'use a generator-derived name like stinger-generated-<ts>.webm; the dashboard will activate it for you' });
+    if (!dataBase64 || typeof dataBase64 !== 'string') return res.status(400).json({ error: 'dataBase64 required' });
+
+    const stingersDir = path.join(installDir, 'sasi-overlays', 'stingers');
+    try {
+      if (!existsSync(stingersDir)) await fs.mkdir(stingersDir, { recursive: true });
+      // Strip data: URL prefix if the client sent one
+      const clean = dataBase64.replace(/^data:[^,]+,/, '');
+      const buf = Buffer.from(clean, 'base64');
+      if (buf.length === 0) return res.status(400).json({ error: 'decoded data is empty' });
+      if (buf.length > 50 * 1024 * 1024) return res.status(413).json({ error: 'stinger > 50 MB — keep it under 5 seconds' });
+      const dest = path.join(stingersDir, filename);
+      await fs.writeFile(dest, buf);
+      log.info(`upload-stinger: ${dest} (${buf.length} bytes)`);
+
+      let archivedAs = null;
+      let activated = false;
+      if (activate) {
+        const active = path.join(stingersDir, 'stinger-active.webm');
+        if (existsSync(active)) {
+          const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
+          const archive = path.join(stingersDir, 'stinger-active-archived-' + stamp + '.webm');
+          await fs.rename(active, archive);
+          archivedAs = path.basename(archive);
+        }
+        // We copy (not rename) so the original generated file is preserved in the
+        // grid as the "source webm" and stinger-active.webm becomes a duplicate
+        // pointing at the same content. Lets the user swap back later.
+        await fs.copyFile(dest, active);
+        activated = true;
+      }
+      res.json({ ok: true, filename, bytes: buf.length, activated, archivedAs });
+    } catch (err) {
+      log.error(`upload-stinger failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /apply-stinger  body: { file }  — file is the filename to promote.
+  app.post('/apply-stinger', async (req, res) => {
+    if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
+    const file = (req.body && req.body.file) ? String(req.body.file).trim() : '';
+    if (!file || !/^[a-zA-Z0-9._-]+\.webm$/i.test(file)) return res.status(400).json({ error: 'invalid stinger filename' });
+    if (file === 'stinger-active.webm') return res.status(400).json({ error: 'already active' });
+    const stingersDir = path.join(installDir, 'sasi-overlays', 'stingers');
+    const target = path.join(stingersDir, file);
+    const active = path.join(stingersDir, 'stinger-active.webm');
+    if (!existsSync(target)) return res.status(404).json({ error: 'stinger file not found: ' + file });
+    try {
+      let archivedAs = null;
+      if (existsSync(active)) {
+        const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
+        const archive = path.join(stingersDir, 'stinger-active-archived-' + stamp + '.webm');
+        await fs.rename(active, archive);
+        archivedAs = path.basename(archive);
+      }
+      try {
+        await fs.rename(target, active);
+      } catch (renameErr) {
+        // Rollback archive
+        if (archivedAs && !existsSync(active)) {
+          await fs.rename(path.join(stingersDir, archivedAs), active).catch(() => {});
+        }
+        throw renameErr;
+      }
+      log.info(`apply-stinger: ${file} now active${archivedAs ? ' (previous → ' + archivedAs + ')' : ''}`);
+      res.json({ ok: true, active: 'stinger-active.webm', archivedAs });
+    } catch (err) {
+      log.error(`apply-stinger failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ===== CHANNELS =====
+  // Channels live in sasi-secrets.js under `channels: { <key>: {brand, theme, youtube, twitch} }`.
+  // The active channel is `activeChannel`. Switching = update activeChannel, write secrets back,
+  // and apply that channel's theme via the same atomic-rename flow as /apply-theme.
+
+  // GET /list-channels — returns [{ key, name, tagline, theme, active }, ...]
+  app.get('/list-channels', async (_req, res) => {
+    if (!secretsPath) return res.status(500).json({ error: 'secretsPath not configured' });
+    try {
+      let parsed = null;
+      if (existsSync(secretsPath)) {
+        parsed = parseSecretsFile(await fs.readFile(secretsPath, 'utf8'));
+      }
+      if (!parsed && existsSync(secretsExamplePath)) {
+        parsed = parseSecretsFile(await fs.readFile(secretsExamplePath, 'utf8'));
+      }
+      if (!parsed || !parsed.channels) return res.json({ channels: [], activeChannel: '' });
+      const channels = Object.entries(parsed.channels).map(([key, c]) => ({
+        key,
+        name: c.brand?.name || key,
+        tagline: c.brand?.tagline || '',
+        theme: c.theme || 'sasi-overlays',
+        active: key === parsed.activeChannel,
+      }));
+      res.json({ channels, activeChannel: parsed.activeChannel || '' });
+    } catch (err) {
+      log.error(`list-channels failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /switch-channel  body: { key }
+  // Updates activeChannel + applies the channel's theme. Returns { ok, key, theme, archivedAs }.
+  app.post('/switch-channel', async (req, res) => {
+    if (!secretsPath) return res.status(500).json({ error: 'secretsPath not configured' });
+    const key = (req.body && req.body.key) ? String(req.body.key).trim() : '';
+    if (!key || !/^[a-zA-Z0-9_-]{1,40}$/.test(key)) return res.status(400).json({ error: 'invalid channel key' });
+    try {
+      let parsed = null;
+      if (existsSync(secretsPath)) parsed = parseSecretsFile(await fs.readFile(secretsPath, 'utf8'));
+      if (!parsed) parsed = defaultSecrets();
+      if (!parsed.channels || !parsed.channels[key]) return res.status(404).json({ error: 'channel not found: ' + key });
+      const channel = parsed.channels[key];
+      // Resolve target theme: channel.theme is the FOLDER NAME (e.g. 'sasi-overlays' or 'sasi-overlays-blue').
+      // Convert to the suffix form that applyThemeByName expects.
+      const themeFolder = channel.theme || 'sasi-overlays';
+      let archivedAs = null;
+      if (themeFolder === 'sasi-overlays') {
+        // Already the active folder name — no swap needed.
+      } else if (themeFolder.startsWith('sasi-overlays-')) {
+        const suffix = themeFolder.slice('sasi-overlays-'.length);
+        const result = await applyThemeByName(suffix);
+        archivedAs = result.archivedAs;
+      } else {
+        return res.status(400).json({ error: 'channel.theme must be sasi-overlays or sasi-overlays-<name>' });
+      }
+      // Persist activeChannel
+      parsed.activeChannel = key;
+      await fs.writeFile(secretsPath, serializeSecretsFile(parsed), { encoding: 'utf8' });
+      log.info(`switch-channel: ${key} (theme ${themeFolder}${archivedAs ? ', previous → ' + archivedAs : ''})`);
+      res.json({ ok: true, key, theme: themeFolder, archivedAs });
+    } catch (err) {
+      const status = err.status || 500;
+      log.error(`switch-channel failed: ${err.message}`);
+      res.status(status).json({ error: err.message });
     }
   });
 
@@ -930,18 +1404,27 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   });
 
   // ===== SECRETS (sasi-studio v2 Keys tab) =====
-  // secrets.js lives in the install dir's sasi-overlays/ folder.
+  // sasi-secrets.js lives at install dir root (one level above the active
+  // theme's sasi-overlays/ folder). Reason: themes get swapped via folder
+  // rename, and we don't want secrets to ride along into the archive.
   // Format: a JS file that assigns window.SASI_SECRETS = {...}.
-  // GET /secrets returns the parsed object; PUT /secrets writes it back.
-  // Plain text on disk (existing behavior). Reject non-localhost (existing CSRF guard already does).
-  const secretsPath = installDir ? path.join(installDir, 'sasi-overlays', 'secrets.js') : '';
-  const secretsExamplePath = installDir ? path.join(installDir, 'sasi-overlays', 'secrets.example.js') : '';
+  const secretsPath = installDir ? path.join(installDir, 'sasi-secrets.js') : '';
+  const secretsExamplePath = installDir ? path.join(installDir, 'sasi-secrets.example.js') : '';
 
   function defaultSecrets() {
     return {
-      youtube: { apiKeys: [], channelId: '' },
-      twitch: { username: '', clientId: '', clientSecret: '' },
+      activeChannel: 'sasi-streams',
       streamelements: { youtube: { jwt: '' }, twitch: { jwt: '' } },
+      channels: {
+        'sasi-streams': {
+          brand: { name: 'SASI STREAMS', tagline: 'LIVE STREAM', logo: 'assets/Sasi_Streams_logo.png' },
+          theme: 'sasi-overlays',
+          youtube: { apiKeys: [], channelId: '' },
+          // username = IRC chat. clientId/clientSecret reserved for future
+          // Twitch API features (followers, channel points). Optional — blank is fine.
+          twitch: { username: '', clientId: '', clientSecret: '' },
+        },
+      },
     };
   }
 
@@ -961,9 +1444,20 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
 
   function serializeSecretsFile(obj) {
     const json = JSON.stringify(obj, null, 2);
+    // Backwards-compat shim: older overlay code reads s.youtube / s.twitch
+    // directly (single-channel shape). Project active channel up so nothing breaks.
     return `// AUTO-GENERATED by Sasi Studio dashboard. You can also edit by hand.
-// Loaded by every overlay scene before config.js. Never commit this file.
+// Loaded by every overlay scene via lib/secrets.js stub loader. Never commit this file.
 window.SASI_SECRETS = ${json};
+
+(function () {
+  const s = window.SASI_SECRETS;
+  if (!s || !s.channels) return;
+  const active = s.channels[s.activeChannel];
+  if (!active) return;
+  if (!s.youtube) s.youtube = active.youtube;
+  if (!s.twitch)  s.twitch  = active.twitch;
+})();
 `;
   }
 
@@ -993,16 +1487,16 @@ window.SASI_SECRETS = ${json};
     if (typeof incoming !== 'object' || Array.isArray(incoming)) {
       return res.status(400).json({ error: 'body must be an object' });
     }
-    // Merge with defaults so missing sections don't blow away existing data
+    // Multi-channel shape: trust whatever the dashboard sends (the Keys/Channels
+    // tab owns the schema). Only fill in top-level defaults that are always required.
     const merged = {
       ...defaultSecrets(),
       ...incoming,
-      youtube: { ...defaultSecrets().youtube, ...(incoming.youtube || {}) },
-      twitch: { ...defaultSecrets().twitch, ...(incoming.twitch || {}) },
       streamelements: {
-        youtube: { ...(incoming.streamelements?.youtube || {}) },
-        twitch: { ...(incoming.streamelements?.twitch || {}) },
+        youtube: { ...(defaultSecrets().streamelements.youtube), ...(incoming.streamelements?.youtube || {}) },
+        twitch: { ...(defaultSecrets().streamelements.twitch), ...(incoming.streamelements?.twitch || {}) },
       },
+      channels: incoming.channels || defaultSecrets().channels,
     };
     try {
       const text = serializeSecretsFile(merged);

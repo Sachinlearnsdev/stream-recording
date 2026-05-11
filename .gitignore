@@ -14,6 +14,7 @@ obs-export-*/
 *-bundle/
 
 # Overlay secrets (API keys) — never commit
+Overlay/sasi-secrets.js
 Overlay/sasi-overlays/secrets.js
 Overlay/sasi-overlays/lib/secrets.js
 

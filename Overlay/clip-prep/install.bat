@@ -87,18 +87,26 @@ if errorlevel 1 (
   echo Note: register-lua.ps1 failed ^(non-fatal^). Use the dashboard's "Register Lua" button after opening OBS once.
 )
 
+rem ---------- Step 4d: Generate sample-blue theme so user has 2 themes to test swap ----------
+echo.
+echo [4d/5] Generating sample-blue theme (so dashboard Themes section has alternates to test)...
+powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\generate-sample-theme.ps1" -InstallDir "!SCRIPT_DIR!"
+if errorlevel 1 (
+  echo Note: generate-sample-theme.ps1 failed ^(non-fatal^). You'll start with one theme.
+)
+
 rem ---------- Step 5: Start it now + open dashboard ----------
 echo.
 echo [5/5] Starting watcher (hidden) and opening dashboard...
 wscript.exe "!LAUNCHER!"
 
-rem Look for dashboard.html in two locations: alongside install (preferred,
-rem after bootstrap copies it here) or sibling-folder (legacy, when running
-rem install.bat directly from the repo without bootstrap).
-set "DASHBOARD=!SCRIPT_DIR!dashboard.html"
-if not exist "!DASHBOARD!" set "DASHBOARD=!SCRIPT_DIR!..\sasi-overlays\dashboard.html"
-echo Dashboard: !DASHBOARD!
-start "" "!DASHBOARD!"
+rem Open the dashboard via http://127.0.0.1:6789 so every overlay iframe is
+rem same-origin with the dashboard. Required for HTML stinger auto-record
+rem (canvas access from a hidden iframe) and reliable cross-iframe localStorage.
+rem Brief delay so the watcher's listener is up before the browser hits it.
+echo Dashboard: http://127.0.0.1:6789/dashboard.html
+timeout /t 2 /nobreak >nul 2>&1
+start "" "http://127.0.0.1:6789/dashboard.html"
 
 echo.
 echo ========================================
