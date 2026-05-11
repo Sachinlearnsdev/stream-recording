@@ -4,6 +4,11 @@
 #
 # Idempotent: skips if sasi-overlays-sample-blue/ already exists.
 # Returns 0 on success / skip; non-zero only on hard failure.
+#
+# ASCII-only on purpose. Windows PowerShell 5.1 reads .ps1 files as
+# Windows-1252 by default; UTF-8 em-dashes / arrows in this file confuse
+# the parser and abort with "string is missing the terminator". Keep
+# this script pure ASCII to stay portable across user encodings.
 
 [CmdletBinding()]
 param(
@@ -26,15 +31,15 @@ if (Test-Path -LiteralPath $dest) {
 
 try {
   Write-Output "  generate-sample-theme: creating $dest ..."
-  # Recursive copy. Skip secrets.js (gitignored — has user keys, lives one level
+  # Recursive copy. Skip secrets.js (gitignored - has user keys, lives one level
   # up at install root after the v2 layout refactor; this stub-loader copy is fine to keep).
   Copy-Item -LiteralPath $source -Destination $dest -Recurse -Force
 
-  # Recolor: red → blue, orange → cyan, gold → silver. Apply across all HTML/CSS/JS.
+  # Recolor: red -> blue, orange -> cyan, gold -> silver. Apply across all HTML/CSS/JS.
   $colorMap = @{
-    '#FF2200' = '#0080FF'   # red → bright blue
-    '#FF7700' = '#00BFFF'   # orange → cyan
-    '#FFD700' = '#C0C0C0'   # gold → silver
+    '#FF2200' = '#0080FF'   # red -> bright blue
+    '#FF7700' = '#00BFFF'   # orange -> cyan
+    '#FFD700' = '#C0C0C0'   # gold -> silver
     'STARTING SOON' = 'SAMPLE THEME (BLUE)'  # visible swap-confirmation
   }
 
@@ -66,7 +71,7 @@ try {
       $json = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
       $json.id = 'sasi-blue'
       $json.name = 'Sasi Blue (Sample)'
-      $json.description = 'Generated sample theme — recolored copy of the default for testing the Themes swap flow.'
+      $json.description = 'Generated sample theme - recolored copy of the default for testing the Themes swap flow.'
       if ($json.PSObject.Properties.Name -contains 'preview') {
         $json.preview.primary = '#0080FF'
         $json.preview.secondary = '#00BFFF'
@@ -78,9 +83,9 @@ try {
     }
   }
 
-  Write-Output "  generate-sample-theme: done. Apply via dashboard Overlays tab → 'Sasi Blue (Sample)' → Make active."
+  Write-Output "  generate-sample-theme: done. Apply via dashboard Overlays tab -> 'Sasi Blue (Sample)' -> Make active."
   exit 0
 } catch {
-  Write-Output "  generate-sample-theme: FAILED — $($_.Exception.Message)"
+  Write-Output ("  generate-sample-theme: FAILED - " + $_.Exception.Message)
   exit 1
 }
