@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sasi Streams — Just Chatting</title>
+<script src="../lib/config.js"></script>
+<script src="../lib/secrets.js"></script>
+<script src="../lib/alerts.js"></script>
+<script src="../lib/live-update.js"></script>
+<style>
+/* ================================================
+   SASI STREAMS — JUST CHATTING  |  1920x1080
+   ================================================ */
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Arial Black', Impact, Arial, sans-serif;
+  color:#fff;
+}
+
+
+
+.stage { position:absolute; inset:0; z-index:10; animation:fadeIn 1.2s ease forwards; }
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+@keyframes tlIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes trIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes topIn{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
+@keyframes frameIn { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:translateY(0); } }
+
+/* ================================================
+   BRAND — top-left
+   ================================================ */
+.brand-wrap {
+  position:absolute; top:30px; left:52px;
+  display:flex; align-items:center; gap:12px;
+  opacity:0; animation:tlIn .7s ease .1s forwards;
+}
+.logo-img {
+  width:52px; height:52px; border-radius:10px; display:block;
+  mix-blend-mode:screen; filter:brightness(1.1) contrast(1.05);
+}
+.brand-rule { width:2px; height:40px; background:linear-gradient(to bottom,transparent,var(--red),transparent); box-shadow:0 0 7px var(--red); }
+.brand-text { display:flex; flex-direction:column; }
+.brand-l1 { font-size:14px; font-weight:900; letter-spacing:5px; color:#fff; line-height:1; }
+.brand-l2 { font-size:8px;  font-weight:700; letter-spacing:7px; color:rgba(255,255,255,.3); margin-top:3px; }
+
+/* ================================================
+   LIVE BADGE — top-right
+   ================================================ */
+.live-wrap {
+  position:absolute; top:30px; right:30px;
+  opacity:0; animation:trIn .7s ease .2s forwards;
+}
+.live-badge {
+  display:flex; align-items:center; gap:8px; padding:8px 14px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  position:relative;
+}
+.live-badge::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,34,0,.5),transparent);
+}
+.live-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--red);
+  box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5);
+  animation:livePulse 1.2s ease-in-out infinite;
+}
+.live-text { font-size:12px; font-weight:900; letter-spacing:4px; color:var(--red); }
+
+/* ================================================
+   SCENE TITLE — top-center (matches overlay.html)
+   ================================================ */
+.scene-wrap {
+  position:absolute; top:30px; left:50%; transform:translateX(-50%);
+  z-index:20;
+  opacity:0; animation:topIn .7s ease .25s forwards;
+}
+.scene-name {
+  font-size:22px; font-weight:900; letter-spacing:6px;
+  color:#fff; white-space:nowrap;
+  text-align:center;
+  text-shadow:0 0 12px rgba(255,255,255,.2);
+  animation:sceneGlitch 6s linear 2s infinite;
+  position:relative;
+}
+@keyframes sceneGlitch {
+  0%,38%,100% { opacity:1; transform:skewX(0) translate(0,0); text-shadow:0 0 12px rgba(255,255,255,.2); clip-path:none; filter:none; }
+  39%   { opacity:0; }
+  39.3% { opacity:1; }
+  39.6% { opacity:0; }
+  40%   { opacity:1; }
+  40.4% { opacity:.15; }
+  40.8% { opacity:1; }
+  42%   { transform:translate(-5px,0); clip-path:polygon(0 0,100% 0,100% 30%,0 30%); text-shadow:4px 0 var(--red),-3px 0 var(--orange); filter:brightness(1.4); }
+  42.3% { transform:translate(4px,0);  clip-path:none; text-shadow:0 0 12px rgba(255,255,255,.2); filter:none; }
+  43%   { transform:translate(-3px,1px); clip-path:polygon(0 45%,100% 45%,100% 70%,0 70%); text-shadow:-3px 0 var(--red),5px 0 var(--orange); filter:brightness(1.3); }
+  43.4% { transform:translate(2px,-1px); clip-path:polygon(0 20%,100% 20%,100% 50%,0 50%); text-shadow:2px 0 var(--red); filter:none; }
+  43.8% { transform:translate(0,0); clip-path:none; text-shadow:0 0 12px rgba(255,255,255,.2); }
+  44.5% { transform:skewX(-12deg) translate(-2px,0) scaleX(1.03); text-shadow:3px 0 var(--orange),-3px 0 var(--red); filter:brightness(1.2); }
+  44.9% { transform:skewX(0) translate(0,0); text-shadow:0 0 12px rgba(255,255,255,.2); filter:none; }
+  71%   { opacity:1; transform:translate(0,0); clip-path:none; }
+  71.4% { opacity:0; }
+  71.7% { opacity:1; transform:translate(-4px,0); clip-path:polygon(0 55%,100% 55%,100% 100%,0 100%); text-shadow:3px 0 var(--red); }
+  72%   { transform:translate(3px,0); clip-path:none; text-shadow:none; }
+  72.4% { transform:translate(0,0); text-shadow:0 0 12px rgba(255,255,255,.2); }
+}
+
+/* ================================================
+   SHARED FRAME STYLES
+   ================================================ */
+.frame {
+  position:absolute;
+  border:1px solid rgba(255,34,0,.28);
+  border-radius:10px;
+  background:rgba(0,0,0,.25);
+  box-shadow:0 0 20px rgba(255,34,0,.08), inset 0 0 30px rgba(0,0,0,.4);
+  overflow:hidden;
+  opacity:0;
+  display:flex; flex-direction:column;
+}
+.frame::before {
+  content:''; position:absolute; top:0; left:12px; right:12px; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.45), transparent);
+  z-index:3;
+}
+.tick-tl-h, .tick-tl-v {
+  position:absolute; background:var(--red); box-shadow:0 0 8px var(--red); z-index:4;
+}
+.tick-tl-h { top:0; left:0; width:22px; height:2px; }
+.tick-tl-v { top:0; left:0; width:2px; height:22px; }
+.tick-br-h, .tick-br-v {
+  position:absolute; background:var(--orange); box-shadow:0 0 6px var(--orange); z-index:4;
+}
+.tick-br-h { bottom:0; right:0; width:16px; height:1.5px; }
+.tick-br-v { bottom:0; right:0; width:1.5px; height:16px; }
+
+.frame-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 16px 9px;
+  border-bottom:1px solid rgba(255,34,0,.12);
+  background:rgba(0,0,0,.45);
+  position:relative; z-index:2;
+  flex-shrink:0;
+}
+.frame-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--red); box-shadow:0 0 6px var(--red);
+  animation:livePulse 1.2s ease-in-out infinite;
+  flex-shrink:0;
+}
+.frame-title {
+  font-size:9px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,255,255,.55); text-transform:uppercase;
+}
+.frame-icon {
+  width:14px; height:14px; fill:rgba(255,34,0,.55); margin-left:auto;
+}
+.frame-body { flex:1; background:transparent; overflow:hidden; min-height:0; }
+
+/* ================================================
+   LAYOUT
+   Canvas 1920×1080  •  60px side margins  •  30px gaps
+
+   LEFT column (x:60, w:1130)
+     Webcam: y=100  h=840  → y=940
+
+   RIGHT column (x:1220, w:640)
+     Info:   y=100  h=180  → y=280
+     Chat:   y=310  h=630  → y=940
+
+   Alert stripe (center): y=980, 880×60 (matches subscribe)
+   ================================================ */
+
+.webcam-frame {
+  left:60px; top:100px; width:1290px; height:730px;
+  animation:frameIn .8s cubic-bezier(.22,1,.36,1) .3s forwards;
+}
+
+.info-frame {
+  left:1380px; top:100px; width:480px; height:170px;
+  animation:frameIn .8s cubic-bezier(.22,1,.36,1) .45s forwards;
+}
+.info-frame .frame-body {
+  padding:0;
+  position:relative;
+  overflow:hidden;
+}
+
+/* Each item overlays the body, only one visible at a time */
+.info-item {
+  position:absolute; inset:0;
+  padding:14px 28px;
+  display:flex; flex-direction:column; justify-content:center;
+  opacity:0; transform:translateY(8px);
+  transition:opacity .4s ease, transform .4s ease;
+  pointer-events:none;
+}
+.info-item.active {
+  opacity:1; transform:translateY(0);
+}
+
+/* Common label */
+.info-item-label {
+  font-size:10px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,119,0,.7); text-transform:uppercase;
+  margin-bottom:8px;
+}
+
+/* ─── Text item ─── */
+.info-text-value {
+  font-size:26px; font-weight:900; letter-spacing:4px;
+  color:#fff;
+  text-shadow:0 0 14px rgba(255,34,0,.25);
+  line-height:1;
+}
+
+/* ─── Goal item ─── */
+.info-goal-top {
+  display:flex; justify-content:space-between; align-items:baseline;
+  margin-bottom:8px;
+}
+.info-goal-nums {
+  font-size:18px; font-weight:900; letter-spacing:2px;
+  color:#fff;
+  font-variant-numeric:tabular-nums;
+  line-height:1;
+}
+.info-goal-nums .current {
+  color:var(--goal-color, var(--red));
+  text-shadow:0 0 12px var(--goal-color, var(--red));
+  font-size:24px;
+}
+.info-goal-nums .sep    { color:rgba(255,255,255,.25); margin:0 5px; font-size:18px; }
+.info-goal-nums .target { color:rgba(255,255,255,.5); font-size:18px; }
+
+.info-goal-bar {
+  width:100%; height:10px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:5px;
+  overflow:hidden;
+  position:relative;
+}
+.info-goal-fill {
+  position:absolute; left:0; top:0; bottom:0;
+  width:0;
+  background:linear-gradient(90deg, var(--goal-color, var(--red)), var(--orange));
+  box-shadow:0 0 12px var(--goal-color, var(--red));
+  border-radius:5px;
+  transition:width 1.2s cubic-bezier(.22,1,.36,1);
+}
+.info-goal-fill::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:rgba(255,255,255,.3);
+}
+.info-goal-pct {
+  font-size:9px; font-weight:700; letter-spacing:3px;
+  color:rgba(255,255,255,.4);
+  text-transform:uppercase;
+  margin-top:6px;
+}
+
+/* ─── Discord QR item ─── */
+.info-qr {
+  display:flex; align-items:center; gap:18px;
+  height:100%;
+}
+.info-qr-left {
+  flex:1;
+  display:flex; flex-direction:column; justify-content:center; gap:6px;
+}
+.info-qr-brand {
+  display:flex; align-items:center; gap:10px;
+}
+.info-qr-icon {
+  width:24px; height:24px; fill:#fff;
+  flex-shrink:0;
+}
+.info-qr-name {
+  font-size:24px; font-weight:900; letter-spacing:3px;
+  color:#fff;
+  text-shadow:0 0 12px rgba(255,34,0,.2);
+  line-height:1;
+}
+.info-qr-sub {
+  font-size:9px; font-weight:700; letter-spacing:4px;
+  color:rgba(255,255,255,.4);
+  text-transform:uppercase;
+  margin-top:4px;
+}
+.info-qr-img {
+  width:108px; height:108px;
+  background:#fff;
+  padding:5px;
+  border-radius:6px;
+  box-shadow:0 0 18px rgba(255,255,255,.08);
+  flex-shrink:0;
+}
+.info-qr-img img {
+  width:100%; height:100%;
+  display:block;
+}
+
+
+.chat-frame {
+  left:1380px; top:284px; width:480px; height:694px;
+  animation:frameIn .8s cubic-bezier(.22,1,.36,1) .6s forwards;
+}
+
+
+/* ================================================
+   STATS FRAME — rolling session stats (like info panel)
+   ================================================ */
+.stats-frame {
+  left:600px; top:860px; width:380px; height:118px;
+  animation:frameIn .8s cubic-bezier(.22,1,.36,1) .9s forwards;
+}
+
+/* ================================================
+   GAMES PANEL — wheel + mystery box + highlighted
+   ================================================ */
+.games-frame {
+  left:1000px; top:860px; width:350px; height:118px;
+  animation:frameIn .8s cubic-bezier(.22,1,.36,1) .95s forwards;
+}
+.games-frame .frame-body {
+  padding:0;
+  position:relative;
+  overflow:hidden;
+}
+/* Game tiles — stacked, one visible at a time, rolling */
+.game-tile {
+  position:absolute; inset:0;
+  display:flex; align-items:center;
+  gap:14px;
+  padding:10px 18px;
+  opacity:0; transform:translateY(8px);
+  transition:opacity .4s ease, transform .4s ease;
+  pointer-events:none;
+}
+.game-tile.active {
+  opacity:1; transform:translateY(0);
+}
+.game-tile.gold .game-tile-icon { filter:drop-shadow(0 0 8px rgba(255,215,0,.4)); }
+.game-tile-icon {
+  font-size:32px;
+  filter:drop-shadow(0 0 8px rgba(255,34,0,.4));
+  flex-shrink:0;
+}
+.game-tile-info {
+  display:flex; flex-direction:column; gap:2px;
+}
+.game-tile-name {
+  font-size:14px; font-weight:900; letter-spacing:2px;
+  color:#fff; text-transform:uppercase;
+  line-height:1.1;
+}
+.game-tile-cost {
+  font-size:10px; font-weight:700; letter-spacing:1px;
+  color:rgba(255,119,0,.7);
+  text-transform:uppercase;
+}
+.game-tile.gold .game-tile-cost { color:rgba(255,215,0,.8); }
+.game-tile-status {
+  font-size:8px; font-weight:700; letter-spacing:1px;
+  color:rgba(255,255,255,.3);
+  text-transform:uppercase;
+}
+
+
+/* ================================================
+   JACKPOT WHEEL — hidden modal (triggered from games tile)
+   ================================================ */
+.wheel-wrap {
+  position:fixed;
+  left:50%; top:50%; transform:translate(-50%,-50%);
+  width:260px; height:230px;
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(8,0,2,.96);
+  border:2px solid rgba(255,215,0,.5);
+  border-radius:12px;
+  padding:20px;
+  box-shadow:0 0 60px rgba(255,215,0,.3), 0 0 100px rgba(0,0,0,.8);
+  z-index:1000;
+}
+.wheel-wrap.active { display:flex; }
+.wheel-title {
+  font-size:8px; font-weight:900; letter-spacing:4px;
+  color:var(--gold); text-transform:uppercase;
+  margin-bottom:6px;
+  text-shadow:0 0 8px rgba(255,215,0,.4);
+}
+.wheel {
+  position:relative;
+  width:130px; height:130px;
+  filter:drop-shadow(0 0 16px rgba(255,215,0,.25));
+}
+.wheel-svg {
+  width:100%; height:100%;
+  transition:transform 4s cubic-bezier(.16,1,.3,1);
+}
+.wheel.spinning .wheel-svg {
+  transform:rotate(var(--spin-deg, 1800deg));
+}
+.wheel-arrow {
+  position:absolute; top:-4px; left:50%; transform:translateX(-50%);
+  width:0; height:0;
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+  border-top:14px solid var(--gold);
+  filter:drop-shadow(0 0 6px var(--gold));
+  z-index:10;
+}
+.wheel-center {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:32px; height:32px;
+  background:radial-gradient(circle, #fff 0%, var(--gold) 60%, var(--orange) 100%);
+  border-radius:50%;
+  box-shadow:0 0 12px rgba(255,215,0,.6), inset 0 0 6px rgba(0,0,0,.4);
+  z-index:5;
+}
+.wheel-status {
+  font-size:9px; font-weight:700; letter-spacing:2px;
+  color:rgba(255,215,0,.5);
+  margin-top:6px;
+  text-transform:uppercase;
+}
+.wheel-status.locked { color:rgba(255,255,255,.25); }
+
+
+/* ================================================
+   ALERT ZONE — bottom-left, standard 110 size
+   Wrapper handles positioning so inner .alert-frame
+   keeps standard position:relative for alerts.js
+   ================================================ */
+.alert-zone-wrap {
+  position:absolute;
+  left:60px; top:860px; width:520px;
+  z-index:100;
+  opacity:0;
+  animation:frameIn .8s cubic-bezier(.22,1,.36,1) .75s forwards;
+}
+.alert-zone-wrap .alert-frame {
+  position:relative;
+  width:520px; height:118px;
+  border:none;
+  border-radius:10px;
+  background:transparent;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:5px;
+  z-index:1;
+}
+.alert-zone-wrap .alert-frame.sasi-has-alert .alert-label,
+.alert-zone-wrap .alert-frame.sasi-has-alert .alert-sub { display:none; }
+.alert-zone-wrap .sasi-alert-popup {
+  z-index:200 !important;
+}
+.alert-label {
+  font-size:8px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,119,0,.35); text-transform:uppercase;
+}
+.alert-sub {
+  font-size:7px; font-weight:700; letter-spacing:3px;
+  color:rgba(255,255,255,.18); text-transform:uppercase;
+}
+.stats-frame .frame-body {
+  padding:0;
+  position:relative;
+  overflow:hidden;
+}
+.stat-item {
+  position:absolute; inset:0;
+  padding:10px 18px;
+  display:flex; flex-direction:column; justify-content:center;
+  opacity:0; transform:translateY(8px);
+  transition:opacity .4s ease, transform .4s ease;
+  pointer-events:none;
+}
+.stat-item.active {
+  opacity:1; transform:translateY(0);
+}
+.stat-label {
+  font-size:9px; font-weight:900; letter-spacing:5px;
+  color:var(--orange); text-transform:uppercase;
+  line-height:1;
+}
+.stat-value {
+  font-size:20px; font-weight:900; letter-spacing:2px;
+  color:#fff;
+  text-shadow:0 0 12px rgba(255,34,0,.35);
+  font-variant-numeric:tabular-nums;
+  margin-top:6px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.stat-sub {
+  font-size:10px; font-weight:700; letter-spacing:1px;
+  color:rgba(255,255,255,.4);
+  margin-top:3px;
+}
+.activity-frame .frame-body {
+  position:relative;
+  overflow:hidden;
+}
+
+/* Each card is absolutely positioned, only one shown at a time */
+.activity-card {
+  position:absolute; inset:0;
+  display:flex; align-items:center; gap:18px;
+  padding:14px 28px;
+  opacity:0; transform:translateX(20px);
+  transition:opacity .4s ease, transform .4s ease;
+  pointer-events:none;
+}
+.activity-card.active { opacity:1; transform:translateX(0); }
+.activity-card.exit   { opacity:0; transform:translateX(-20px); }
+
+/* Left icon */
+.act-icon-wrap {
+  width:62px; height:62px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:8px;
+  background:rgba(255,34,0,.08);
+  border:1px solid rgba(255,34,0,.2);
+  position:relative;
+}
+.act-icon-wrap.tier-tip,
+.act-icon-wrap.tier-cheer {
+  background:rgba(255,215,0,.08);
+  border-color:rgba(255,215,0,.25);
+}
+.act-icon-wrap.tier-sub,
+.act-icon-wrap.tier-member {
+  background:rgba(255,119,0,.08);
+  border-color:rgba(255,119,0,.25);
+}
+.act-icon-wrap.tier-raid {
+  background:rgba(255,34,0,.12);
+  border-color:rgba(255,34,0,.35);
+}
+.act-icon { width:30px; height:30px; fill:#fff; opacity:.9; }
+
+/* Center content */
+.act-content {
+  flex:1;
+  display:flex; flex-direction:column; gap:4px;
+  min-width:0;
+}
+.act-label {
+  font-size:9px; font-weight:900; letter-spacing:4px;
+  color:rgba(255,119,0,.7);
+  text-transform:uppercase;
+}
+.act-name {
+  font-size:22px; font-weight:900; letter-spacing:2px;
+  color:#fff;
+  text-shadow:0 0 12px rgba(255,34,0,.25);
+  line-height:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.act-name .amt {
+  color:var(--gold);
+  text-shadow:0 0 12px rgba(255,215,0,.5);
+  margin-left:8px;
+}
+.act-message {
+  font-size:11px; font-weight:700;
+  color:rgba(255,255,255,.55);
+  font-style:italic;
+  letter-spacing:1px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  margin-top:2px;
+}
+
+/* Right meta — tier badge / time */
+.act-right {
+  display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+  flex-shrink:0;
+}
+.act-tier {
+  font-size:9px; font-weight:900; letter-spacing:3px;
+  color:var(--orange);
+  padding:4px 10px;
+  border:1px solid rgba(255,119,0,.4);
+  border-radius:4px;
+  background:rgba(255,119,0,.08);
+}
+.act-time {
+  font-size:8px; font-weight:700; letter-spacing:2px;
+  color:rgba(255,255,255,.3);
+  text-transform:uppercase;
+}
+
+/* Empty state — soft pulse */
+.activity-empty {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  gap:14px;
+  font-size:10px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,119,0,.35);
+  text-transform:uppercase;
+  opacity:0;
+  transition:opacity .4s ease;
+}
+.activity-empty.show { opacity:1; }
+.activity-empty .dot {
+  width:6px; height:6px; border-radius:50%;
+  background:var(--orange);
+  box-shadow:0 0 8px var(--orange);
+  animation:livePulse 1.6s ease-in-out infinite;
+}
+</style>
+</head>
+<body>
+
+
+<div class="stage">
+
+  <!-- Brand — top-left -->
+  <div class="brand-wrap">
+    <img class="logo-img" src="../assets/Sasi_Streams_logo.png" alt="Sasi Streams">
+    <div class="brand-rule"></div>
+    <div class="brand-text">
+      <span class="brand-l1" id="brand-l1"></span>
+      <span class="brand-l2">JUST CHATTING</span>
+    </div>
+  </div>
+
+  <!-- Scene title — top-center -->
+  <div class="scene-wrap">
+    <div class="scene-name">JUST CHATTING</div>
+  </div>
+
+  <!-- LIVE badge — top-right -->
+  <div class="live-wrap">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span class="live-text">LIVE</span>
+    </div>
+  </div>
+
+  <!-- WEBCAM — left, full height -->
+  <div class="frame webcam-frame">
+    <div class="tick-tl-h"></div><div class="tick-tl-v"></div>
+    <div class="tick-br-h"></div><div class="tick-br-v"></div>
+    <div class="frame-header">
+      <div class="frame-dot"></div>
+      <span class="frame-title">Live Camera</span>
+      <svg class="frame-icon" viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+    </div>
+    <div class="frame-body"></div>
+  </div>
+
+  <!-- STREAM INFO — right top -->
+  <div class="frame info-frame">
+    <div class="tick-tl-h"></div><div class="tick-tl-v"></div>
+    <div class="tick-br-h"></div><div class="tick-br-v"></div>
+    <div class="frame-header">
+      <div class="frame-dot"></div>
+      <span class="frame-title">Stream Info</span>
+      <svg class="frame-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+    </div>
+    <div class="frame-body" id="info-body">
+      <!-- Items rendered by JS -->
+    </div>
+  </div>
+
+  <!-- CHAT — right bottom -->
+  <div class="frame chat-frame">
+    <div class="tick-tl-h"></div><div class="tick-tl-v"></div>
+    <div class="tick-br-h"></div><div class="tick-br-v"></div>
+    <div class="frame-header">
+      <div class="frame-dot"></div>
+      <span class="frame-title">Live Chat</span>
+      <svg class="frame-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+    </div>
+    <div class="frame-body"></div>
+  </div>
+
+  <!-- ALERT ZONE — alerts.js mounts popups inside .alert-frame -->
+  <div class="alert-zone-wrap">
+    <div class="alert-frame">
+      <span class="alert-label">Alert Zone</span>
+      <span class="alert-sub">Waiting for alerts</span>
+    </div>
+  </div>
+
+  <!-- JACKPOT WHEEL -->
+  <div class="wheel-wrap">
+    <div class="wheel-title">★ JACKPOT WHEEL ★</div>
+    <div class="wheel" id="wheel">
+      <div class="wheel-arrow"></div>
+      <svg class="wheel-svg" id="wheel-svg" viewBox="0 0 200 200"></svg>
+      <div class="wheel-center"></div>
+    </div>
+    <div class="wheel-status locked" id="wheel-status">1M+ POINTS TO SPIN</div>
+  </div>
+
+  <!-- Session Stats — rolling cards -->
+  <div class="frame stats-frame">
+    <div class="tick-tl-h"></div><div class="tick-tl-v"></div>
+    <div class="tick-br-h"></div><div class="tick-br-v"></div>
+    <div class="frame-header">
+      <div class="frame-dot"></div>
+      <span class="frame-title">Session Stats</span>
+      <svg class="frame-icon" viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+    </div>
+    <div class="frame-body" id="stats-body">
+      <!-- Items injected by JS -->
+    </div>
+  </div>
+
+  <!-- Games Panel — wheel + mystery box + highlighted message -->
+  <div class="frame games-frame">
+    <div class="tick-tl-h"></div><div class="tick-tl-v"></div>
+    <div class="tick-br-h"></div><div class="tick-br-v"></div>
+    <div class="frame-header">
+      <div class="frame-dot"></div>
+      <span class="frame-title">Viewer Games</span>
+      <svg class="frame-icon" viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+    </div>
+    <div class="frame-body">
+      <div class="game-tile gold active" id="game-wheel">
+        <div class="game-tile-icon">🎰</div>
+        <div class="game-tile-info">
+          <div class="game-tile-name">Wheel of Fortune</div>
+          <div class="game-tile-cost">1M PTS</div>
+          <div class="game-tile-status" id="status-wheel">READY</div>
+        </div>
+      </div>
+      <div class="game-tile" id="game-mystery">
+        <div class="game-tile-icon">📦</div>
+        <div class="game-tile-info">
+          <div class="game-tile-name">Mystery Box</div>
+          <div class="game-tile-cost">500K PTS</div>
+          <div class="game-tile-status" id="status-mystery">READY</div>
+        </div>
+      </div>
+      <div class="game-tile gold" id="game-highlight">
+        <div class="game-tile-icon">💬</div>
+        <div class="game-tile-info">
+          <div class="game-tile-name">Highlight Message</div>
+          <div class="game-tile-cost">100K PTS</div>
+          <div class="game-tile-status" id="status-highlight">READY</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('brand-l1').textContent = SASI_CONFIG.brand.name;
+
+// ================================================
+// STREAM INFO PANEL — rolling items with live goal bars
+// ================================================
+(function() {
+  const cfg   = SASI_CONFIG.streamInfo;
+  const items = cfg.items;
+  const body  = document.getElementById('info-body');
+  if (!cfg || !items || !items.length) return;
+
+  // Live data cache
+  const liveData = {
+    youtubeSubs: null,
+  };
+
+  // Color map
+  const colorMap = {
+    red:    getComputedStyle(document.documentElement).getPropertyValue('--red').trim()    || '#FF2200',
+    orange: getComputedStyle(document.documentElement).getPropertyValue('--orange').trim() || '#FF7700',
+    gold:   getComputedStyle(document.documentElement).getPropertyValue('--gold').trim()   || '#FFD700',
+  };
+  const resolveColor = c => colorMap[c] || c || colorMap.red;
+
+  // Milestone tiers — auto-rolls to next target as count grows
+  const MILESTONES = [1000, 10000, 50000, 100000, 500000, 1000000];
+  function nextMilestone(current) {
+    for (const m of MILESTONES) if (current < m) return m;
+    return null;
+  }
+  const fnLocale = (SASI_CONFIG.locale && SASI_CONFIG.locale.region) || 'en-IN';
+  function formatNum(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
+    if (n >= 1000)    return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K';
+    return n.toLocaleString(fnLocale);
+  }
+
+  // Create element per item
+  const elements = items.map((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'info-item';
+    el.dataset.index = i;
+
+    if (item.type === 'text') {
+      el.innerHTML = `
+        <div class="info-item-label">${item.label}</div>
+        <div class="info-text-value">${item.value}</div>
+      `;
+    } else if (item.type === 'youtube-goal') {
+      const color = resolveColor(item.color);
+      el.style.setProperty('--goal-color', color);
+      el.innerHTML = `
+        <div class="info-goal-top">
+          <div class="info-item-label">${item.label}</div>
+          <div class="info-goal-nums"><span class="current">—</span><span class="sep">/</span><span class="target">—</span></div>
+        </div>
+        <div class="info-goal-bar"><div class="info-goal-fill"></div></div>
+        <div class="info-goal-pct">Loading…</div>
+      `;
+    } else if (item.type === 'stream-time') {
+      el.innerHTML = `
+        <div class="info-item-label">${item.label}</div>
+        <div class="info-text-value" data-stream-time="1">00:00:00</div>
+      `;
+    } else if (item.type === 'social') {
+      const social = SASI_CONFIG.socials[item.platform];
+      if (social) {
+        el.innerHTML = `
+          <div class="info-item-label">${item.label} ${social.platform}</div>
+          <div class="info-text-value">${social.handle}</div>
+        `;
+      }
+    } else if (item.type === 'discord-qr') {
+      // Free QR API — generates a clean PNG of the Discord invite
+      const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=2&color=050005&bgcolor=ffffff&data=' + encodeURIComponent(item.url);
+      const serverName = item.server || "SASI's Hub";
+      el.innerHTML = `
+        <div class="info-qr">
+          <div class="info-qr-left">
+            <div class="info-item-label">${item.label}</div>
+            <div class="info-qr-brand">
+              <svg class="info-qr-icon" viewBox="0 0 24 24"><path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27 1.33c-.01 0-.02.01-.03.02c-2.72 4.07-3.47 8.03-3.1 11.95c0 .02.01.04.03.05c1.8 1.32 3.53 2.12 5.24 2.65c.03.01.06 0 .07-.02c.4-.55.76-1.13 1.07-1.74c.02-.04 0-.08-.04-.09c-.57-.22-1.11-.48-1.64-.78c-.04-.02-.04-.08-.01-.11c.11-.08.22-.17.33-.25c.02-.02.05-.02.07-.01c3.44 1.57 7.15 1.57 10.55 0c.02-.01.05-.01.07.01c.11.09.22.17.33.26c.04.03.04.09-.01.11c-.52.31-1.07.56-1.64.78c-.04.01-.05.06-.04.09c.32.61.68 1.19 1.07 1.74c.03.01.06.02.09.01c1.72-.53 3.45-1.33 5.25-2.65c.02-.01.03-.03.03-.05c.44-4.53-.73-8.46-3.1-11.95c-.01-.01-.02-.02-.04-.02zM8.52 14.91c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.84 2.12-1.89 2.12zm6.97 0c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.83 2.12-1.89 2.12z"/></svg>
+              <span class="info-qr-name">${serverName}</span>
+            </div>
+            <div class="info-qr-sub">${item.sub || 'Scan to join'}</div>
+          </div>
+          <div class="info-qr-img"><img src="${qrUrl}" alt="QR"></div>
+        </div>
+      `;
+    }
+
+    body.appendChild(el);
+    return el;
+  });
+
+  // ── Gradual counter animation ──
+  // Stores displayed value per element so we can animate from current → new
+  const displayedValue = new WeakMap();
+  const animationFrames = new WeakMap();
+
+  function animateCounter(currentEl, fromVal, toVal, duration = 58000) {
+    // Cancel any in-flight animation for this element
+    if (animationFrames.has(currentEl)) {
+      cancelAnimationFrame(animationFrames.get(currentEl));
+    }
+    const startTime = performance.now();
+    const delta = toVal - fromVal;
+
+    function tick(now) {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      const value = Math.round(fromVal + delta * eased);
+      currentEl.textContent = formatNum(value);
+      displayedValue.set(currentEl, value);
+
+      if (t < 1) {
+        animationFrames.set(currentEl, requestAnimationFrame(tick));
+      } else {
+        animationFrames.delete(currentEl);
+      }
+    }
+    animationFrames.set(currentEl, requestAnimationFrame(tick));
+  }
+
+  // Update a goal item with fresh data — milestone-aware + gradual counter
+  function updateGoalItem(el, current) {
+    const currentEl = el.querySelector('.current');
+    const targetEl  = el.querySelector('.target');
+    const fillEl    = el.querySelector('.info-goal-fill');
+    const pctEl     = el.querySelector('.info-goal-pct');
+
+    if (current == null) {
+      currentEl.textContent = '—';
+      targetEl.textContent  = '—';
+      fillEl.style.width    = '0%';
+      pctEl.textContent     = 'Unavailable';
+      return;
+    }
+
+    const target = nextMilestone(current);
+    if (target == null) {
+      // Past 1M — legendary
+      currentEl.textContent = formatNum(current);
+      targetEl.textContent  = '1M+';
+      fillEl.style.width    = '100%';
+      pctEl.textContent     = 'LEGENDARY · MAX MILESTONE';
+      return;
+    }
+
+    const prevIdx = MILESTONES.indexOf(target) - 1;
+    const floor   = prevIdx >= 0 ? MILESTONES[prevIdx] : 0;
+    const span    = target - floor;
+    const pct = Math.min(100, Math.round(((current - floor) / span) * 100));
+
+    // Gradual counter: animate from last displayed value to new
+    const lastDisplayed = displayedValue.get(currentEl);
+    const fromVal = (lastDisplayed != null) ? lastDisplayed : current;
+    // Animate over slightly less than the poll interval so it finishes before next fetch
+    const animDur = ((cfg.pollInterval || 60) - 2) * 1000;
+    animateCounter(currentEl, fromVal, current, animDur);
+
+    targetEl.textContent = formatNum(target);
+    fillEl.style.width   = pct + '%';
+    pctEl.textContent    = pct + '% to ' + formatNum(target);
+  }
+
+  // Apply live data to all goal items
+  function applyLiveData() {
+    items.forEach((item, i) => {
+      if (item.type === 'youtube-goal') {
+        updateGoalItem(elements[i], liveData.youtubeSubs);
+      }
+    });
+  }
+
+  // Fetch YouTube sub count
+  async function fetchYouTubeSubs() {
+    const secrets = window.SASI_SECRETS && window.SASI_SECRETS.youtube;
+    if (!secrets || !secrets.apiKey || !secrets.channelId || secrets.apiKey.startsWith('YOUR_')) {
+      console.warn('YouTube API key or channel ID not set in secrets.js');
+      return;
+    }
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${secrets.channelId}&key=${secrets.apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.items && data.items[0] && data.items[0].statistics) {
+        liveData.youtubeSubs = parseInt(data.items[0].statistics.subscriberCount, 10);
+        applyLiveData();
+      }
+    } catch (e) {
+      console.warn('YouTube fetch failed:', e);
+    }
+  }
+
+  // Cycling logic
+  let currentIdx = 0;
+  function showItem(i) {
+    elements.forEach((el, idx) => el.classList.toggle('active', idx === i));
+  }
+  showItem(0);
+  setInterval(() => {
+    currentIdx = (currentIdx + 1) % items.length;
+    showItem(currentIdx);
+  }, (cfg.cycleInterval || 6) * 1000);
+
+  // Initial fetch + poll
+  fetchYouTubeSubs();
+  setInterval(fetchYouTubeSubs, (cfg.pollInterval || 60) * 1000);
+
+  // ── Stream time ticker (counts up from page load) ──
+  const streamStart = Date.now();
+  const timeEls = body.querySelectorAll('[data-stream-time]');
+  if (timeEls.length) {
+    function updateStreamTime() {
+      const elapsed = Math.floor((Date.now() - streamStart) / 1000);
+      const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+      const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+      const s = String(elapsed % 60).padStart(2, '0');
+      timeEls.forEach(el => el.textContent = `${h}:${m}:${s}`);
+    }
+    updateStreamTime();
+    setInterval(updateStreamTime, 1000);
+  }
+})();
+
+
+// ================================================
+// SESSION STATS — rolling cards from StreamElements
+// ================================================
+(function() {
+  const POLL_INTERVAL = 60000;    // 60s API refresh
+  const CYCLE_INTERVAL = 4000;    // 4s per card
+
+  // Cards to rotate through (privacy-safe, no money amounts)
+  const STATS = [
+    { id:'topChatter',     label:'TOP CHATTER',       render:() => state.topChatter || '—', sub:() => state.topChatterCount ? state.topChatterCount + ' messages' : '' },
+    { id:'topDonorDay',    label:'TOP DONOR — TODAY', render:() => state.topDonorDay || '—' },
+    { id:'topDonorWeek',   label:'TOP DONOR — WEEK',  render:() => state.topDonorWeek || '—' },
+    { id:'topDonorMonth',  label:'TOP DONOR — MONTH', render:() => state.topDonorMonth || '—' },
+    { id:'viewers',        label:'CURRENT VIEWERS',   render:() => state.viewers != null ? state.viewers : '—' },
+    { id:'newSubs',        label:'NEW SUBS',          render:() => state.newSubs != null ? state.newSubs : '—', sub:() => 'today' },
+    { id:'newMembers',     label:'NEW MEMBERS',       render:() => state.newMembers != null ? state.newMembers : '—', sub:() => 'today' },
+    { id:'latestFollower', label:'LATEST FOLLOWER',   render:() => state.latestFollower || '—' },
+    { id:'latestSub',      label:'LATEST SUBSCRIBER', render:() => state.latestSub || '—' },
+  ];
+
+  const state = {
+    topChatter: null, topChatterCount: null,
+    topDonorDay: null, topDonorWeek: null, topDonorMonth: null,
+    viewers: null,
+    newSubs: null,
+    newMembers: null,
+    latestFollower: null,
+    latestSub: null,
+  };
+
+  const body = document.getElementById('stats-body');
+  if (!body) return;
+
+  // Create DOM items
+  const elements = STATS.map(s => {
+    const el = document.createElement('div');
+    el.className = 'stat-item';
+    el.innerHTML =
+      '<div class="stat-label">' + s.label + '</div>' +
+      '<div class="stat-value" id="sv-' + s.id + '">—</div>' +
+      '<div class="stat-sub" id="ss-' + s.id + '"></div>';
+    body.appendChild(el);
+    return el;
+  });
+
+  function updateValues() {
+    STATS.forEach(stat => {
+      const vEl = document.getElementById('sv-' + stat.id);
+      const sEl = document.getElementById('ss-' + stat.id);
+      if (vEl) vEl.textContent = stat.render();
+      if (sEl && stat.sub) sEl.textContent = stat.sub();
+    });
+  }
+
+  let activeIdx = 0;
+  function showCurrent() {
+    elements.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+    updateValues();
+  }
+
+  function nextCard() {
+    activeIdx = (activeIdx + 1) % elements.length;
+    showCurrent();
+  }
+
+  showCurrent();
+  setInterval(nextCard, CYCLE_INTERVAL);
+
+  // ── StreamElements data fetch ──
+  function getActiveJWT() {
+    const platform = (window.SASI_CONFIG && SASI_CONFIG.activePlatform) || 'youtube';
+    const se = window.SASI_SECRETS && window.SASI_SECRETS.streamelements;
+    if (!se) return null;
+    const acc = se[platform];
+    if (!acc || !acc.jwt || acc.jwt.startsWith('PASTE_')) return null;
+    return acc.jwt;
+  }
+
+  let channelId = null;
+  async function getChannelId(jwt) {
+    if (channelId) return channelId;
+    try {
+      const res = await fetch('https://api.streamelements.com/kappa/v2/channels/me', {
+        headers: { 'Authorization': 'Bearer ' + jwt }
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      channelId = data._id;
+      return channelId;
+    } catch(e) { return null; }
+  }
+
+  async function fetchStats() {
+    const jwt = getActiveJWT();
+    if (!jwt) return;
+    const id = await getChannelId(jwt);
+    if (!id) return;
+
+    try {
+      const res = await fetch('https://api.streamelements.com/kappa/v2/sessions/' + id, {
+        headers: { 'Authorization': 'Bearer ' + jwt }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const d = data.data || {};
+
+      // Latest follower
+      if (d['follower-latest'] && d['follower-latest'].username) {
+        state.latestFollower = d['follower-latest'].username;
+      }
+      // Latest subscriber
+      if (d['subscriber-latest'] && d['subscriber-latest'].username) {
+        state.latestSub = d['subscriber-latest'].username;
+      }
+      // Top donor today (from session)
+      if (d['tip-session-top-donation'] && d['tip-session-top-donation'].username) {
+        state.topDonorDay = d['tip-session-top-donation'].username;
+      }
+      // Today's totals
+      if (d['subscriber-session']) state.newSubs = d['subscriber-session'].count || 0;
+      if (d['merch-latest']) {} // placeholder
+      // SE doesn't expose member count separately on YouTube — fallback to subscriber
+      if (d['subscriber-session']) state.newMembers = d['subscriber-session'].count || 0;
+    } catch(e) { console.warn('[Stats] fetch failed', e); }
+
+    // Weekly + monthly top donor (leaderboard endpoints)
+    try {
+      const headers = { 'Authorization': 'Bearer ' + jwt };
+      // Week
+      const wRes = await fetch('https://api.streamelements.com/kappa/v2/tips/' + id + '/leaderboard?period=week&limit=1&offset=0', { headers });
+      if (wRes.ok) {
+        const wData = await wRes.json();
+        if (wData && wData.users && wData.users[0]) state.topDonorWeek = wData.users[0].username;
+      }
+      // Month
+      const mRes = await fetch('https://api.streamelements.com/kappa/v2/tips/' + id + '/leaderboard?period=month&limit=1&offset=0', { headers });
+      if (mRes.ok) {
+        const mData = await mRes.json();
+        if (mData && mData.users && mData.users[0]) state.topDonorMonth = mData.users[0].username;
+      }
+    } catch(e) { console.warn('[Stats] leaderboard fetch failed', e); }
+
+    // YouTube concurrent viewers (uses YouTube Data API, not SE)
+    try {
+      const yt = window.SASI_SECRETS && window.SASI_SECRETS.youtube;
+      const videoId = localStorage.getItem('sasi_liveVideoId') || (window.SASI_CONFIG && SASI_CONFIG.liveVideoId);
+      if (yt && yt.apiKey && videoId) {
+        const url = 'https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=' + videoId + '&key=' + yt.apiKey;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.items && data.items[0] && data.items[0].liveStreamingDetails) {
+          const v = data.items[0].liveStreamingDetails.concurrentViewers;
+          if (v != null) state.viewers = parseInt(v);
+        }
+      }
+    } catch(e) {}
+  }
+
+  function start() {
+    const streamLive = localStorage.getItem('sasi_streamLive');
+    const isFake = window.SASI_CONFIG && SASI_CONFIG.fakeAlerts;
+
+    if (isFake) {
+      state.topChatter = 'NeonViper42';
+      state.topChatterCount = 47;
+      state.topDonorDay = 'DragonByte';
+      state.topDonorWeek = 'CrimsonAce';
+      state.topDonorMonth = 'ShadowReaper';
+      state.viewers = 234;
+      state.newSubs = 8;
+      state.newMembers = 3;
+      state.latestFollower = 'MidnightHawk';
+      state.latestSub = 'SuperGamer';
+      updateValues();
+      return;
+    }
+
+    if (streamLive === 'false') {
+      setTimeout(start, 5000);
+      return;
+    }
+
+    fetchStats();
+    setInterval(fetchStats, POLL_INTERVAL);
+  }
+  start();
+})();
+
+// ================================================
+// VIEWER GAMES — Wheel, Mystery Box, Highlighted Message
+// All gated by SE loyalty points
+// ================================================
+(function() {
+  // ── Game configs ──
+  const GAMES = {
+    wheel: {
+      cost: 1000000,
+      cooldown: 5 * 60 * 1000,
+      fakeInterval: 3 * 60 * 1000,  // 3 min in fake (was 1 min)
+    },
+    mystery: {
+      cost: 500000,
+      cooldown: 5 * 60 * 1000,
+      fakeInterval: 3 * 60 * 1000,
+    },
+    highlight: {
+      cost: 100000,
+      cooldown: 60 * 1000,
+      fakeInterval: 2 * 60 * 1000,
+    },
+  };
+
+  // Wheel challenges
+  const WHEEL_SEGMENTS = [
+    { label:'10 PUSHUPS',    color:'#FF2200' },
+    { label:'SING SONG',     color:'#FF7700' },
+    { label:'FUNNY ACCENT',  color:'#FFD700' },
+    { label:'DANCE 30s',     color:'#FF2200' },
+    { label:'MEME REVIEW',   color:'#FF7700' },
+    { label:'BHOJPURI MODE', color:'#FFD700' },
+    { label:'RAGE QUIT',     color:'#FF2200' },
+    { label:'EAT SPICY',     color:'#FF7700' },
+  ];
+
+  // Mystery Box rewards
+  const MYSTERY_REWARDS = [
+    'PICK NEXT GAME',
+    'CHOOSE NEXT SONG',
+    'SHOUTOUT 30s',
+    'CUSTOM EMOTE',
+    'NAME IN OUTRO',
+    'FIRST DIBS NEXT STREAM',
+    'ROAST ME 1 MIN',
+    'CHALLENGE ME',
+  ];
+
+  // Cooldown tracking (last spin time per game)
+  const cooldowns = { wheel: 0, mystery: 0, highlight: 0 };
+
+  // ── DOM refs ──
+  const wheelModal = document.getElementById('wheel');
+  const wheelSvg = document.getElementById('wheel-svg');
+
+  if (!wheelModal || !wheelSvg) return;
+
+  // ── Render wheel SVG segments ──
+  const cx = 100, cy = 100, r = 95;
+  const angle = 360 / WHEEL_SEGMENTS.length;
+  function polar(deg) {
+    const rad = (deg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+  let svgContent = '';
+  for (let i = 0; i < WHEEL_SEGMENTS.length; i++) {
+    const startA = i * angle, endA = (i + 1) * angle;
+    const start = polar(startA), end = polar(endA);
+    const largeArc = angle > 180 ? 1 : 0;
+    const path = `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+    svgContent += `<path d="${path}" fill="${WHEEL_SEGMENTS[i].color}" opacity="0.85" stroke="rgba(0,0,0,.4)" stroke-width="1"/>`;
+    const labelA = startA + angle / 2;
+    const lr = r * 0.62;
+    const lp = { x: cx + lr * Math.cos((labelA - 90) * Math.PI / 180), y: cy + lr * Math.sin((labelA - 90) * Math.PI / 180) };
+    svgContent += `<text x="${lp.x}" y="${lp.y}" fill="#fff" font-size="9" font-weight="900" text-anchor="middle" dominant-baseline="middle" transform="rotate(${labelA} ${lp.x} ${lp.y})">${WHEEL_SEGMENTS[i].label.split(' ')[0]}</text>`;
+  }
+  wheelSvg.innerHTML = svgContent;
+
+  // ── Cooldown UI helper ──
+  function startCooldown(gameId) {
+    cooldowns[gameId] = Date.now();
+    const tile = document.getElementById('game-' + gameId);
+    const status = document.getElementById('status-' + gameId);
+    const cdBar = document.getElementById('cd-' + gameId);
+    if (!tile) return;
+
+    tile.classList.add('locked');
+    status.textContent = 'COOLDOWN';
+    const dur = GAMES[gameId].cooldown;
+    cdBar.style.transition = 'none';
+    cdBar.style.width = '100%';
+    requestAnimationFrame(() => {
+      cdBar.style.transition = 'width ' + (dur / 1000) + 's linear';
+      cdBar.style.width = '0%';
+    });
+    setTimeout(() => {
+      tile.classList.remove('locked');
+      status.textContent = 'READY';
+    }, dur);
+  }
+
+  function isOnCooldown(gameId) {
+    return Date.now() - cooldowns[gameId] < GAMES[gameId].cooldown;
+  }
+
+  // ── Wheel spin ──
+  let totalDeg = 0;
+  function spinWheel(username) {
+    if (isOnCooldown('wheel')) { console.log('[Wheel] On cooldown'); return; }
+    startCooldown('wheel');
+
+    const winIdx = Math.floor(Math.random() * WHEEL_SEGMENTS.length);
+    const segment = WHEEL_SEGMENTS[winIdx];
+    const segCenter = winIdx * angle + angle / 2;
+    const target = 360 - segCenter;
+    const spins = 6 + Math.floor(Math.random() * 3);
+    totalDeg += spins * 360 + target;
+
+    wheelModal.classList.add('active', 'spinning');
+    wheelModal.style.setProperty('--spin-deg', totalDeg + 'deg');
+
+    setTimeout(() => {
+      wheelModal.classList.remove('active');
+      wheelModal.classList.remove('spinning');
+      // Notification on ALL scenes
+      if (window.SASI_NOTIFY) {
+        window.SASI_NOTIFY.add({
+          type: 'wheel',
+          title: '★ JACKPOT WINNER ★',
+          user: '@' + username,
+          body: segment.label,
+          duration: 60000, // 1 min — long enough to see, short enough not to stack
+        });
+      }
+    }, 4500);
+  }
+
+  // ── Mystery Box ──
+  function openMystery(username) {
+    if (isOnCooldown('mystery')) { console.log('[Mystery] On cooldown'); return; }
+    startCooldown('mystery');
+
+    const reward = MYSTERY_REWARDS[Math.floor(Math.random() * MYSTERY_REWARDS.length)];
+    if (window.SASI_NOTIFY) {
+      window.SASI_NOTIFY.add({
+        type: 'wheel',
+        title: '📦 MYSTERY BOX OPENED',
+        user: '@' + username,
+        body: reward,
+        duration: 60000,
+      });
+    }
+  }
+
+  // ── Highlighted Message ──
+  function highlightMessage(username, message) {
+    if (isOnCooldown('highlight')) { console.log('[Highlight] On cooldown'); return; }
+    if (!message) return;
+    startCooldown('highlight');
+
+    if (window.SASI_NOTIFY) {
+      window.SASI_NOTIFY.add({
+        type: 'wheel',
+        title: '💬 HIGHLIGHTED MESSAGE',
+        user: '@' + username,
+        body: message.slice(0, 80),
+        duration: 45000,
+      });
+    }
+  }
+
+
+  // ── Public APIs ──
+  window.SPIN_WHEEL = function(username) { if (username) spinWheel(username); };
+  window.OPEN_MYSTERY = function(username) { if (username) openMystery(username); };
+  window.HIGHLIGHT_MSG = function(username, msg) { if (username && msg) highlightMessage(username, msg); };
+
+  // ── Manual click triggers (testing) ──
+  document.getElementById('game-wheel').addEventListener('click', () => spinWheel('TestUser'));
+  document.getElementById('game-mystery').addEventListener('click', () => openMystery('TestUser'));
+  document.getElementById('game-highlight').addEventListener('click', () => highlightMessage('TestUser', 'Hello stream this is a test message!'));
+
+  // ── Game tiles rotation — one at a time, cycling every 4s ──
+  (function() {
+    const tiles = document.querySelectorAll('.games-frame .game-tile');
+    if (tiles.length < 2) return;
+    let idx = 0;
+    setInterval(() => {
+      tiles[idx].classList.remove('active');
+      idx = (idx + 1) % tiles.length;
+      tiles[idx].classList.add('active');
+    }, 4000);
+  })();
+
+  // ── Auto-trigger in fake mode for preview ──
+  if (window.SASI_CONFIG && SASI_CONFIG.fakeAlerts) {
+    const FAKE_USERS = ['NeonViper42','DragonByte','ShadowReaper','SuperGamer','CrimsonAce'];
+    const FAKE_MSGS = [
+      'Sasi this stream is fire bro',
+      'I have been watching for 3 years now',
+      'Bhai aaj ka stream zabardast hai',
+      'Love your content keep it up',
+      'When are you visiting Mumbai?',
+    ];
+
+    function pickUser() { return FAKE_USERS[Math.floor(Math.random() * FAKE_USERS.length)]; }
+
+    // Staggered start so they don't fire together
+    setTimeout(function fakeWheelLoop() {
+      spinWheel(pickUser());
+      setTimeout(fakeWheelLoop, GAMES.wheel.fakeInterval);
+    }, 10000);  // first wheel at 10s
+
+    setTimeout(function fakeMysteryLoop() {
+      openMystery(pickUser());
+      setTimeout(fakeMysteryLoop, GAMES.mystery.fakeInterval);
+    }, 25000); // first mystery at 25s
+
+    setTimeout(function fakeHighlightLoop() {
+      highlightMessage(pickUser(), FAKE_MSGS[Math.floor(Math.random() * FAKE_MSGS.length)]);
+      setTimeout(fakeHighlightLoop, GAMES.highlight.fakeInterval);
+    }, 40000); // first highlight at 40s
+  }
+})();
+</script>
+<script>
+// === Live updates from dashboard (sasi-studio v2) ===
+if (window.registerLiveUpdater) {
+  registerLiveUpdater('brand_name',    liveUpdate.text('.brand-l1, #brand-l1'));
+  registerLiveUpdater('cRed',    liveUpdate.cssVar('--red'));
+  registerLiveUpdater('cOrange', liveUpdate.cssVar('--orange'));
+  registerLiveUpdater('cGold',   liveUpdate.cssVar('--gold'));
+  applyLiveUpdaters();
+}
+</script>
+</body>
+</html>

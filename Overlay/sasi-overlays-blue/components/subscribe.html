@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sasi Streams — Subscribe Strip</title>
+<script src="../config.js"></script>
+<style>
+:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:transparent;
+  font-family:'Inter','Helvetica Neue',Arial,sans-serif;
+  color:#fff;
+}
+
+.strip {
+  position:absolute;
+  bottom:110px; left:0; right:0;
+  height:64px;
+  background:
+    linear-gradient(180deg, rgba(8,0,2,.82) 0%, rgba(4,0,1,.92) 50%, rgba(8,0,2,.82) 100%);
+  display:flex; align-items:center;
+  overflow:hidden;
+  opacity:0; animation:stripIn .6s ease forwards;
+}
+@keyframes stripIn { to { opacity:1; } }
+
+.strip::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.55) 12%, rgba(255,34,0,.55) 88%, transparent);
+}
+.strip::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.35) 12%, rgba(255,34,0,.35) 88%, transparent);
+}
+
+.strip-mask {
+  position:absolute; inset:0;
+  background:linear-gradient(90deg, rgba(5,0,5,1) 0%, transparent 5%, transparent 95%, rgba(5,0,5,1) 100%);
+  pointer-events:none; z-index:5;
+}
+
+.track {
+  display:flex; align-items:center;
+  flex-shrink:0;
+  white-space:nowrap;
+  will-change:transform;
+  animation:scrollLR 22s linear infinite;
+}
+@keyframes scrollLR {
+  from { transform:translateX(-50%); }
+  to   { transform:translateX(0); }
+}
+
+.item {
+  display:inline-flex; align-items:center; gap:10px;
+  padding:0 22px;
+}
+.item-icon {
+  display:flex; align-items:center; justify-content:center;
+  width:34px; height:34px;
+  flex-shrink:0;
+}
+.item-icon svg {
+  width:100%; height:100%;
+  fill:#fff;
+}
+.item-text {
+  font-size:26px;
+  font-weight:900;
+  font-style:italic;
+  letter-spacing:.5px;
+  color:var(--red);
+  text-shadow:0 0 12px rgba(255,34,0,.4);
+  white-space:nowrap;
+}
+</style>
+</head>
+<body>
+
+<div class="strip">
+  <div class="track" id="track"></div>
+  <div class="strip-mask"></div>
+</div>
+
+<script>
+// Play button icon
+const ICON_SVG = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+const TEXT = (window.SASI_CONFIG && SASI_CONFIG.subscribe && SASI_CONFIG.subscribe.tickerItems && SASI_CONFIG.subscribe.tickerItems[0]) || 'SUBSCRIBE';
+
+const REPEAT = 18;
+function rebuildTrack(text) {
+  const t = text || TEXT;
+  const h = Array.from({length: REPEAT}, () =>
+    `<div class="item"><div class="item-icon">${ICON_SVG}</div><div class="item-text">${t}</div></div>`
+  ).join('');
+  document.getElementById('track').innerHTML = h + h;
+}
+rebuildTrack(TEXT);
+</script>
+
+<script src="../lib/live-update.js"></script>
+<script>
+// Sasi Studio v2 — live updates from dashboard
+if (window.registerLiveUpdater) {
+  registerLiveUpdater('sub_items', (v) => rebuildTrack(v));
+  registerLiveUpdater('cRed',    liveUpdate.cssVar('--red'));
+  registerLiveUpdater('cOrange', liveUpdate.cssVar('--orange'));
+  registerLiveUpdater('cGold',   liveUpdate.cssVar('--gold'));
+  applyLiveUpdaters();
+}
+</script>
+
+</body>
+</html>
