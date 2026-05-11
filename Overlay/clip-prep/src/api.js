@@ -895,6 +895,86 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
+  // ===== THEME CONFIG (lib/config.js) =====
+  // The active theme's lib/config.js holds the SASI_CONFIG object with
+  // brand text, colors, social handles, scene-specific copy, etc. Scenes
+  // read SASI_CONFIG at load time. Dashboard edits the JSON shape via
+  // these endpoints; saving writes the file back. To see edits in OBS,
+  // refresh the Browser Source after save.
+  //
+  // Replaces the previous live-edit framework (localStorage + postMessage)
+  // which couldn't propagate to OBS's embedded CEF browser anyway.
+
+  function configPath() {
+    if (!installDir) return null;
+    return path.join(installDir, 'sasi-overlays', 'lib', 'config.js');
+  }
+
+  // Parse the SASI_CONFIG = {...} block out of config.js.
+  // Tolerant of `const SASI_CONFIG = {...}` and `window.SASI_CONFIG = {...}` shapes.
+  // Comments inside the object are stripped during parse (JS Function eval handles them).
+  function parseConfigFile(text) {
+    // Find the start of the assignment. Anchors handle either declaration style.
+    const m = text.match(/(?:const|let|var)?\s*(?:window\.)?SASI_CONFIG\s*=\s*(\{[\s\S]*?\})\s*;?\s*(?:window\.SASI_CONFIG|$)/);
+    if (!m) return null;
+    try {
+      // Evaluate as a JS expression so we get a real object (handles comments,
+      // single-quote strings, unquoted keys, trailing commas — all of which
+      // pure JSON.parse would reject).
+      return new Function('return ' + m[1])();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function serializeConfigFile(obj) {
+    const json = JSON.stringify(obj, null, 2);
+    return `// ============================================================
+//  SASI STUDIO — overlay config (edited by dashboard)
+//  All overlay scenes read this object at load time.
+//  Edit via the dashboard's Overlays tab, or hand-edit directly.
+//  Save + refresh OBS Browser Source to apply.
+// ============================================================
+
+const SASI_CONFIG = ${json};
+window.SASI_CONFIG = SASI_CONFIG;
+`;
+  }
+
+  app.get('/config', async (_req, res) => {
+    const p = configPath();
+    if (!p) return res.status(500).json({ error: 'installDir not configured' });
+    try {
+      if (!existsSync(p)) return res.status(404).json({ error: 'config.js not found in active theme' });
+      const text = await fs.readFile(p, 'utf8');
+      const parsed = parseConfigFile(text);
+      if (!parsed) return res.status(500).json({ error: 'could not parse SASI_CONFIG in config.js' });
+      res.json({ config: parsed });
+    } catch (err) {
+      log.error(`GET /config failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put('/config', async (req, res) => {
+    const p = configPath();
+    if (!p) return res.status(500).json({ error: 'installDir not configured' });
+    const incoming = req.body && req.body.config;
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+      return res.status(400).json({ error: 'body must be { config: <object> }' });
+    }
+    try {
+      const dir = path.dirname(p);
+      if (!existsSync(dir)) await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(p, serializeConfigFile(incoming), { encoding: 'utf8' });
+      log.info('config.js updated via API');
+      res.json({ ok: true });
+    } catch (err) {
+      log.error(`PUT /config failed: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // POST /upload-scene — body: { filename, html }
   // Custom overlay HTML → install dir's sasi-overlays/scenes/<filename>.
   // Returns the file:// URL the user can paste into OBS browser source.
