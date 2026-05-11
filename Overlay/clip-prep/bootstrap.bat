@@ -151,15 +151,15 @@ if exist "!_OVL_DIR!\dashboard.html" (
     robocopy "!_OVL_DIR!\sasi-overlays" "!INSTALL_DIR!\sasi-overlays" /E /XF secrets.js /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
   )
   rem  Also vendor any sibling theme folders (sasi-overlays-<name>/) so the
-  rem  dashboard's theme cards row has alternates to switch to. Glob matches
-  rem  every directory whose name starts with "sasi-overlays-". On a fresh
-  rem  iex install, the repo only carries the sample themes we ship (blue,
-  rem  purple, minimal) plus whatever the user has committed.
-  for /d %%T in ("!_OVL_DIR!\sasi-overlays-*") do (
-    set "_TNAME=%%~nT"
-    if not exist "!INSTALL_DIR!\!_TNAME!" mkdir "!INSTALL_DIR!\!_TNAME!"
-    robocopy "%%T" "!INSTALL_DIR!\!_TNAME!" /E /XF secrets.js /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
+  rem  dashboard's theme cards row has alternates to switch to. pushd-based
+  rem  loop so %%T resolves to a bare folder name (no path) — `%%~nT` inside
+  rem  delayed-expansion blocks tripped CMD's parser on some setups.
+  pushd "!_OVL_DIR!" >nul
+  for /d %%T in (sasi-overlays-*) do (
+    if not exist "!INSTALL_DIR!\%%T" mkdir "!INSTALL_DIR!\%%T"
+    robocopy "%%T" "!INSTALL_DIR!\%%T" /E /XF secrets.js /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
   )
+  popd >nul
   rem  Preserve real keys: if the repo has a local Overlay/sasi-secrets.js
   rem  (gitignored — only exists on the developer's machine, not on iex
   rem  fresh clones), vendor it into the install dir UNLESS one already
@@ -169,6 +169,15 @@ if exist "!_OVL_DIR!\dashboard.html" (
       copy /Y "!_OVL_DIR!\sasi-secrets.js" "!INSTALL_DIR!\sasi-secrets.js" >nul
       echo   sasi-secrets.js vendored from local repo (one-time on fresh install).
     )
+  )
+  rem  Vendor the default OBS bundle if the repo ships one. install.bat will
+  rem  auto-import it iff the user has no existing OBS scene collections —
+  rem  i.e. truly first-time setup. The bundle is committed at
+  rem  Overlay/default-bundle/ (see .gitignore exception).
+  if exist "!_OVL_DIR!\default-bundle" (
+    if not exist "!INSTALL_DIR!\default-bundle" mkdir "!INSTALL_DIR!\default-bundle"
+    robocopy "!_OVL_DIR!\default-bundle" "!INSTALL_DIR!\default-bundle" /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
+    echo   Default OBS bundle copied (install.bat will auto-import if fresh OBS).
   )
   echo   Engine + active theme + sibling themes copied to install dir.
 ) else (
