@@ -15,10 +15,17 @@
 [CmdletBinding()]
 param(
   [string]$Version = '32.1.2',
-  [string]$InstallRoot = 'C:\Program Files\obs-studio'
+  # Default to a per-user path that doesn't need admin. bootstrap.bat's
+  # OBS detection check looks at this path too (alongside Program Files),
+  # so the dashboard's "OBS already installed" gate passes after extract.
+  [string]$InstallRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not $InstallRoot) {
+  $InstallRoot = Join-Path $env:LOCALAPPDATA 'Programs\obs-studio'
+}
 
 $obs64 = Join-Path $InstallRoot 'bin\64bit\obs64.exe'
 if (Test-Path -LiteralPath $obs64) {

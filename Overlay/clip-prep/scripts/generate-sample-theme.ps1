@@ -17,6 +17,14 @@ param(
 
 $ErrorActionPreference = 'Continue'
 
+# CMD-to-PowerShell quoting fix: install.bat calls this as
+#   powershell -File ... -InstallDir "!SCRIPT_DIR!"
+# !SCRIPT_DIR! ends with \, so the trailing \" gets parsed by PowerShell's
+# argument splitter as an escaped quote. The arg arrives with a literal "
+# at the end, which produces paths like C:\...\clip-prep"\sasi-overlays
+# and Test-Path / Join-Path explode with "Illegal characters in path."
+$InstallDir = $InstallDir.TrimEnd('"').TrimEnd('\','/')
+
 $source = Join-Path $InstallDir 'sasi-overlays'
 $dest   = Join-Path $InstallDir 'sasi-overlays-sample-blue'
 
