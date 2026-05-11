@@ -66,22 +66,47 @@ if errorlevel 1 (
 )
 
 rem ---------- Step 2: OBS Studio ----------
+rem  Detection looks at multiple paths because OBS can land in any of them
+rem  depending on machine arch + how it was installed (msi/portable/winget).
 echo.
 echo [2/5] Checking OBS Studio...
+set "_OBS_FOUND="
+if exist "C:\Program Files\obs-studio\bin\64bit\obs64.exe"          set "_OBS_FOUND=C:\Program Files\obs-studio\bin\64bit\obs64.exe"
+if not defined _OBS_FOUND if exist "C:\Program Files (x86)\obs-studio\bin\64bit\obs64.exe" set "_OBS_FOUND=C:\Program Files (x86)\obs-studio\bin\64bit\obs64.exe"
+if not defined _OBS_FOUND if exist "%LOCALAPPDATA%\Programs\obs-studio\bin\64bit\obs64.exe" set "_OBS_FOUND=%LOCALAPPDATA%\Programs\obs-studio\bin\64bit\obs64.exe"
+if defined _OBS_FOUND goto :_obs_done
+
+echo OBS Studio not found. Trying winget first...
+winget install --id=OBSProject.OBSStudio --silent --accept-source-agreements --accept-package-agreements
+rem  winget's exit code doesn't always reflect inner installer success
+rem  (NSIS exit code 6 = "files in use" gets swallowed). Trust the file
+rem  system instead: if obs64.exe exists at the canonical path now, win.
 if exist "C:\Program Files\obs-studio\bin\64bit\obs64.exe" (
-  echo OBS Studio: already installed.
-) else (
-  echo OBS Studio not found. Installing via winget...
-  winget install --id=OBSProject.OBSStudio --silent --accept-source-agreements --accept-package-agreements
-  if errorlevel 1 (
-    echo.
-    echo WARNING: winget OBS install failed or was cancelled.
-    echo Install manually from https://obsproject.com/download then re-run bootstrap.
-    echo ^(continuing - clip-prep itself doesn't need OBS to run^)
-  ) else (
-    echo OBS Studio installed.
-  )
+  echo OBS Studio installed via winget.
+  set "_OBS_FOUND=C:\Program Files\obs-studio\bin\64bit\obs64.exe"
+  goto :_obs_done
 )
+
+echo.
+echo winget install did not produce obs64.exe (likely a Chromium/CEF process
+echo locked CEF DLLs - Brave, Chrome, Edge, Discord, VSCode, etc.).
+echo Falling back to the official portable .zip download...
+powershell -NoProfile -ExecutionPolicy Bypass -File "!REPO_CLIPPREP!scripts\install-obs-portable.ps1"
+if exist "C:\Program Files\obs-studio\bin\64bit\obs64.exe" (
+  set "_OBS_FOUND=C:\Program Files\obs-studio\bin\64bit\obs64.exe"
+  goto :_obs_done
+)
+
+echo.
+echo WARNING: OBS Studio could not be installed automatically.
+echo Install manually from https://obsproject.com/download then re-run bootstrap.
+echo ^(continuing - clip-prep itself doesn't need OBS to run^)
+goto :_obs_after
+
+:_obs_done
+echo OBS Studio: !_OBS_FOUND!
+
+:_obs_after
 
 rem ---------- Step 3: ffmpeg ----------
 echo.
