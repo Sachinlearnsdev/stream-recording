@@ -98,34 +98,30 @@ if errorlevel 1 (
 rem ---------- Step 4e: Auto-import default OBS bundle on truly-fresh OBS ----------
 rem  If the user has NO existing OBS scene collections (truly first run) AND
 rem  the repo vendored a default-bundle, import it so they start with working
-rem  scenes instead of an empty OBS. On subsequent installs / re-runs with
-rem  existing scenes, this is skipped so we don't trample user setup.
+rem  scenes instead of an empty OBS. Flat goto-based flow — nested parens with
+rem  delayed expansion misparse on some CMD versions ("." was unexpected ...).
 echo.
 echo [4e/5] Checking for default OBS bundle auto-import...
 set "_OBS_SCENES_DIR=%APPDATA%\obs-studio\basic\scenes"
-set "_DO_IMPORT=0"
-if exist "!SCRIPT_DIR!default-bundle" (
-  if not exist "!_OBS_SCENES_DIR!" (
-    set "_DO_IMPORT=1"
-  ) else (
-    dir /b /a-d "!_OBS_SCENES_DIR!\*.json" 2>nul | findstr "." >nul
-    if errorlevel 1 set "_DO_IMPORT=1"
-  )
-)
-if "!_DO_IMPORT!"=="1" (
-  echo   No existing OBS scene collections — importing vendored default bundle...
-  powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\obs-import.ps1" -RepoRoot "!SCRIPT_DIR!" -BundleSubdir "default-bundle" -LuaPath "!SCRIPT_DIR!obs\game-tracker.lua"
-  if errorlevel 1 (
-    echo Note: default bundle import failed ^(non-fatal^). Use the dashboard's Import OBS Bundle button manually.
-  )
-) else (
-  if exist "!SCRIPT_DIR!default-bundle" (
-    echo   Existing OBS scene collections detected — skipping auto-import to preserve your setup.
-    echo   To replace with the default bundle, use the dashboard's Import OBS Bundle button.
-  ) else (
-    echo   No vendored default-bundle in install dir; skipping auto-import.
-  )
-)
+if not exist "!SCRIPT_DIR!default-bundle" goto :_bundle_skip_none
+rem  Bundle is vendored. Decide whether to import based on existing OBS state.
+if not exist "!_OBS_SCENES_DIR!"        goto :_bundle_do_import
+dir /b /a-d "!_OBS_SCENES_DIR!\*.json" 2>nul | findstr "." >nul
+if errorlevel 1 goto :_bundle_do_import
+echo   Existing OBS scene collections detected — skipping auto-import to preserve your setup.
+echo   To replace with the default bundle, use the dashboard's Import OBS Bundle button.
+goto :_bundle_done
+
+:_bundle_do_import
+echo   No existing OBS scene collections — importing vendored default bundle...
+powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\obs-import.ps1" -RepoRoot "!SCRIPT_DIR!" -BundleSubdir "default-bundle" -LuaPath "!SCRIPT_DIR!obs\game-tracker.lua"
+if errorlevel 1 echo Note: default bundle import failed ^(non-fatal^). Use the dashboard's Import OBS Bundle button manually.
+goto :_bundle_done
+
+:_bundle_skip_none
+echo   No vendored default-bundle in install dir; skipping auto-import.
+
+:_bundle_done
 
 rem ---------- Step 5: Start it now + open dashboard ----------
 echo.

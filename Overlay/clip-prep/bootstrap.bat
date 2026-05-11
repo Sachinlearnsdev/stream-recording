@@ -111,12 +111,14 @@ rem ---------- Step 4: Copy clip-prep into install dir ----------
 echo.
 echo [4/5] Copying clip-prep into !INSTALL_DIR!...
 if not exist "!INSTALL_DIR!" mkdir "!INSTALL_DIR!"
-rem  %~dp0 always ends with \, but "...\" terminates the quoted string with
-rem  an escaped quote and breaks robocopy's arg parsing. Strip trailing slash.
+rem  %~dp0 always ends with \. Strip it so robocopy doesn't see "...\\".
 set "_SRC_DIR=!REPO_CLIPPREP!"
 if "!_SRC_DIR:~-1!"=="\" set "_SRC_DIR=!_SRC_DIR:~0,-1!"
-set "_OVL_DIR=!OVERLAY_SRC_DIR!"
-if "!_OVL_DIR:~-1!"=="\" set "_OVL_DIR=!_OVL_DIR:~0,-1!"
+
+rem  Resolve OVERLAY_SRC_DIR to an absolute path (eliminates the trailing
+rem  \.. that REPO_CLIPPREP/.. produces). Using `for %%I in ("...") do
+rem  set "_OVL_DIR=%%~fI"` is the canonical CMD way to normalize a path.
+for %%I in ("!OVERLAY_SRC_DIR!") do set "_OVL_DIR=%%~fI"
 
 robocopy "!_SRC_DIR!" "!INSTALL_DIR!" /E ^
   /XD node_modules .git ^
@@ -129,60 +131,58 @@ if !ERRORLEVEL! GEQ 8 (
   exit /b 1
 )
 
-rem  Copy Sasi Studio engine files (dashboard + tokens + secrets template) and
-rem  the active theme as a subfolder. Layout at install dir is:
-rem    !INSTALL_DIR!\dashboard.html              (engine)
-rem    !INSTALL_DIR!\tokens.css                  (engine)
-rem    !INSTALL_DIR!\sasi-secrets.example.js     (template, real keys at sasi-secrets.js)
-rem    !INSTALL_DIR!\sasi-overlays\              (active theme — swappable by rename)
-rem    !INSTALL_DIR!\sasi-overlays-<name>\       (additional themes — inactive)
-if exist "!_OVL_DIR!\dashboard.html" (
-  copy /Y "!_OVL_DIR!\dashboard.html" "!INSTALL_DIR!\dashboard.html" >nul
-  if exist "!_OVL_DIR!\dashboard-old.html" copy /Y "!_OVL_DIR!\dashboard-old.html" "!INSTALL_DIR!\dashboard-old.html" >nul
-  if exist "!_OVL_DIR!\dashboard-v1.html" copy /Y "!_OVL_DIR!\dashboard-v1.html" "!INSTALL_DIR!\dashboard-v1.html" >nul
-  if exist "!_OVL_DIR!\tokens.css" copy /Y "!_OVL_DIR!\tokens.css" "!INSTALL_DIR!\tokens.css" >nul
-  if exist "!_OVL_DIR!\sasi-secrets.example.js" copy /Y "!_OVL_DIR!\sasi-secrets.example.js" "!INSTALL_DIR!\sasi-secrets.example.js" >nul
-  rem  Copy active theme folder (sasi-overlays/) as a subfolder of install dir.
-  rem  Themes get swapped via folder rename; OBS browser sources point at the
-  rem  stable subpath so they keep working across swaps.
-  if exist "!_OVL_DIR!\sasi-overlays" (
-    if not exist "!INSTALL_DIR!\sasi-overlays" mkdir "!INSTALL_DIR!\sasi-overlays"
-    rem  /XF excludes secrets.js so we never overwrite the user's real keys.
-    robocopy "!_OVL_DIR!\sasi-overlays" "!INSTALL_DIR!\sasi-overlays" /E /XF secrets.js /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
-  )
-  rem  Also vendor any sibling theme folders (sasi-overlays-<name>/) so the
-  rem  dashboard's theme cards row has alternates to switch to. pushd-based
-  rem  loop so %%T resolves to a bare folder name (no path) — `%%~nT` inside
-  rem  delayed-expansion blocks tripped CMD's parser on some setups.
-  pushd "!_OVL_DIR!" >nul
-  for /d %%T in (sasi-overlays-*) do (
-    if not exist "!INSTALL_DIR!\%%T" mkdir "!INSTALL_DIR!\%%T"
-    robocopy "%%T" "!INSTALL_DIR!\%%T" /E /XF secrets.js /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
-  )
-  popd >nul
-  rem  Preserve real keys: if the repo has a local Overlay/sasi-secrets.js
-  rem  (gitignored — only exists on the developer's machine, not on iex
-  rem  fresh clones), vendor it into the install dir UNLESS one already
-  rem  exists there. Re-runs of bootstrap never overwrite live secrets.
-  if exist "!_OVL_DIR!\sasi-secrets.js" (
-    if not exist "!INSTALL_DIR!\sasi-secrets.js" (
-      copy /Y "!_OVL_DIR!\sasi-secrets.js" "!INSTALL_DIR!\sasi-secrets.js" >nul
-      echo   sasi-secrets.js vendored from local repo (one-time on fresh install).
-    )
-  )
-  rem  Vendor the default OBS bundle if the repo ships one. install.bat will
-  rem  auto-import it iff the user has no existing OBS scene collections —
-  rem  i.e. truly first-time setup. The bundle is committed at
-  rem  Overlay/default-bundle/ (see .gitignore exception).
-  if exist "!_OVL_DIR!\default-bundle" (
-    if not exist "!INSTALL_DIR!\default-bundle" mkdir "!INSTALL_DIR!\default-bundle"
-    robocopy "!_OVL_DIR!\default-bundle" "!INSTALL_DIR!\default-bundle" /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
-    echo   Default OBS bundle copied (install.bat will auto-import if fresh OBS).
-  )
-  echo   Engine + active theme + sibling themes copied to install dir.
-) else (
-  echo   WARNING: dashboard.html not found at !_OVL_DIR!
+rem  Copy Sasi Studio engine files + theme. We use flat goto-based flow (not
+rem  nested parenthesized if-blocks) because CMD's parser was misreading the
+rem  nested delayed-expansion + substring + paren structure on a fresh install
+rem  and aborting step 4 with ". was unexpected at this time."
+if not exist "!_OVL_DIR!\dashboard.html" goto :_step4_warn
+
+copy /Y "!_OVL_DIR!\dashboard.html" "!INSTALL_DIR!\dashboard.html" >nul
+if exist "!_OVL_DIR!\dashboard-old.html" copy /Y "!_OVL_DIR!\dashboard-old.html" "!INSTALL_DIR!\dashboard-old.html" >nul
+if exist "!_OVL_DIR!\dashboard-v1.html" copy /Y "!_OVL_DIR!\dashboard-v1.html" "!INSTALL_DIR!\dashboard-v1.html" >nul
+if exist "!_OVL_DIR!\tokens.css" copy /Y "!_OVL_DIR!\tokens.css" "!INSTALL_DIR!\tokens.css" >nul
+if exist "!_OVL_DIR!\sasi-secrets.example.js" copy /Y "!_OVL_DIR!\sasi-secrets.example.js" "!INSTALL_DIR!\sasi-secrets.example.js" >nul
+
+rem  Active theme folder (sasi-overlays/). /XF excludes secrets.js so we
+rem  don't overwrite the user's real keys on re-install.
+if not exist "!_OVL_DIR!\sasi-overlays" goto :_step4_after_active_theme
+if not exist "!INSTALL_DIR!\sasi-overlays" mkdir "!INSTALL_DIR!\sasi-overlays"
+robocopy "!_OVL_DIR!\sasi-overlays" "!INSTALL_DIR!\sasi-overlays" /E /XF secrets.js /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
+:_step4_after_active_theme
+
+rem  Vendor sibling sample themes (sasi-overlays-blue/purple/minimal/etc.)
+rem  pushd so the for-loop pattern is relative — %%T resolves to a bare name.
+pushd "!_OVL_DIR!" >nul
+for /d %%T in (sasi-overlays-*) do (
+  if not exist "!INSTALL_DIR!\%%T" mkdir "!INSTALL_DIR!\%%T"
+  robocopy "%%T" "!INSTALL_DIR!\%%T" /E /XF secrets.js /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
 )
+popd >nul
+
+rem  Preserve real keys: if the repo has a local Overlay/sasi-secrets.js
+rem  (gitignored — dev-machine only, NOT on iex fresh clones), vendor it
+rem  UNLESS one already exists in install dir.
+if not exist "!_OVL_DIR!\sasi-secrets.js" goto :_step4_after_secrets
+if exist "!INSTALL_DIR!\sasi-secrets.js" goto :_step4_after_secrets
+copy /Y "!_OVL_DIR!\sasi-secrets.js" "!INSTALL_DIR!\sasi-secrets.js" >nul
+echo   sasi-secrets.js vendored from local repo (one-time on fresh install).
+:_step4_after_secrets
+
+rem  Vendor the default OBS bundle if shipped. install.bat auto-imports
+rem  it iff the user has no existing OBS scene collections.
+if not exist "!_OVL_DIR!\default-bundle" goto :_step4_after_bundle
+if not exist "!INSTALL_DIR!\default-bundle" mkdir "!INSTALL_DIR!\default-bundle"
+robocopy "!_OVL_DIR!\default-bundle" "!INSTALL_DIR!\default-bundle" /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
+echo   Default OBS bundle copied (install.bat will auto-import if fresh OBS).
+:_step4_after_bundle
+
+echo   Engine + active theme + sibling themes copied to install dir.
+goto :_step4_done
+
+:_step4_warn
+echo   WARNING: dashboard.html not found at !_OVL_DIR!
+
+:_step4_done
 echo   Source files copied.
 
 rem ---------- Step 5: Run install.bat from install dir ----------
