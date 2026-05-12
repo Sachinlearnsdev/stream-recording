@@ -132,7 +132,17 @@ async function tryProcess(basename) {
       isFileQuiet(entry.mp4, config.fileQuietSeconds),
     ]);
     if (!quiet.every(Boolean)) {
-      log.info(`${basename}: still being written, will retry`);
+      // Chokidar fires one 'add' per file and won't re-fire for the same path
+      // again — so without an explicit retry, a file that fails the quiet
+      // check at exactly the wrong moment (mid-write) gets stuck in
+      // tripleSeen forever and never moves until the watcher restarts.
+      // Schedule a self-retry after the quiet window elapses again.
+      log.info(`${basename}: still being written, retrying in ${config.fileQuietSeconds}s`);
+      setTimeout(() => {
+        // tryProcess re-checks `processing.has` so the retry won't double-fire
+        // if a concurrent caller is already inside.
+        tryProcess(basename).catch(e => log.error(`${basename}: retry failed: ${e.message}`));
+      }, config.fileQuietSeconds * 1000);
       return;
     }
 

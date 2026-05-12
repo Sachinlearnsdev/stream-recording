@@ -506,10 +506,11 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       if (found.length === 0) return res.json({ ok: true, recycled: 0, message: 'no .mkv files in targetRoot' });
       const psScript = path.join(installDir || '', 'scripts', 'recycle.ps1');
       log.warn(`recycle-all-mkvs: sending ${found.length} files to Recycle Bin`);
-      // recycle.ps1 splits its -Files argument on ';'; pass the joined list
-      // through the arg-array path so the outer process call doesn't get
+      // recycle.ps1 splits its -Files argument on '|' (an invalid filename
+      // character on Windows, so splitting is unambiguous); pass the joined
+      // list through the arg-array path so the outer process call doesn't get
       // shell-parsed (an outer shell would mishandle a path containing ').
-      const r = await runPowerShell(psScript, ['-Files', found.join(';')], { maxBuffer: 16 * 1024 * 1024, log });
+      const r = await runPowerShell(psScript, ['-Files', found.join('|')], { maxBuffer: 16 * 1024 * 1024, log });
       if (r.code !== 0) return res.status(500).json({ error: 'recycle.ps1 failed', stdout: r.stdout, stderr: r.stderr });
       log.info(`recycle-all-mkvs done`);
       res.json({ ok: true, recycled: found.length, output: r.stdout.trim().split('\n').slice(0, 10).join('\n') });
@@ -548,7 +549,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     try {
       const psScript = path.join(installDir || '', 'scripts', 'recycle.ps1');
       log.info(`delete-mix: ${basename} â†’ recycle bin (${targets.length} files)`);
-      const r = await runPowerShell(psScript, ['-Files', targets.join(';')], { maxBuffer: 1024 * 1024, log });
+      const r = await runPowerShell(psScript, ['-Files', targets.join('|')], { maxBuffer: 1024 * 1024, log });
       if (r.code !== 0) return res.status(500).json({ error: 'recycle.ps1 failed', stdout: r.stdout, stderr: r.stderr });
       log.info(`delete-mix output: ${r.stdout.trim()}`);
       res.json({ ok: true, recycled: targets.length, output: r.stdout.trim() });
@@ -1061,13 +1062,30 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         if (!v.valid && !isActive) continue; // Hide invalid sibling folders, but always show active so user can see what's broken
         const stat = await fs.stat(full);
         const manifest = readThemeManifest(full);
+        // Sanitize manifest.preview color values to strict hex strings before
+        // returning to the dashboard. The dashboard interpolates these into
+        // an inline `style="background:${preview.primary}"` attribute, and
+        // theme folders can come from anywhere (zip download, third-party
+        // contributor). Without sanitization a malicious theme.json could
+        // break out of the style attribute and execute arbitrary JS in the
+        // dashboard origin — which has full /uninstall + /delete-backup
+        // access. Drop any value that doesn't match #RRGGBB or #RRGGBBAA.
+        let safePreview = null;
+        if (manifest && typeof manifest.preview === 'object' && manifest.preview !== null) {
+          const hexRe = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/;
+          safePreview = {};
+          for (const k of ['primary', 'secondary', 'accent', 'bg']) {
+            const v = manifest.preview[k];
+            if (typeof v === 'string' && hexRe.test(v)) safePreview[k] = v;
+          }
+        }
         themes.push({
           folder: ent.name,
           name: isActive ? 'active' : suffix,
           id: (manifest && typeof manifest.id === 'string' && /^[a-zA-Z0-9_-]{1,40}$/.test(manifest.id)) ? manifest.id : null,
-          displayName: (manifest && typeof manifest.name === 'string') ? manifest.name : null,
-          author: (manifest && typeof manifest.author === 'string') ? manifest.author : null,
-          preview: (manifest && typeof manifest.preview === 'object') ? manifest.preview : null,
+          displayName: (manifest && typeof manifest.name === 'string') ? manifest.name.slice(0, 80) : null,
+          author: (manifest && typeof manifest.author === 'string') ? manifest.author.slice(0, 80) : null,
+          preview: safePreview,
           active: isActive,
           path: toWebPath(full),
           mtime: stat.mtimeMs,
@@ -1442,8 +1460,17 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
 
   // Parse secrets.js by extracting the assigned object. Tolerates either
   // `window.SASI_SECRETS = {...}` or `const SASI_SECRETS = {...};`.
+  //
+  // The pattern must be GREEDY (`[\s\S]*` not `[\s\S]*?`). The previous lazy
+  // form stopped at the first `}` it found — which for the multi-channel
+  // shape is the inner `streamelements.youtube` block — so the captured
+  // string was a truncated, syntactically incomplete fragment and the
+  // Function() eval threw. Result: every call to GET /secrets silently
+  // returned the example defaults, /switch-channel 404'd on every valid key.
+  // Greedy match runs to the LAST `}` before the trailing `;` at end-of-file,
+  // which is what we want.
   function parseSecretsFile(text) {
-    const m = text.match(/SASI_SECRETS\s*=\s*(\{[\s\S]*?\})\s*;?\s*$/m);
+    const m = text.match(/SASI_SECRETS\s*=\s*(\{[\s\S]*\})\s*;?\s*(?:\n|$)/);
     if (!m) return null;
     try {
       // eval-ish but safe: it's a JS literal we just wrote. Use Function so

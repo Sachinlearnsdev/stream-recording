@@ -1,12 +1,18 @@
 # Moves files to the Windows Recycle Bin (NOT permanent delete).
-# Called by the watcher's /delete-mix endpoint.
-# Args: paths to delete, one per line via -Files (semicolon-separated string).
+# Called by the watcher's /delete-mix and /recycle-* endpoints.
+#
+# Args: -Files is a `|`-separated path list. We use `|` (not `;`) because
+# Windows filename rules disallow `|` (one of the invalid characters
+# <>:"/\|?*), so splitting can never ambiguously eat part of a real path.
+# Semicolons CAN appear in NTFS paths (rare but legal) — they would silently
+# split here into two non-existent paths and the actual file would never
+# be recycled.
 
 param([Parameter(Mandatory=$true)][string]$Files)
 
 Add-Type -AssemblyName Microsoft.VisualBasic
 
-$paths = $Files -split ';' | Where-Object { $_ }
+$paths = $Files -split '\|' | Where-Object { $_ }
 $results = @()
 foreach ($p in $paths) {
   $path = $p.Trim()

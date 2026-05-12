@@ -1571,16 +1571,26 @@ async function refreshThemes() {
     window.__previewTheme = (themes.find(t => t.active) || themes[0]).folder;
   }
 
+  // Hex-color validator — defense-in-depth so dashboard-side string
+  // interpolation into a style="..." attribute never lets a malformed
+  // theme.json#preview value break out of the attribute. Server-side
+  // /list-themes already drops non-hex values, but we don't trust the
+  // client to receive sanitized data (FALLBACK_ACTIVE_THEME paths, future
+  // code paths populating .preview from other sources).
+  const safeHex = (v, fallback) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(v)) ? v : fallback;
   cards.innerHTML = themes.map(t => {
     const valid = t.valid !== false;
     const selected = t.folder === window.__previewTheme;
     const colors = t.preview || {};
-    // Best-effort preview swatches: use placeholders if /list-themes doesn't expose colors yet.
+    const c1 = safeHex(colors.primary,   '#FF2200');
+    const c2 = safeHex(colors.secondary, '#FF7700');
+    const c3 = safeHex(colors.accent,    '#FFD700');
+    // Preview swatches — colors validated above, so direct interpolation is safe.
     const swatches = `
       <div style="display:flex;gap:4px;margin-top:6px">
-        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${colors.primary || '#FF2200'};border:1px solid var(--bg-divider)" title="primary"></span>
-        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${colors.secondary || '#FF7700'};border:1px solid var(--bg-divider)" title="secondary"></span>
-        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${colors.accent || '#FFD700'};border:1px solid var(--bg-divider)" title="accent"></span>
+        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${c1};border:1px solid var(--bg-divider)" title="primary"></span>
+        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${c2};border:1px solid var(--bg-divider)" title="secondary"></span>
+        <span style="display:block;width:18px;height:18px;border-radius:50%;background:${c3};border:1px solid var(--bg-divider)" title="accent"></span>
       </div>`;
     const stateBadge = t.active
       ? '<span style="color:var(--accent-online);font-weight:700;font-size:10px;letter-spacing:0.1em">● ACTIVE</span>'
