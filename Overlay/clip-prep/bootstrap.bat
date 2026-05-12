@@ -163,8 +163,9 @@ rem  and aborting step 4 with ". was unexpected at this time."
 if not exist "!_OVL_DIR!\dashboard.html" goto :_step4_warn
 
 copy /Y "!_OVL_DIR!\dashboard.html" "!INSTALL_DIR!\dashboard.html" >nul
-if exist "!_OVL_DIR!\dashboard-old.html" copy /Y "!_OVL_DIR!\dashboard-old.html" "!INSTALL_DIR!\dashboard-old.html" >nul
-if exist "!_OVL_DIR!\dashboard-v1.html" copy /Y "!_OVL_DIR!\dashboard-v1.html" "!INSTALL_DIR!\dashboard-v1.html" >nul
+rem  dashboard-old.html + dashboard-v1.html were removed from the repo in the
+rem  Tier-2 cleanup pass — they were 1000-2800 line legacy versions that were
+rem  pre-current-design. History is the rollback path.
 if exist "!_OVL_DIR!\tokens.css" copy /Y "!_OVL_DIR!\tokens.css" "!INSTALL_DIR!\tokens.css" >nul
 if exist "!_OVL_DIR!\sasi-secrets.example.js" copy /Y "!_OVL_DIR!\sasi-secrets.example.js" "!INSTALL_DIR!\sasi-secrets.example.js" >nul
 
@@ -175,7 +176,15 @@ if not exist "!INSTALL_DIR!\sasi-overlays" mkdir "!INSTALL_DIR!\sasi-overlays"
 robocopy "!_OVL_DIR!\sasi-overlays" "!INSTALL_DIR!\sasi-overlays" /E /XF secrets.js /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS /NP >nul
 :_step4_after_active_theme
 
-rem  Vendor sibling sample themes (sasi-overlays-blue/purple/minimal/etc.)
+rem  Vendor any sibling theme folders (sasi-overlays-<name>/) that exist in
+rem  the repo. The repo no longer ships vendored sample themes, so on a
+rem  fresh iex this loop is a no-op. It still matters in two cases:
+rem    1. Dev re-runs bootstrap from a local clone where they have
+rem       branched themes via dashboard "Save current as theme".
+rem    2. After install.bat runs generate-sample-theme.ps1, a
+rem       sasi-overlays-sample-blue/ exists in install dir — a later
+rem       bootstrap run picks it up via this same loop pattern (via
+rem       a future re-vendoring round trip).
 rem  pushd so the for-loop pattern is relative — %%T resolves to a bare name.
 pushd "!_OVL_DIR!" >nul
 for /d %%T in (sasi-overlays-*) do (

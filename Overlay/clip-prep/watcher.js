@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, promises as fs, appendFileSync } from 'node:fs';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import chokidar from 'chokidar';
 
@@ -13,7 +13,10 @@ import { parseSidecar } from './src/sidecar.js';
 import { decideRoute, executeRoute } from './src/router.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const execAsync = promisify(exec);
+// execFile (not exec) — no shell layer, args are an array, no string-interpolation
+// hazard. Even though the tasklist call below has zero user input, the project
+// policy is to keep all child-process calls in array-form for discipline.
+const execFileAsync = promisify(execFile);
 const logFile = path.join(__dirname, 'clip-prep.log');
 
 // Write fatal errors to the log file before dying so we can diagnose
@@ -62,7 +65,7 @@ chokidar.watch(gamesPath, { ignoreInitial: true }).on('change', async () => {
 
 async function getRunningProcesses() {
   try {
-    const { stdout } = await execAsync('tasklist /fo csv /nh', { maxBuffer: 8 * 1024 * 1024 });
+    const { stdout } = await execFileAsync('tasklist.exe', ['/fo', 'csv', '/nh'], { maxBuffer: 8 * 1024 * 1024 });
     const set = new Set();
     for (const line of stdout.split(/\r?\n/)) {
       const m = line.match(/^"([^"]+)"/);

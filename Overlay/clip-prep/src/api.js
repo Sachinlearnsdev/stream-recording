@@ -8,8 +8,16 @@ import { splitMixFile } from '../split-mix.js';
 
 const execAsync = promisify(exec);
 
+// Path conversion helpers â€” used in ~30 places to translate between web-style
+// (forward slashes, what JSON / browser-facing APIs want) and OS-native (Windows
+// backslashes, what Node's fs / path / Windows-CLI consumers want). Node's path
+// module accepts both on Windows, so OS-native is mostly cosmetic â€” but it
+// matters for shell-style consumers (cmd /c, robocopy, registry strings).
+const toOsPath  = (p) => (p == null ? '' : String(p).replace(/\//g, path.sep));
+const toWebPath = (p) => (p == null ? '' : String(p).replace(/\\/g, '/'));
+
 // Run a PowerShell script with an explicit argv. Avoids any shell parsing of
-// the path arguments — the only correct way to pass user-supplied paths to a
+// the path arguments â€” the only correct way to pass user-supplied paths to a
 // child process. Returns { code, stdout, stderr }.
 function runPowerShell(scriptPath, args = [], { maxBuffer = 32 * 1024 * 1024, log } = {}) {
   return new Promise((resolve) => {
@@ -41,7 +49,7 @@ function openInExplorer(targetPath) {
   spawn('explorer.exe', [targetPath], { detached: true, stdio: 'ignore' }).unref();
 }
 
-// Spawn the folder-picker PowerShell script with a hidden console window —
+// Spawn the folder-picker PowerShell script with a hidden console window â€”
 // the IFileDialog inside uses GetForegroundWindow() as its parent, so it
 // appears modal to the user's browser (or whatever they have focused).
 // Result is communicated via temp file (more reliable than stdout capture).
@@ -73,7 +81,7 @@ function pickFolderViaTempFile(scriptPath, description, log) {
     try {
       child = spawn('powershell.exe', args, {
         stdio: 'ignore',
-        windowsHide: true, // no terminal flash — dialog uses foreground window as parent
+        windowsHide: true, // no terminal flash â€” dialog uses foreground window as parent
       });
     } catch (err) {
       if (log) log.error(`pick-folder: spawn threw: ${err.message}`);
@@ -92,7 +100,7 @@ function pickFolderViaTempFile(scriptPath, description, log) {
       if (log) log.error(`pick-folder: child error: ${err.message}`);
       finish(null, 'child-error');
     });
-    // 60-second failsafe — user might take a moment to find the folder
+    // 60-second failsafe â€” user might take a moment to find the folder
     setTimeout(() => finish(null, 'timeout-60s'), 60 * 1000);
   });
 }
@@ -107,7 +115,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // the install dir directly, so the Origin header is "null" for file:// and
   // we can't whitelist a real origin. Instead:
   //   * Echo the requesting origin if it looks like a local dashboard
-  //     (file://, http://localhost, http://127.0.0.1) — that lets the dashboard
+  //     (file://, http://localhost, http://127.0.0.1) â€” that lets the dashboard
   //     read responses while still blocking arbitrary public web pages from
   //     reading our local data.
   //   * Mutating methods (POST, PUT, DELETE) MUST include the X-Clip-Prep
@@ -155,7 +163,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   //
   // index:false so /  doesn't accidentally serve a directory listing; the
   // user explicitly hits /dashboard.html. dotfiles:'ignore' so we don't expose
-  // .gitignore. We mount AFTER the CSRF middleware on purpose — these are
+  // .gitignore. We mount AFTER the CSRF middleware on purpose â€” these are
   // GETs only and the static middleware doesn't process mutating methods.
   if (installDir && existsSync(installDir)) {
     app.use(express.static(installDir, {
@@ -177,24 +185,24 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         targetRoot: config.targetRoot,
         keepMkv: config.keepMkv !== false,
       },
-      installDir: (installDir || '').replace(/\\/g, '/'),
-      logFile: (logFile || '').replace(/\\/g, '/'),
+      installDir: toWebPath(installDir),
+      logFile: toWebPath(logFile),
     });
   });
 
-  // POST /open-log — opens the log file in the default text editor (notepad).
+  // POST /open-log â€” opens the log file in the default text editor (notepad).
   app.post('/open-log', (_req, res) => {
     if (!logFile) return res.status(500).json({ error: 'logFile not configured' });
     try {
       spawn('notepad.exe', [logFile], { detached: true, stdio: 'ignore' }).unref();
-      res.json({ ok: true, opened: logFile.replace(/\\/g, '/') });
+      res.json({ ok: true, opened: toWebPath(logFile) });
     } catch (err) {
       log.error(`open-log failed: ${err.message}`);
       res.status(500).json({ error: err.message });
     }
   });
 
-  // POST /pick-folder?kind=dump|target|bundle|output — pop a real folder picker.
+  // POST /pick-folder?kind=dump|target|bundle|output â€” pop a real folder picker.
   // Spawns powershell with a visible console window so the dialog gets
   // foreground rights. Result is communicated via a temp file (more reliable
   // than capturing stdout from a hidden child process).
@@ -222,7 +230,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         return res.json({ ok: true, cancelled: true });
       }
       log.info(`pick-folder: got "${picked}"`);
-      res.json({ ok: true, path: picked.replace(/\\/g, '/') });
+      res.json({ ok: true, path: toWebPath(picked) });
     } catch (err) {
       log.error(`pick-folder failed: ${err.message}`);
       res.status(500).json({ error: err.message });
@@ -255,7 +263,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // POST /open-folder — opens File Explorer at the given path. Body: { path }.
+  // POST /open-folder â€” opens File Explorer at the given path. Body: { path }.
   // If the path doesn't exist, opens the closest existing parent.
   app.post('/open-folder', (req, res) => {
     const target = (req.body && req.body.path) ? String(req.body.path) : '';
@@ -281,7 +289,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // PUT /config — update dumpDir / targetRoot.
+  // PUT /config â€” update dumpDir / targetRoot.
   // dumpDir must exist (OBS writes there; the user owns that folder).
   // targetRoot is auto-created if missing (it's our output, we manage it).
   // Writes config.json (UTF-8 no BOM). Client should call /restart after.
@@ -293,7 +301,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       const filtered = {};
       for (const k of allowed) {
         if (typeof updates[k] === 'string' && updates[k].length > 0) {
-          filtered[k] = updates[k].replace(/\\/g, '/');
+          filtered[k] = toWebPath(updates[k]);
         }
       }
       for (const k of allowedBool) {
@@ -305,7 +313,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       // dumpDir: must exist
       if (filtered.dumpDir && !existsSync(filtered.dumpDir)) {
         return res.status(400).json({
-          error: `dumpDir does not exist: ${filtered.dumpDir}. Create the folder first — this is where OBS writes recordings.`,
+          error: `dumpDir does not exist: ${filtered.dumpDir}. Create the folder first â€” this is where OBS writes recordings.`,
         });
       }
       // targetRoot: auto-create
@@ -330,7 +338,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // POST /uninstall — remove the auto-start entry (registry Run key + any
+  // POST /uninstall â€” remove the auto-start entry (registry Run key + any
   // stale Task Scheduler entry from older installs), then exit cleanly.
   // Does NOT delete files (config.json, games.json, node_modules, etc).
   app.post('/uninstall', async (_req, res) => {
@@ -355,11 +363,11 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // visibility of ongoing work. Keyed by basename.
   const splitsInProgress = new Set();
 
-  // GET /list-mix — list all .mkv files in <targetRoot>/_mix/MKV plus whether
+  // GET /list-mix â€” list all .mkv files in <targetRoot>/_mix/MKV plus whether
   // each has been split (via _split-record.json) or is currently being split.
   app.get('/list-mix', async (_req, res) => {
     try {
-      const mixDir = path.join(config.targetRoot.replace(/\//g, path.sep), '_mix');
+      const mixDir = path.join(toOsPath(config.targetRoot), '_mix');
       const mkvDir = path.join(mixDir, 'MKV');
       if (!existsSync(mkvDir)) return res.json({ files: [] });
       const files = (await fs.readdir(mkvDir)).filter(f => f.toLowerCase().endsWith('.mkv'));
@@ -387,7 +395,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         const stat = await fs.stat(mkvPath).catch(() => null);
         result.push({
           basename,
-          mkv: mkvPath.replace(/\\/g, '/'),
+          mkv: toWebPath(mkvPath),
           size_bytes: stat ? stat.size : 0,
           duration_sec: durationSec,
           started_at,
@@ -405,12 +413,12 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // GET /list-recordings — walks targetRoot, returns one entry per top-level
+  // GET /list-recordings â€” walks targetRoot, returns one entry per top-level
   // game folder with that folder's files (mkv + mp4 in MKV/ and MP4/ subdirs,
   // plus any direct files like sidecars). Skips _mix (handled separately).
   app.get('/list-recordings', async (_req, res) => {
     try {
-      const root = config.targetRoot.replace(/\//g, path.sep);
+      const root = toOsPath(config.targetRoot);
       if (!existsSync(root)) return res.json({ games: [] });
       const entries = await fs.readdir(root, { withFileTypes: true });
       const games = [];
@@ -430,7 +438,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
             if (!stat) continue;
             files.push({
               name: it.name,
-              path: full.replace(/\\/g, '/'),
+              path: toWebPath(full),
               size: stat.size,
               mtime: stat.mtimeMs,
               format,
@@ -453,16 +461,16 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   });
 
   // POST /recycle-file  body: { path }
-  // Sends a single file (under targetRoot only — for safety) to the Recycle
+  // Sends a single file (under targetRoot only â€” for safety) to the Recycle
   // Bin. Path is validated to live inside config.targetRoot to prevent any
   // accidental or malicious recycling of files outside the recording tree.
   app.post('/recycle-file', async (req, res) => {
     const target = (req.body && req.body.path) ? String(req.body.path) : '';
     if (!target) return res.status(400).json({ error: 'body.path required' });
-    const targetNorm = path.resolve(target.replace(/\//g, path.sep));
-    const rootNorm = path.resolve(config.targetRoot.replace(/\//g, path.sep));
+    const targetNorm = toOsPath(path.resolve(target));
+    const rootNorm = toOsPath(path.resolve(config.targetRoot));
     if (!targetNorm.toLowerCase().startsWith(rootNorm.toLowerCase() + path.sep) && targetNorm.toLowerCase() !== rootNorm.toLowerCase()) {
-      return res.status(400).json({ error: 'refusing — path is not inside targetRoot: ' + targetNorm });
+      return res.status(400).json({ error: 'refusing â€” path is not inside targetRoot: ' + targetNorm });
     }
     if (!existsSync(targetNorm)) return res.status(404).json({ error: 'file not found: ' + targetNorm });
     try {
@@ -477,12 +485,12 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // POST /recycle-all-mkvs — walks targetRoot recursively and sends every
+  // POST /recycle-all-mkvs â€” walks targetRoot recursively and sends every
   // .mkv file to the Recycle Bin. Useful for cleaning up after switching
   // keepMkv off (so existing MKVs from before don't sit around).
   app.post('/recycle-all-mkvs', async (_req, res) => {
     try {
-      const root = config.targetRoot.replace(/\//g, path.sep);
+      const root = toOsPath(config.targetRoot);
       if (!existsSync(root)) return res.status(400).json({ error: 'targetRoot does not exist: ' + root });
       // Walk the tree and collect .mkv paths
       const found = [];
@@ -513,7 +521,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
 
   // POST /delete-mix  body: { basename }
   // Moves the mix recording's .mkv, .mp4, and .json sidecar to the Windows
-  // Recycle Bin (not permanent delete — user can restore from Recycle Bin).
+  // Recycle Bin (not permanent delete â€” user can restore from Recycle Bin).
   // Only allowed if the file has actually been split (per _split-record.json),
   // so segments exist before we trash the source.
   app.post('/delete-mix', async (req, res) => {
@@ -522,12 +530,12 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     if (splitsInProgress.has(basename)) {
       return res.status(409).json({ error: 'split in progress; wait until it completes' });
     }
-    const mixDir = path.join(config.targetRoot.replace(/\//g, path.sep), '_mix');
+    const mixDir = path.join(toOsPath(config.targetRoot), '_mix');
     const recordPath = path.join(mixDir, '_split-record.json');
     let record = {};
     try { record = JSON.parse(await fs.readFile(recordPath, 'utf8')); } catch {}
     if (!record[basename]) {
-      return res.status(400).json({ error: 'this mix has not been split yet — split first, then delete the original' });
+      return res.status(400).json({ error: 'this mix has not been split yet â€” split first, then delete the original' });
     }
     const targets = [
       path.join(mixDir, 'MKV', basename + '.mkv'),
@@ -539,7 +547,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
     try {
       const psScript = path.join(installDir || '', 'scripts', 'recycle.ps1');
-      log.info(`delete-mix: ${basename} → recycle bin (${targets.length} files)`);
+      log.info(`delete-mix: ${basename} â†’ recycle bin (${targets.length} files)`);
       const r = await runPowerShell(psScript, ['-Files', targets.join(';')], { maxBuffer: 1024 * 1024, log });
       if (r.code !== 0) return res.status(500).json({ error: 'recycle.ps1 failed', stdout: r.stdout, stderr: r.stderr });
       log.info(`delete-mix output: ${r.stdout.trim()}`);
@@ -559,14 +567,14 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     if (splitsInProgress.has(basename)) {
       return res.status(409).json({ error: 'split already in progress for this file' });
     }
-    const mixDir = path.join(config.targetRoot.replace(/\//g, path.sep), '_mix');
+    const mixDir = path.join(toOsPath(config.targetRoot), '_mix');
     const mkvPath = path.join(mixDir, 'MKV', basename + '.mkv');
     if (!existsSync(mkvPath)) return res.status(404).json({ error: 'mix file not found: ' + mkvPath });
     splitsInProgress.add(basename);
     log.info(`split-mix start: ${basename} precise=${!!precise}`);
     try {
       const result = await splitMixFile(mkvPath, { precise: !!precise, gamesPath, log, keepMkv: config.keepMkv !== false });
-      log.info(`split-mix done: ${basename} → ${result.segments.length} segment(s)`);
+      log.info(`split-mix done: ${basename} â†’ ${result.segments.length} segment(s)`);
       res.json({ ok: true, ...result });
     } catch (err) {
       log.error(`split-mix failed: ${err.message}`);
@@ -576,7 +584,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // POST /restart — relaunch: kick off a new watcher via the launcher VBS,
+  // POST /restart â€” relaunch: kick off a new watcher via the launcher VBS,
   // detached via cmd /c start (the canonical Windows detach pattern), then
   // exit ourselves. The launcher VBS sleeps 1 second before starting node,
   // so the new instance binds port 6789 only after this one has freed it.
@@ -585,11 +593,15 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     log.warn('Restart requested via API; launching new instance via cmd /c start');
     if (launcherPath) {
       try {
-        const cmdline = `start "" /B wscript.exe "${launcherPath}"`;
-        spawn(cmdline, {
-          shell: true,
+        // Array-form spawn (no shell:true) â€” even though launcherPath is set at
+        // service init from a trusted source, treating any string-interpolated
+        // command line as untrusted is the right default. cmd.exe's `start`
+        // detaches the child so this process can exit cleanly.
+        spawn('cmd.exe', ['/c', 'start', '""', '/B', 'wscript.exe', launcherPath], {
+          shell: false,
           stdio: 'ignore',
           windowsHide: true,
+          detached: true,
         });
       } catch (e) {
         log.error(`failed to spawn launcher: ${e.message}`);
@@ -603,7 +615,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // Single-folder convenience: takes one parent path, creates <root>/_dump and
   // <root>/recording, updates config, restart picks up new paths.
   app.post('/set-recording-root', async (req, res) => {
-    const root = (req.body && req.body.root) ? String(req.body.root).replace(/\//g, path.sep) : '';
+    const root = (req.body && req.body.root) ? toOsPath(String(req.body.root)) : '';
     if (!root) return res.status(400).json({ error: 'body.root required' });
     if (!existsSync(root)) {
       try {
@@ -620,8 +632,8 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       const current = JSON.parse(await fs.readFile(configPath, 'utf8'));
       const merged = {
         ...current,
-        dumpDir: dumpDir.replace(/\\/g, '/'),
-        targetRoot: targetRoot.replace(/\\/g, '/'),
+        dumpDir: toWebPath(dumpDir),
+        targetRoot: toWebPath(targetRoot),
       };
       await fs.writeFile(configPath, JSON.stringify(merged, null, 2), { encoding: 'utf8' });
       log.info(`set-recording-root: ${root} -> dump=${merged.dumpDir}, target=${merged.targetRoot}`);
@@ -654,13 +666,13 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // POST /export-obs-bundle  body: { outputDir }
   // Runs obs-export.ps1 -OutputDir <outputDir>. Returns full stdout/stderr.
   app.post('/export-obs-bundle', async (req, res) => {
-    const pickedDir = (req.body && req.body.outputDir) ? String(req.body.outputDir).replace(/\//g, path.sep) : '';
+    const pickedDir = (req.body && req.body.outputDir) ? toOsPath(String(req.body.outputDir)) : '';
     if (!pickedDir) return res.status(400).json({ error: 'body.outputDir required' });
     if (!exportScript || !existsSync(exportScript)) {
       return res.status(500).json({ error: 'export script not found at ' + exportScript });
     }
     // Auto-create a timestamped subfolder so bundle files never leak into a
-    // non-empty picked folder (which has happened — users pick their recordings
+    // non-empty picked folder (which has happened â€” users pick their recordings
     // root and end up with manifest.json / global.ini sitting alongside videos).
     const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
     const outputDir = path.join(pickedDir, 'bundle-' + stamp);
@@ -675,7 +687,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         return res.status(500).json({ ok: false, output: combined });
       }
       log.info(`export-obs-bundle done -> ${outputDir}`);
-      res.json({ ok: true, outputDir: outputDir.replace(/\\/g, '/'), output: combined });
+      res.json({ ok: true, outputDir: toWebPath(outputDir), output: combined });
     } catch (err) {
       log.error(`export-obs-bundle failed: ${err.message}`);
       res.status(500).json({ error: err.message });
@@ -684,7 +696,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
 
   // POST /import-obs-bundle  body: { bundlePath }
   app.post('/import-obs-bundle', async (req, res) => {
-    const bundlePath = (req.body && req.body.bundlePath) ? String(req.body.bundlePath).replace(/\//g, path.sep) : '';
+    const bundlePath = (req.body && req.body.bundlePath) ? toOsPath(String(req.body.bundlePath)) : '';
     const v = validateBundle(bundlePath);
     if (!v.ok) return res.status(400).json({ error: v.error });
     if (!importScript || !existsSync(importScript)) {
@@ -714,7 +726,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // POST /register-lua
   // Walks every OBS scene-collection JSON in %APPDATA%\obs-studio\basic\scenes
   // and ensures game-tracker.lua is registered under modules.scripts-tool.
-  // Idempotent — running it twice is a no-op. Mirrors what obs-import.ps1
+  // Idempotent â€” running it twice is a no-op. Mirrors what obs-import.ps1
   // does at the end of a bundle restore, but standalone so the user doesn't
   // need to import a bundle to get the script registered on a fresh install.
   app.post('/register-lua', async (_req, res) => {
@@ -767,7 +779,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         } catch {}
         backups.push({
           name: ent.name,
-          path: full.replace(/\\/g, '/'),
+          path: toWebPath(full),
           modified: stat.mtime.toISOString(),
           sizeBytes,
           fileCount,
@@ -870,8 +882,8 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     return true;
   }
 
-  // POST /upload-asset — body: { filename, dataBase64 }
-  // Image (PNG/JPG/SVG/WebP) → install dir's sasi-overlays/assets/<filename>.
+  // POST /upload-asset â€” body: { filename, dataBase64 }
+  // Image (PNG/JPG/SVG/WebP) â†’ install dir's sasi-overlays/assets/<filename>.
   app.post('/upload-asset', async (req, res) => {
     if (!overlaysRoot) return res.status(500).json({ error: 'overlaysRoot not configured' });
     const { filename, dataBase64 } = req.body || {};
@@ -888,15 +900,15 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       const dest = path.join(assetsDir, filename);
       await fs.writeFile(dest, buf);
       log.info(`upload-asset: ${dest} (${buf.length} bytes)`);
-      res.json({ ok: true, path: dest.replace(/\\/g, '/'), url: 'assets/' + filename });
+      res.json({ ok: true, path: toWebPath(dest), url: 'assets/' + filename });
     } catch (err) {
       log.error(`upload-asset failed: ${err.message}`);
       res.status(500).json({ error: err.message });
     }
   });
 
-  // POST /upload-scene — body: { filename, html }
-  // Custom overlay HTML → install dir's sasi-overlays/scenes/<filename>.
+  // POST /upload-scene â€” body: { filename, html }
+  // Custom overlay HTML â†’ install dir's sasi-overlays/scenes/<filename>.
   // Returns the file:// URL the user can paste into OBS browser source.
   app.post('/upload-scene', async (req, res) => {
     if (!overlaysRoot) return res.status(500).json({ error: 'overlaysRoot not configured' });
@@ -910,9 +922,9 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       if (!existsSync(scenesDir)) await fs.mkdir(scenesDir, { recursive: true });
       const dest = path.join(scenesDir, filename);
       await fs.writeFile(dest, html, { encoding: 'utf8' });
-      const fileUrl = 'file:///' + dest.replace(/\\/g, '/');
+      const fileUrl = 'file:///' + toWebPath(dest);
       log.info(`upload-scene: ${dest} (${html.length} chars)`);
-      res.json({ ok: true, path: dest.replace(/\\/g, '/'), fileUrl });
+      res.json({ ok: true, path: toWebPath(dest), fileUrl });
     } catch (err) {
       log.error(`upload-scene failed: ${err.message}`);
       res.status(500).json({ error: err.message });
@@ -920,9 +932,9 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   });
 
   // Resolve a theme folder argument to an absolute path under installDir.
-  // ?theme=sasi-overlays           → active theme
-  // ?theme=sasi-overlays-<name>   → inactive theme (must exist in installDir)
-  // (missing/empty)                → active theme
+  // ?theme=sasi-overlays           â†’ active theme
+  // ?theme=sasi-overlays-<name>   â†’ inactive theme (must exist in installDir)
+  // (missing/empty)                â†’ active theme
   function resolveThemeRoot(theme) {
     if (!installDir) return null;
     const t = (theme || 'sasi-overlays').trim();
@@ -943,8 +955,8 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       const stat = await fs.stat(full);
       items.push({
         name: ent.name,
-        path: full.replace(/\\/g, '/'),
-        fileUrl: 'file:///' + full.replace(/\\/g, '/'),
+        path: toWebPath(full),
+        fileUrl: 'file:///' + toWebPath(full),
         size: stat.size,
         mtime: stat.mtimeMs,
       });
@@ -953,7 +965,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     return items;
   }
 
-  // GET /list-scenes?theme=<folder> — defaults to active theme.
+  // GET /list-scenes?theme=<folder> â€” defaults to active theme.
   app.get('/list-scenes', async (req, res) => {
     if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
     try {
@@ -966,7 +978,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // GET /list-components?theme=<folder> — defaults to active theme.
+  // GET /list-components?theme=<folder> â€” defaults to active theme.
   app.get('/list-components', async (req, res) => {
     if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
     try {
@@ -982,8 +994,8 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // ===== THEME SYSTEM (Sasi Studio v2) =====
   // Each theme is a fully self-contained folder under installDir, named
   // sasi-overlays[-<suffix>]. The folder named exactly "sasi-overlays" is
-  // ACTIVE — that's where OBS browser-source paths point. Swap by atomic
-  // rename: active → sasi-overlays-<old>/, target → sasi-overlays/.
+  // ACTIVE â€” that's where OBS browser-source paths point. Swap by atomic
+  // rename: active â†’ sasi-overlays-<old>/, target â†’ sasi-overlays/.
 
   function isSafeThemeName(name) {
     // Theme suffix: alphanumerics + dash + underscore, 1-40 chars.
@@ -992,10 +1004,10 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     return true;
   }
 
-  // Theme contract — files every theme MUST have for OBS browser sources to keep working
+  // Theme contract â€” files every theme MUST have for OBS browser sources to keep working
   // when themes are swapped. Themes can ADD more files; they cannot REMOVE these.
   const THEME_REQUIRED_SCENES = ['starting-soon.html', 'brb.html', 'stream-ending.html', 'overlay.html', 'just-chatting.html'];
-  // terminal-alerts.html is optional (not part of the contract) — user reserves
+  // terminal-alerts.html is optional (not part of the contract) â€” user reserves
   // it for an unrelated project. Themes can include it but don't have to.
   const THEME_REQUIRED_COMPONENTS = ['subscribe.html', 'likes.html', 'nametag.html', 'webcam.html'];
 
@@ -1025,7 +1037,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     return null;
   }
 
-  // Read full theme.json manifest — used by /list-themes to surface preview colors.
+  // Read full theme.json manifest â€” used by /list-themes to surface preview colors.
   function readThemeManifest(themeFolder) {
     try {
       return JSON.parse(readFileSync(path.join(themeFolder, 'theme.json'), 'utf8'));
@@ -1033,7 +1045,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     return null;
   }
 
-  // GET /list-themes — returns all sasi-overlays* folders in installDir.
+  // GET /list-themes â€” returns all sasi-overlays* folders in installDir.
   app.get('/list-themes', async (_req, res) => {
     if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
     try {
@@ -1057,7 +1069,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
           author: (manifest && typeof manifest.author === 'string') ? manifest.author : null,
           preview: (manifest && typeof manifest.preview === 'object') ? manifest.preview : null,
           active: isActive,
-          path: full.replace(/\\/g, '/'),
+          path: toWebPath(full),
           mtime: stat.mtimeMs,
           valid: v.valid,
           missing: v.missing,
@@ -1091,7 +1103,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
     let archived = null;
     if (existsSync(activeFolder)) {
-      // Prefer renaming by theme id so identity persists (sasi-overlays/ → sasi-overlays-<id>/).
+      // Prefer renaming by theme id so identity persists (sasi-overlays/ â†’ sasi-overlays-<id>/).
       // If theme.json#id is missing or collides with an existing folder, fall back to timestamp.
       const id = readThemeId(activeFolder);
       const proposed = id ? path.join(installDir, 'sasi-overlays-' + id) : null;
@@ -1121,7 +1133,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     const name = (req.body && req.body.name) ? String(req.body.name).trim() : '';
     try {
       const result = await applyThemeByName(name);
-      log.info(`apply-theme: ${name} now active${result.archivedAs ? ' (previous → ' + result.archivedAs + ')' : ''}`);
+      log.info(`apply-theme: ${name} now active${result.archivedAs ? ' (previous â†’ ' + result.archivedAs + ')' : ''}`);
       res.json({ ok: true, ...result });
     } catch (err) {
       const status = err.status || 500;
@@ -1147,7 +1159,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     if (existsSync(dest)) return res.status(409).json({ error: 'theme already exists: sasi-overlays-' + name + ' (delete it first or pick another name)' });
     try {
       await fs.cp(activeFolder, dest, { recursive: true, force: false });
-      log.info(`save-theme: copied active → sasi-overlays-${name}`);
+      log.info(`save-theme: copied active â†’ sasi-overlays-${name}`);
       res.json({ ok: true, savedAs: 'sasi-overlays-' + name });
     } catch (err) {
       log.error(`save-theme failed: ${err.message}`);
@@ -1176,8 +1188,8 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // ===== STINGERS =====
   // OBS Stinger transition points at a single filename: stinger-active.webm
   // (in the active theme's stingers/ folder). Picker = atomic rename:
-  //   target.webm        → stinger-active.webm
-  //   stinger-active.webm → stinger-active-archived-<timestamp>.webm
+  //   target.webm        â†’ stinger-active.webm
+  //   stinger-active.webm â†’ stinger-active-archived-<timestamp>.webm
   // OBS keeps working because the path it points at didn't change.
 
   app.get('/list-stingers', async (_req, res) => {
@@ -1198,7 +1210,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
           name: ent.name,
           size: stat.size,
           mtime: stat.mtimeMs,
-          fileUrl: 'file:///' + full.replace(/\\/g, '/'),
+          fileUrl: 'file:///' + toWebPath(full),
           isActive,
           isArchived,
         };
@@ -1217,7 +1229,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // GET /list-stinger-generators — *.html files in the active theme's stingers/
+  // GET /list-stinger-generators â€” *.html files in the active theme's stingers/
   // folder. These are TOOLS users open in their browser to record a webm; they
   // aren't stingers themselves.
   app.get('/list-stinger-generators', async (_req, res) => {
@@ -1235,7 +1247,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
           name: ent.name,
           size: stat.size,
           mtime: stat.mtimeMs,
-          fileUrl: 'file:///' + full.replace(/\\/g, '/'),
+          fileUrl: 'file:///' + toWebPath(full),
         });
       }
       generators.sort((a, b) => a.name.localeCompare(b.name));
@@ -1265,7 +1277,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       const clean = dataBase64.replace(/^data:[^,]+,/, '');
       const buf = Buffer.from(clean, 'base64');
       if (buf.length === 0) return res.status(400).json({ error: 'decoded data is empty' });
-      if (buf.length > 50 * 1024 * 1024) return res.status(413).json({ error: 'stinger > 50 MB — keep it under 5 seconds' });
+      if (buf.length > 50 * 1024 * 1024) return res.status(413).json({ error: 'stinger > 50 MB â€” keep it under 5 seconds' });
       const dest = path.join(stingersDir, filename);
       await fs.writeFile(dest, buf);
       log.info(`upload-stinger: ${dest} (${buf.length} bytes)`);
@@ -1293,7 +1305,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // POST /apply-stinger  body: { file }  — file is the filename to promote.
+  // POST /apply-stinger  body: { file }  â€” file is the filename to promote.
   app.post('/apply-stinger', async (req, res) => {
     if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
     const file = (req.body && req.body.file) ? String(req.body.file).trim() : '';
@@ -1320,7 +1332,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         }
         throw renameErr;
       }
-      log.info(`apply-stinger: ${file} now active${archivedAs ? ' (previous → ' + archivedAs + ')' : ''}`);
+      log.info(`apply-stinger: ${file} now active${archivedAs ? ' (previous â†’ ' + archivedAs + ')' : ''}`);
       res.json({ ok: true, active: 'stinger-active.webm', archivedAs });
     } catch (err) {
       log.error(`apply-stinger failed: ${err.message}`);
@@ -1333,7 +1345,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // The active channel is `activeChannel`. Switching = update activeChannel, write secrets back,
   // and apply that channel's theme via the same atomic-rename flow as /apply-theme.
 
-  // GET /list-channels — returns [{ key, name, tagline, theme, active }, ...]
+  // GET /list-channels â€” returns [{ key, name, tagline, theme, active }, ...]
   app.get('/list-channels', async (_req, res) => {
     if (!secretsPath) return res.status(500).json({ error: 'secretsPath not configured' });
     try {
@@ -1376,7 +1388,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       const themeFolder = channel.theme || 'sasi-overlays';
       let archivedAs = null;
       if (themeFolder === 'sasi-overlays') {
-        // Already the active folder name — no swap needed.
+        // Already the active folder name â€” no swap needed.
       } else if (themeFolder.startsWith('sasi-overlays-')) {
         const suffix = themeFolder.slice('sasi-overlays-'.length);
         const result = await applyThemeByName(suffix);
@@ -1387,7 +1399,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       // Persist activeChannel
       parsed.activeChannel = key;
       await fs.writeFile(secretsPath, serializeSecretsFile(parsed), { encoding: 'utf8' });
-      log.info(`switch-channel: ${key} (theme ${themeFolder}${archivedAs ? ', previous → ' + archivedAs : ''})`);
+      log.info(`switch-channel: ${key} (theme ${themeFolder}${archivedAs ? ', previous â†’ ' + archivedAs : ''})`);
       res.json({ ok: true, key, theme: themeFolder, archivedAs });
     } catch (err) {
       const status = err.status || 500;
@@ -1396,7 +1408,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
-  // POST /stop — exit without respawning. Dashboard offers START hint after.
+  // POST /stop â€” exit without respawning. Dashboard offers START hint after.
   app.post('/stop', (_req, res) => {
     res.json({ ok: true });
     log.warn('Stop requested via API; exiting (no auto-relaunch)');
@@ -1421,7 +1433,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
           theme: 'sasi-overlays',
           youtube: { apiKeys: [], channelId: '' },
           // username = IRC chat. clientId/clientSecret reserved for future
-          // Twitch API features (followers, channel points). Optional — blank is fine.
+          // Twitch API features (followers, channel points). Optional â€” blank is fine.
           twitch: { username: '', clientId: '', clientSecret: '' },
         },
       },
@@ -1483,7 +1495,7 @@ window.SASI_SECRETS = ${json};
   app.put('/secrets', async (req, res) => {
     if (!secretsPath) return res.status(500).json({ error: 'secretsPath not configured' });
     const incoming = req.body || {};
-    // Validate shape — must have at least the top-level keys
+    // Validate shape â€” must have at least the top-level keys
     if (typeof incoming !== 'object' || Array.isArray(incoming)) {
       return res.status(400).json({ error: 'body must be an object' });
     }

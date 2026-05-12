@@ -21,12 +21,18 @@ echo.
 echo Press Ctrl+C to cancel, or any key to continue...
 pause >nul
 
-echo.
-echo [1/3] Asking running watcher to exit (via /restart endpoint)...
-powershell -NoProfile -Command "try { Invoke-RestMethod -Uri 'http://127.0.0.1:6789/restart' -Method Post -TimeoutSec 2 | Out-Null; Write-Host '  Watcher acknowledged - exiting' } catch { Write-Host '  Watcher not reachable (may already be stopped)' }"
+set "SCRIPT_DIR=%~dp0"
 
 echo.
-echo [2/3] Removing auto-start registry entry...
+echo [1/5] Asking running watcher to exit (via /stop endpoint)...
+rem  IMPORTANT: must be /stop, NOT /restart.
+rem  /restart calls launcherPath and re-spawns a new watcher instance — uninstall would
+rem  leave the watcher still listening on 127.0.0.1:6789 until reboot.
+rem  /stop exits the process without respawn (api.js POST /stop, see app.post('/stop')).
+powershell -NoProfile -Command "try { Invoke-RestMethod -Uri 'http://127.0.0.1:6789/stop' -Method Post -Headers @{'X-Clip-Prep'='1'} -TimeoutSec 2 | Out-Null; Write-Host '  Watcher acknowledged - exiting' } catch { Write-Host '  Watcher not reachable (may already be stopped)' }"
+
+echo.
+echo [2/5] Removing auto-start registry entry...
 reg delete "!RUN_KEY!" /v "!RUN_NAME!" /f >nul 2>&1
 if errorlevel 1 (
   echo   Note: registry entry could not be deleted ^(may not exist^).
@@ -34,10 +40,8 @@ if errorlevel 1 (
   echo   Registry entry removed.
 )
 
-set "SCRIPT_DIR=%~dp0"
-
 echo.
-echo [3/5] Removing Start Menu shortcut...
+echo [3/5] Removing Start Menu + Desktop shortcuts...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\uninstall-shortcut.ps1"
 
 echo.

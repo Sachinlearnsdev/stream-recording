@@ -21,24 +21,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# ====================================================================
-# Set this to your repo URL after you push (https or ssh both work).
-# Until then, the one-liner can't run - but you can still test by
-# invoking install.ps1 directly with: .\install.ps1 -RepoUrl <url>
-# ====================================================================
+# Default repo to clone from. Override at invocation with -RepoUrl <url>
+# (useful if you want to test a fork or a private mirror).
 $DefaultRepoUrl = 'https://github.com/Sachinlearnsdev/stream-recording.git'
 
 if (-not $RepoUrl) { $RepoUrl = $DefaultRepoUrl }
-if ($RepoUrl -like '*CHANGE-ME*') {
-  Write-Host "ERROR: install.ps1 hasn't been configured with a repo URL yet." -ForegroundColor Red
-  Write-Host ""
-  Write-Host "Open install.ps1, set `$DefaultRepoUrl to your real GitHub URL," -ForegroundColor Red
-  Write-Host "commit, push - then the one-liner will work." -ForegroundColor Red
-  Write-Host ""
-  Write-Host "Or override at invocation:" -ForegroundColor Yellow
-  Write-Host "  .\install.ps1 -RepoUrl https://github.com/you/clip-prep.git" -ForegroundColor Yellow
-  exit 1
-}
 
 $cloneDir = Join-Path $env:LOCALAPPDATA 'clip-prep-src'
 

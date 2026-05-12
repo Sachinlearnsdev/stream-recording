@@ -17,35 +17,35 @@ echo.
 
 rem ---------- Step 1: Bootstrap config.json if missing ----------
 if not exist "!SCRIPT_DIR!config.json" (
-  echo [1/4] config.json not found - creating with defaults...
+  echo [1/9] config.json not found - creating with defaults...
   call :BootstrapConfig
   if errorlevel 1 goto :Failed
 ) else (
-  echo [1/4] config.json exists - keeping yours.
+  echo [1/9] config.json exists - keeping yours.
 )
 
-rem ---------- Step 2: npm install if node_modules missing ----------
-if not exist "!SCRIPT_DIR!node_modules" (
+rem ---------- Step 2: npm install (always — handles upgrades) ----------
+rem  Previously gated on `if not exist node_modules` which silently skipped
+rem  the install on upgrade — new deps added to package.json wouldn't land
+rem  until a manual cleanup. npm install is idempotent and fast on no-op
+rem  (~1s when nothing changed), so just always run it.
+echo.
+echo [2/9] Running npm install (idempotent — fast if nothing changed)...
+pushd "!SCRIPT_DIR!"
+call npm install
+set "NPM_RC=!ERRORLEVEL!"
+popd
+if not "!NPM_RC!"=="0" (
   echo.
-  echo [2/4] Installing npm dependencies...
-  pushd "!SCRIPT_DIR!"
-  call npm install
-  set "NPM_RC=!ERRORLEVEL!"
-  popd
-  if not "!NPM_RC!"=="0" (
-    echo.
-    echo ERROR: npm install failed with exit code !NPM_RC!
-    echo Hint: open a fresh cmd window and run: node --version
-    echo If that fails, Node.js is not installed or not in PATH.
-    goto :Failed
-  )
-) else (
-  echo [2/4] node_modules exists - skipping npm install.
+  echo ERROR: npm install failed with exit code !NPM_RC!
+  echo Hint: open a fresh cmd window and run: node --version
+  echo If that fails, Node.js is not installed or not in PATH.
+  goto :Failed
 )
 
 rem ---------- Step 3: Register registry Run-key auto-start ----------
 echo.
-echo [3/4] Registering auto-start in registry as "!RUN_NAME!"...
+echo [3/9] Registering auto-start in registry as "!RUN_NAME!"...
 reg add "!RUN_KEY!" /v "!RUN_NAME!" /t REG_SZ /d "wscript.exe \"!LAUNCHER!\"" /f
 if errorlevel 1 (
   echo.
@@ -59,7 +59,7 @@ schtasks /Delete /F /TN "!RUN_NAME!" >nul 2>&1
 
 rem ---------- Step 4: Create Start Menu shortcut ----------
 echo.
-echo [4/5] Creating Start Menu shortcut "clip-prep"...
+echo [4/9] Creating Start Menu shortcut "clip-prep"...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\install-shortcut.ps1" -LauncherPath "!LAUNCHER!" -WorkingDir "!SCRIPT_DIR!"
 if errorlevel 1 (
   echo Note: could not create Start Menu shortcut ^(non-fatal^).
@@ -68,7 +68,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [4b/5] Registering "clip-prep://" URL protocol...
+echo [5/9] Registering "clip-prep://" URL protocol...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\install-protocol.ps1" -LauncherPath "!LAUNCHER!"
 if errorlevel 1 (
   echo Note: could not register URL protocol ^(non-fatal^).
@@ -76,32 +76,32 @@ if errorlevel 1 (
   echo Setup page's START button will now launch the watcher directly.
 )
 
-rem ---------- Step 4c: Auto-register game-tracker.lua in OBS scenes ----------
+rem ---------- Step 6: Auto-register game-tracker.lua in OBS scenes ----------
 rem  Best-effort: if OBS has been opened at least once, scene-collection JSONs
 rem  exist and we can register the script automatically. If not (fresh OBS),
 rem  the script prints a "no scenes yet" message and exits 0.
 echo.
-echo [4c/5] Registering game-tracker.lua in existing OBS scene collections...
+echo [6/9] Registering game-tracker.lua in existing OBS scene collections...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\register-lua.ps1" -LuaPath "!SCRIPT_DIR!obs\game-tracker.lua"
 if errorlevel 1 (
   echo Note: register-lua.ps1 failed ^(non-fatal^). Use the dashboard's "Register Lua" button after opening OBS once.
 )
 
-rem ---------- Step 4d: Generate sample-blue theme so user has 2 themes to test swap ----------
+rem ---------- Step 7: Generate sample-blue theme so user has 2 themes to test swap ----------
 echo.
-echo [4d/5] Generating sample-blue theme (so dashboard Themes section has alternates to test)...
+echo [7/9] Generating sample-blue theme (so dashboard Themes section has alternates to test)...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\generate-sample-theme.ps1" -InstallDir "!SCRIPT_DIR!"
 if errorlevel 1 (
   echo Note: generate-sample-theme.ps1 failed ^(non-fatal^). You'll start with one theme.
 )
 
-rem ---------- Step 4e: Auto-import default OBS bundle on truly-fresh OBS ----------
+rem ---------- Step 8: Auto-import default OBS bundle on truly-fresh OBS ----------
 rem  If the user has NO existing OBS scene collections (truly first run) AND
 rem  the repo vendored a default-bundle, import it so they start with working
 rem  scenes instead of an empty OBS. Flat goto-based flow — nested parens with
 rem  delayed expansion misparse on some CMD versions ("." was unexpected ...).
 echo.
-echo [4e/5] Checking for default OBS bundle auto-import...
+echo [8/9] Checking for default OBS bundle auto-import...
 set "_OBS_SCENES_DIR=%APPDATA%\obs-studio\basic\scenes"
 if not exist "!SCRIPT_DIR!default-bundle" goto :_bundle_skip_none
 rem  Bundle is vendored. Decide whether to import based on existing OBS state.
@@ -128,9 +128,9 @@ echo   No vendored default-bundle in install dir; skipping auto-import.
 
 :_bundle_done
 
-rem ---------- Step 5: Start it now + open dashboard ----------
+rem ---------- Step 9: Start it now + open dashboard ----------
 echo.
-echo [5/5] Starting watcher (hidden) and opening dashboard...
+echo [9/9] Starting watcher (hidden) and opening dashboard...
 wscript.exe "!LAUNCHER!"
 
 rem Open the dashboard via http://127.0.0.1:6789 so every overlay iframe is
