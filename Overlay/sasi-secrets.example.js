@@ -69,7 +69,7 @@ window.SASI_SECRETS = {
     //     tagline: 'LAB SESSION',
     //     logo:    'assets/sasi-labs-logo.png',
     //   },
-    //   theme: 'sasi-overlays-blue',
+    //   theme: 'sasi-overlays-<name>',  // must match a real sasi-overlays-<name>/ folder in install dir
     //   youtube: {
     //     apiKeys: ['YOUR_OTHER_YT_KEY'],
     //     channelId: 'UC_LABS_CHANNEL_ID',

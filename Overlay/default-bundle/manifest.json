@@ -1,0 +1,15 @@
+﻿{
+    "manifest_version":  1,
+    "exported_at":  "2026-05-09T14:59:52.8246702Z",
+    "exported_from":  "DESKTOP-SV1V3DS",
+    "obs_user_dir":  "C:\\Users\\onlys\\AppData\\Roaming\\obs-studio",
+    "basic_files":  74,
+    "basic_bytes":  1945898,
+    "basic_skipped_count":  11,
+    "user_plugin_files":  0,
+    "system_plugin_count":  33,
+    "third_party_count":  2,
+    "bundled_plugin_count":  1,
+    "bundled_sidecar_count":  1,
+    "notes":  "program-plugins/ contains the actual third-party plugin DLLs + data dirs from Program Files. _obs-import.ps1 drops them into the user-plugin folder so OBS auto-loads them - no installer download needed. plugin_config/ holds per-plugin settings (e.g. Advanced Scene Switcher) which are restored alongside. service.json (stream keys) and *.bak files are deliberately skipped."
+}

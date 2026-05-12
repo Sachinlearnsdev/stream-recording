@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sasi Streams — Dashboard</title>
+<style>
+:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; --bg:#050005; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:var(--bg); color:#fff;
+  font-family:'Segoe UI','Arial',sans-serif;
+  min-height:100vh;
+}
+
+/* ── Layout ── */
+.shell { display:flex; min-height:100vh; }
+.sidebar {
+  width:200px; flex-shrink:0;
+  background:rgba(0,0,0,.4);
+  border-right:1px solid rgba(255,34,0,.15);
+  padding:20px 0;
+  position:sticky; top:0; height:100vh;
+}
+.main { flex:1; padding:36px 40px; max-width:720px; }
+
+/* ── Sidebar ── */
+.sb-logo {
+  display:flex; align-items:center; gap:10px;
+  padding:0 16px 20px; border-bottom:1px solid rgba(255,34,0,.1);
+  margin-bottom:12px;
+}
+.sb-logo img { width:32px; height:32px; border-radius:6px; }
+.sb-logo span { font-size:11px; font-weight:900; letter-spacing:2px; color:rgba(255,255,255,.5); }
+.tab-btn {
+  display:flex; align-items:center; gap:10px;
+  width:100%; padding:11px 20px;
+  background:transparent; border:none;
+  color:rgba(255,255,255,.5); font-family:inherit;
+  font-size:13px; font-weight:600; letter-spacing:.5px;
+  cursor:pointer; transition:all .15s;
+  text-align:left;
+}
+.tab-btn:hover { color:#fff; background:rgba(255,34,0,.06); }
+.tab-btn.active {
+  color:#fff; background:rgba(255,34,0,.1);
+  border-right:2px solid var(--red);
+}
+.tab-btn .dot {
+  width:6px; height:6px; border-radius:50%;
+  flex-shrink:0;
+}
+
+/* ── Tab content ── */
+.tab { display:none; }
+.tab.active { display:block; }
+.tab-title {
+  font-size:20px; font-weight:900; letter-spacing:2px;
+  margin-bottom:6px;
+}
+.tab-desc {
+  font-size:12px; color:rgba(255,255,255,.35); letter-spacing:1px;
+  margin-bottom:28px;
+}
+
+/* ── Sections ── */
+.section { margin-bottom:24px; }
+.section-title {
+  font-size:10px; font-weight:900; letter-spacing:4px;
+  color:var(--orange); text-transform:uppercase;
+  margin-bottom:12px;
+}
+
+/* ── Fields ── */
+.field { margin-bottom:14px; }
+.field label {
+  display:block; font-size:11px; font-weight:700;
+  letter-spacing:1px; color:rgba(255,255,255,.5);
+  margin-bottom:5px; text-transform:uppercase;
+}
+.field input, .field select, .field textarea {
+  width:100%; padding:10px 14px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,34,0,.18);
+  border-radius:6px; color:#fff;
+  font-size:14px; font-family:inherit;
+  outline:none; transition:border-color .15s;
+}
+.field input:focus, .field select:focus { border-color:var(--red); box-shadow:0 0 10px rgba(255,34,0,.12); }
+.field input::placeholder { color:rgba(255,255,255,.2); }
+.field .hint { font-size:11px; color:rgba(255,255,255,.25); margin-top:3px; }
+.field select { cursor:pointer; }
+.field select option { background:#111; }
+.field input[readonly] { opacity:.5; cursor:default; }
+
+.row { display:flex; gap:14px; }
+.row .field { flex:1; }
+
+/* Color inputs */
+.color-wrap { display:flex; gap:8px; align-items:center; }
+.color-wrap input[type=color] {
+  width:38px; height:38px; padding:2px; border-radius:6px;
+  border:1px solid rgba(255,34,0,.25); background:transparent; cursor:pointer;
+}
+.color-wrap input[type=text] { flex:1; }
+
+/* Toggle */
+.toggle-row {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 14px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,34,0,.12);
+  border-radius:6px;
+  margin-bottom:10px;
+  cursor:pointer; user-select:none;
+}
+.toggle-row:hover { border-color:rgba(255,34,0,.25); }
+.toggle-row .tl { flex:1; }
+.toggle-row .label { font-size:13px; font-weight:600; }
+.toggle-row .desc { font-size:11px; color:rgba(255,255,255,.3); margin-top:1px; }
+.toggle {
+  width:40px; height:22px; border-radius:11px;
+  background:rgba(255,255,255,.1); position:relative;
+  transition:background .15s; flex-shrink:0;
+}
+.toggle.on { background:var(--red); }
+.toggle::after {
+  content:''; position:absolute; top:2px; left:2px;
+  width:18px; height:18px; border-radius:50%;
+  background:#fff; transition:transform .15s;
+}
+.toggle.on::after { transform:translateX(18px); }
+
+/* Status */
+.status {
+  padding:14px; background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.06); border-radius:6px;
+}
+.status-title { font-size:10px; font-weight:900; letter-spacing:3px; color:rgba(255,255,255,.3); margin-bottom:6px; }
+.si { display:flex; justify-content:space-between; padding:3px 0; font-size:13px; }
+.si .k { color:rgba(255,255,255,.45); }
+.si .v { font-weight:700; }
+.v.ok { color:#4ade80; } .v.warn { color:var(--gold); } .v.err { color:var(--red); }
+
+/* Buttons */
+.btn-row { display:flex; gap:10px; margin-top:20px; }
+.btn {
+  padding:12px 20px;
+  border:2px solid var(--red); background:transparent;
+  color:#fff; font-family:inherit; font-size:12px;
+  font-weight:900; letter-spacing:3px;
+  border-radius:6px; cursor:pointer;
+  transition:background .15s; text-transform:uppercase;
+}
+.btn:hover { background:rgba(255,34,0,.1); }
+.btn.primary { background:var(--red); flex:1; }
+.btn.primary:hover { background:#e61e00; }
+.btn.sm { padding:8px 14px; font-size:11px; letter-spacing:2px; border-color:rgba(255,255,255,.15); color:rgba(255,255,255,.6); }
+.btn.sm:hover { border-color:var(--red); color:#fff; }
+
+/* Toast */
+.toast {
+  position:fixed; top:16px; left:50%; transform:translateX(-50%);
+  background:var(--red); color:#fff;
+  padding:8px 24px; border-radius:6px;
+  font-size:12px; font-weight:700; letter-spacing:2px;
+  opacity:0; transition:opacity .25s; pointer-events:none; z-index:100;
+}
+.toast.show { opacity:1; }
+
+/* BG preview */
+.bg-grid { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+.bg-opt {
+  padding:8px 14px; border-radius:6px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.03);
+  font-size:12px; font-weight:600; letter-spacing:1px;
+  cursor:pointer; transition:all .15s; color:rgba(255,255,255,.5);
+}
+.bg-opt:hover { border-color:rgba(255,34,0,.3); color:#fff; }
+.bg-opt.active { border-color:var(--red); color:#fff; background:rgba(255,34,0,.12); }
+
+/* Social rows */
+.social-row {
+  display:flex; gap:8px; align-items:center; margin-bottom:8px;
+}
+.social-row input { flex:1; padding:8px 12px; font-size:13px; }
+.social-row .del-btn {
+  width:32px; height:32px; border:1px solid rgba(255,255,255,.1);
+  background:transparent; color:rgba(255,255,255,.4); border-radius:6px;
+  cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;
+}
+.social-row .del-btn:hover { border-color:var(--red); color:var(--red); }
+
+/* Stream control */
+.stream-btn {
+  width:100%; padding:16px;
+  border-radius:8px; border:2px solid;
+  font-family:inherit; font-size:14px; font-weight:900;
+  letter-spacing:4px; cursor:pointer;
+  transition:all .2s; text-transform:uppercase;
+}
+.stream-btn.start {
+  border-color:#4ade80; color:#4ade80;
+  background:rgba(74,222,128,.06);
+}
+.stream-btn.start:hover {
+  background:rgba(74,222,128,.15);
+  box-shadow:0 0 24px rgba(74,222,128,.2);
+}
+.stream-btn.stop {
+  border-color:var(--red); color:#fff;
+  background:var(--red);
+}
+.stream-btn.stop:hover {
+  background:#cc1a00;
+  box-shadow:0 0 24px rgba(255,34,0,.3);
+}
+.stream-status {
+  text-align:center; margin-top:8px;
+  font-size:11px; letter-spacing:2px;
+  color:rgba(255,255,255,.35);
+}
+.notif-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,34,0,.15);
+  border-radius:6px;
+  margin-bottom:6px;
+}
+.notif-item.wheel { border-color:rgba(255,215,0,.3); }
+.notif-item-icon {
+  width:6px; height:6px; border-radius:50%;
+  background:var(--red); flex-shrink:0;
+}
+.notif-item.wheel .notif-item-icon { background:var(--gold); }
+.notif-item-info {
+  flex:1; min-width:0;
+}
+.notif-item-title {
+  font-size:9px; font-weight:900; letter-spacing:2px;
+  color:rgba(255,119,0,.7); text-transform:uppercase;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.notif-item-body {
+  font-size:12px; font-weight:700;
+  color:#fff;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.notif-item-user {
+  font-size:11px; color:rgba(255,255,255,.5);
+}
+.notif-item-time {
+  font-size:9px; color:rgba(255,255,255,.3);
+  font-variant-numeric:tabular-nums;
+  flex-shrink:0;
+}
+.notif-item-dismiss {
+  width:24px; height:24px;
+  border:1px solid rgba(255,255,255,.1);
+  background:transparent;
+  color:rgba(255,255,255,.4);
+  border-radius:4px;
+  cursor:pointer;
+  font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+  transition:all .15s;
+}
+.notif-item-dismiss:hover {
+  border-color:var(--red); color:var(--red);
+}
+.notif-empty {
+  padding:14px;
+  text-align:center;
+  font-size:11px;
+  color:rgba(255,255,255,.25);
+  letter-spacing:1px;
+}
+.stream-status .live-indicator {
+  display:inline-block; width:8px; height:8px;
+  border-radius:50%; background:#4ade80;
+  margin-right:6px; vertical-align:middle;
+  animation:statusPulse 1.5s ease-in-out infinite;
+}
+@keyframes statusPulse {
+  0%,100% { opacity:1; box-shadow:0 0 6px #4ade80; }
+  50% { opacity:.4; box-shadow:none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<div class="sidebar">
+  <div class="sb-logo">
+    <img src="./assets/Sasi_Streams_logo.png" alt="">
+    <span>DASHBOARD</span>
+  </div>
+  <button class="tab-btn active" onclick="showTab('golive')">
+    <span class="dot" style="background:var(--red)"></span> Go Live
+  </button>
+  <button class="tab-btn" onclick="showTab('starting')">
+    <span class="dot" style="background:var(--orange)"></span> Starting Soon
+  </button>
+  <button class="tab-btn" onclick="showTab('brb')">
+    <span class="dot" style="background:var(--gold)"></span> BRB
+  </button>
+  <button class="tab-btn" onclick="showTab('ending')">
+    <span class="dot" style="background:rgba(255,255,255,.3)"></span> Stream Ending
+  </button>
+  <button class="tab-btn" onclick="showTab('live')">
+    <span class="dot" style="background:#4ade80"></span> Live Overlay
+  </button>
+  <button class="tab-btn" onclick="showTab('alerts')">
+    <span class="dot" style="background:#ffd700"></span> Alerts
+  </button>
+  <button class="tab-btn" onclick="showTab('games')">
+    <span class="dot" style="background:#a855f7"></span> Games
+  </button>
+  <button class="tab-btn" onclick="showTab('theme')">
+    <span class="dot" style="background:cyan"></span> Theme
+  </button>
+</div>
+
+<!-- ══════════ MAIN ══════════ -->
+<div class="main">
+
+<!-- ────────── GO LIVE ────────── -->
+<div class="tab active" id="tab-golive">
+  <div class="tab-title">GO LIVE</div>
+  <div class="tab-desc">PRE-STREAM SETUP — SET BEFORE EVERY STREAM</div>
+
+  <div class="section">
+    <div class="section-title">Connection</div>
+    <div class="field">
+      <label>Platform</label>
+      <select id="platform" onchange="onPlatformChange()">
+        <option value="youtube">YouTube</option>
+        <option value="twitch">Twitch</option>
+      </select>
+    </div>
+    <div id="yt-fields">
+      <div class="field">
+        <label>YouTube Video ID or URL</label>
+        <input type="text" id="videoId" placeholder="Paste URL or ID (e.g. OAD6b2k10Ys)">
+        <div class="hint">Saves 100x API quota vs auto-search</div>
+      </div>
+    </div>
+    <div id="tw-fields" style="display:none">
+      <div class="field">
+        <label>Twitch Channel</label>
+        <input type="text" id="twitchChannel" readonly>
+        <div class="hint">IRC WebSocket — free, no quota</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Stream Control</div>
+    <div id="stream-ctrl"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Notifications Queue</div>
+    <div class="status" style="margin-bottom:10px">
+      <div class="si"><span class="k">Pending</span><span class="v" id="s-queue">—</span></div>
+    </div>
+    <div id="notif-list" style="max-height:340px;overflow-y:auto;margin-bottom:10px"></div>
+    <button class="btn sm" onclick="clearNotifications()" style="width:100%">CLEAR ALL NOTIFICATIONS</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Quick Settings</div>
+    <div class="row">
+      <div class="field">
+        <label>Countdown (min)</label>
+        <input type="number" id="countdown" min="1" max="60" value="5">
+      </div>
+      <div class="field">
+        <label>Today's Topic</label>
+        <input type="text" id="today" placeholder="e.g. REACT VIDEOS">
+      </div>
+    </div>
+    <div class="toggle-row" onclick="toggle('fakeToggle')">
+      <div class="tl">
+        <div class="label">Test Mode</div>
+        <div class="desc">Fake alerts + chat for UI testing</div>
+      </div>
+      <div class="toggle" id="fakeToggle"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Status</div>
+    <div class="status">
+      <div class="si"><span class="k">Platform</span><span class="v" id="s-plat">—</span></div>
+      <div class="si"><span class="k">Chat Source</span><span class="v" id="s-chat">—</span></div>
+      <div class="si" id="s-vid-row"><span class="k">Video ID</span><span class="v" id="s-vid">—</span></div>
+      <div class="si" id="s-keys-row"><span class="k">API Keys</span><span class="v" id="s-keys">—</span></div>
+      <div class="si" id="s-hours-row"><span class="k">Max Stream Time</span><span class="v" id="s-hours">—</span></div>
+      <div class="si"><span class="k">SE Alerts JWT</span><span class="v" id="s-jwt">—</span></div>
+      <div class="si"><span class="k">Test Mode</span><span class="v" id="s-fake">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── STARTING SOON ────────── -->
+<div class="tab" id="tab-starting">
+  <div class="tab-title">STARTING SOON</div>
+  <div class="tab-desc">STARTING-SOON.HTML SCENE SETTINGS</div>
+
+  <div class="section">
+    <div class="section-title">Background</div>
+    <div class="field">
+      <label>Scene Background</label>
+      <div class="bg-grid" id="bg-starting" data-key="bg_startingSoon"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <div class="row">
+      <div class="field">
+        <label>Badge</label>
+        <input type="text" id="ss_badge" placeholder="STARTING SOON">
+      </div>
+      <div class="field">
+        <label>Top Text (italic)</label>
+        <input type="text" id="ss_topText" placeholder="Stream">
+      </div>
+    </div>
+    <div class="field">
+      <label>Main Text (big)</label>
+      <input type="text" id="ss_mainText" placeholder="STARTING">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Countdown (min)</label>
+        <input type="number" id="ss_countdown" min="1" max="60" value="5">
+      </div>
+      <div class="field">
+        <label>Next Stream</label>
+        <input type="text" id="ss_nextStream" placeholder="FRIDAY • 8PM">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Toggles</div>
+    <div class="toggle-row" onclick="toggle('ss_clock')">
+      <div class="tl"><div class="label">Show Clock / Date</div></div>
+      <div class="toggle" id="ss_clock"></div>
+    </div>
+    <div class="toggle-row" onclick="toggle('ss_ticker')">
+      <div class="tl"><div class="label">Show Ticker</div></div>
+      <div class="toggle" id="ss_ticker"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── BRB ────────── -->
+<div class="tab" id="tab-brb">
+  <div class="tab-title">BRB</div>
+  <div class="tab-desc">BRB.HTML SCENE SETTINGS</div>
+
+  <div class="section">
+    <div class="section-title">Background</div>
+    <div class="field">
+      <label>Scene Background</label>
+      <div class="bg-grid" id="bg-brb" data-key="bg_brb"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <div class="field">
+      <label>Badge</label>
+      <input type="text" id="brb_badge" placeholder="BRB">
+    </div>
+    <div class="field">
+      <label>Main Text (use \n for line break)</label>
+      <input type="text" id="brb_mainText" placeholder="BE RIGHT\nBACK">
+    </div>
+    <div class="field">
+      <label>Subtext</label>
+      <input type="text" id="brb_subtext" placeholder="grabbing something, back in a moment">
+    </div>
+    <div class="field">
+      <label>Tagline (brand area)</label>
+      <input type="text" id="brb_tagline" placeholder="BE RIGHT BACK">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Toggles</div>
+    <div class="toggle-row" onclick="toggle('brb_clock')">
+      <div class="tl"><div class="label">Show Clock / Date</div></div>
+      <div class="toggle" id="brb_clock"></div>
+    </div>
+    <div class="toggle-row" onclick="toggle('brb_ticker')">
+      <div class="tl"><div class="label">Show Ticker</div></div>
+      <div class="toggle" id="brb_ticker"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── STREAM ENDING ────────── -->
+<div class="tab" id="tab-ending">
+  <div class="tab-title">STREAM ENDING</div>
+  <div class="tab-desc">STREAM-ENDING.HTML SCENE SETTINGS</div>
+
+  <div class="section">
+    <div class="section-title">Background</div>
+    <div class="field">
+      <label>Scene Background</label>
+      <div class="bg-grid" id="bg-ending" data-key="bg_ending"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Text</div>
+    <div class="row">
+      <div class="field">
+        <label>Badge</label>
+        <input type="text" id="end_badge" placeholder="OFFLINE">
+      </div>
+      <div class="field">
+        <label>Tagline</label>
+        <input type="text" id="end_tagline" placeholder="SEE YOU NEXT TIME">
+      </div>
+    </div>
+    <div class="field">
+      <label>Thanks Text</label>
+      <input type="text" id="end_thanks" placeholder="Thanks for">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Main Text (big)</label>
+        <input type="text" id="end_main" placeholder="WATCHING">
+      </div>
+      <div class="field">
+        <label>Sub Text</label>
+        <input type="text" id="end_sub" placeholder="SEE YOU SOON">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Toggles</div>
+    <div class="toggle-row" onclick="toggle('end_ticker')">
+      <div class="tl"><div class="label">Show Ticker</div></div>
+      <div class="toggle" id="end_ticker"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── LIVE OVERLAY ────────── -->
+<div class="tab" id="tab-live">
+  <div class="tab-title">LIVE OVERLAY</div>
+  <div class="tab-desc">OVERLAY.HTML — ON-SCREEN DURING GAMEPLAY</div>
+
+  <div class="section">
+    <div class="section-title">Subscribe Strip</div>
+    <div class="field">
+      <label>Scroll Strip Text</label>
+      <input type="text" id="sub_items" placeholder="SUBSCRIBE">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Likes Strip</div>
+    <div class="field">
+      <label>Scroll Strip Text</label>
+      <input type="text" id="likes_items" placeholder="LIKE">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Stream Info Panel</div>
+    <div class="hint" style="margin-bottom:10px">Rolling info cards on just-chatting &amp; overlay scenes. Drag to reorder, click type to change fields.</div>
+    <div id="streaminfo-list"></div>
+    <button class="btn sm" onclick="addStreamInfoItem()" style="margin-top:8px">+ ADD ITEM</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Webcam Frame</div>
+    <div class="row">
+      <div class="field">
+        <label>Width (px)</label>
+        <input type="number" id="cam_width" value="480">
+      </div>
+      <div class="field">
+        <label>Height (px)</label>
+        <input type="number" id="cam_height" value="270">
+      </div>
+      <div class="field">
+        <label>Position</label>
+        <select id="cam_position">
+          <option value="bottom-left">Bottom Left</option>
+          <option value="bottom-right">Bottom Right</option>
+          <option value="top-left">Top Left</option>
+          <option value="top-right">Top Right</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Margin (px)</label>
+        <input type="number" id="cam_margin" value="20">
+      </div>
+      <div class="field">
+        <label>Label</label>
+        <input type="text" id="cam_label" placeholder="(empty = hidden)">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Name Tag</div>
+    <div class="field">
+      <label>Text (empty = uses brand name)</label>
+      <input type="text" id="nametag" placeholder="">
+    </div>
+  </div>
+</div>
+
+<!-- ────────── ALERTS ────────── -->
+<div class="tab" id="tab-alerts">
+  <div class="tab-title">ALERTS</div>
+  <div class="tab-desc">SUPER CHAT TIERS, DURATIONS &amp; THRESHOLDS</div>
+
+  <div class="section">
+    <div class="section-title">Super Chat Tier Thresholds (INR)</div>
+    <div class="hint" style="margin-bottom:10px">Amount ranges that determine which visual tier a Super Chat gets.</div>
+    <div class="row">
+      <div class="field">
+        <label>Tier 2 starts at (₹)</label>
+        <input type="number" id="alert_t2_min" min="1" value="100">
+      </div>
+      <div class="field">
+        <label>Tier 3 starts at (₹)</label>
+        <input type="number" id="alert_t3_min" min="1" value="500">
+      </div>
+      <div class="field">
+        <label>Tier 4 (Hero) starts at (₹)</label>
+        <input type="number" id="alert_t4_min" min="1" value="2000">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Durations</div>
+    <div class="hint" style="margin-bottom:10px">Super Chat duration scales with amount (logarithmic). Other alerts use fixed durations.</div>
+    <div class="row">
+      <div class="field">
+        <label>Base Duration (ms)</label>
+        <input type="number" id="alert_baseDur" min="1000" max="10000" step="500" value="2500">
+      </div>
+      <div class="field">
+        <label>Max Duration (ms)</label>
+        <input type="number" id="alert_maxDur" min="3000" max="15000" step="500" value="7000">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Membership (ms)</label>
+        <input type="number" id="alert_memberDur" min="1000" max="15000" step="500" value="6000">
+      </div>
+      <div class="field">
+        <label>Gift Base (ms)</label>
+        <input type="number" id="alert_giftBaseDur" min="1000" max="10000" step="500" value="3000">
+      </div>
+      <div class="field">
+        <label>Gift Per Unit (ms)</label>
+        <input type="number" id="alert_giftPerUnit" min="100" max="1000" step="50" value="400">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Redeem / Game (ms)</label>
+        <input type="number" id="alert_redeemDur" min="1000" max="10000" step="500" value="5000">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── GAMES ────────── -->
+<div class="tab" id="tab-games">
+  <div class="tab-title">VIEWER GAMES</div>
+  <div class="tab-desc">WHEEL, MYSTERY BOX &amp; HIGHLIGHT — SE LOYALTY POINTS</div>
+
+  <div class="section">
+    <div class="section-title">🎰 Wheel of Fortune</div>
+    <div class="row">
+      <div class="field">
+        <label>Cost (loyalty points)</label>
+        <input type="number" id="game_wheel_cost" min="0" value="1000000">
+      </div>
+    </div>
+    <div class="field" style="margin-top:8px">
+      <label>Rewards (name : weight — higher weight = more common)</label>
+      <div class="hint" style="margin-bottom:6px">One per line: "Reward Name : 40"</div>
+      <textarea id="game_wheel_rewards" rows="6" style="width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:6px;color:#fff;padding:10px;font-family:monospace;font-size:12px;resize:vertical;">500K Points : 40
+VIP Badge : 20
+Custom Emote : 15
+Shoutout : 15
+1M Points : 8
+Nothing 💀 : 2</textarea>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📦 Mystery Box</div>
+    <div class="row">
+      <div class="field">
+        <label>Cost (loyalty points)</label>
+        <input type="number" id="game_mystery_cost" min="0" value="500000">
+      </div>
+    </div>
+    <div class="field" style="margin-top:8px">
+      <label>Rewards (name : weight)</label>
+      <textarea id="game_mystery_rewards" rows="5" style="width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:6px;color:#fff;padding:10px;font-family:monospace;font-size:12px;resize:vertical;">Rare Emote Pack : 30
+200K Points : 30
+Secret Role : 15
+Nothing 💀 : 15
+1M Points Jackpot : 10</textarea>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">💬 Highlight Message</div>
+    <div class="row">
+      <div class="field">
+        <label>Cost (loyalty points)</label>
+        <input type="number" id="game_highlight_cost" min="0" value="100000">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── THEME ────────── -->
+<div class="tab" id="tab-theme">
+  <div class="tab-title">THEME</div>
+  <div class="tab-desc">BRAND, COLORS, EFFECTS &amp; GLOBAL SETTINGS</div>
+
+  <div class="section">
+    <div class="section-title">Brand</div>
+    <div class="row">
+      <div class="field">
+        <label>Channel Name</label>
+        <input type="text" id="brand_name" placeholder="SASI STREAMS">
+      </div>
+      <div class="field">
+        <label>Tagline</label>
+        <input type="text" id="brand_tagline" placeholder="LIVE STREAM">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Locale</div>
+    <div class="row">
+      <div class="field">
+        <label>Number Format Region</label>
+        <select id="locale_region">
+          <option value="en-IN">India (10,00,000)</option>
+          <option value="en-US">US (1,000,000)</option>
+          <option value="en-GB">UK (1,000,000)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Default Currency Symbol</label>
+        <input type="text" id="locale_currency" value="₹" style="max-width:80px">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Ticker Extra Text</div>
+    <div class="hint" style="margin-bottom:10px">Last item in the ticker for each scene.</div>
+    <div class="row">
+      <div class="field">
+        <label>Starting Soon</label>
+        <input type="text" id="ticker_ss" placeholder="Stream Starting Soon — STAY TUNED">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>BRB</label>
+        <input type="text" id="ticker_brb" placeholder="Be Right Back — STAY TUNED">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Stream Ending</label>
+        <input type="text" id="ticker_end" placeholder="Stream Ended — SEE YOU SOON">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Default Background</div>
+    <div class="field">
+      <label>Fallback for scenes without a specific background</label>
+      <div class="bg-grid" id="bg-global" data-key="background"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Colors</div>
+    <div class="row">
+      <div class="field">
+        <label>Primary</label>
+        <div class="color-wrap">
+          <input type="color" id="cRed" value="#FF2200" oninput="syncColor('cRed')">
+          <input type="text" id="cRedHex" value="#FF2200" onchange="syncColorHex('cRed')">
+        </div>
+      </div>
+      <div class="field">
+        <label>Secondary</label>
+        <div class="color-wrap">
+          <input type="color" id="cOrange" value="#FF7700" oninput="syncColor('cOrange')">
+          <input type="text" id="cOrangeHex" value="#FF7700" onchange="syncColorHex('cOrange')">
+        </div>
+      </div>
+      <div class="field">
+        <label>Accent</label>
+        <div class="color-wrap">
+          <input type="color" id="cGold" value="#FFD700" oninput="syncColor('cGold')">
+          <input type="text" id="cGoldHex" value="#FFD700" onchange="syncColorHex('cGold')">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Socials</div>
+    <div class="hint" style="margin-bottom:10px">Shown in tickers and bottom bars across all scenes. Leave handle empty to hide a platform.</div>
+    <div id="socials-list"></div>
+    <button class="btn sm" onclick="addSocial()" style="margin-top:8px">+ ADD SOCIAL</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Effects</div>
+    <div class="toggle-row" onclick="toggle('glitchToggle')">
+      <div class="tl">
+        <div class="label">Glitch Effects</div>
+        <div class="desc">Master toggle for glitch, neon flicker, RGB split</div>
+      </div>
+      <div class="toggle" id="glitchToggle"></div>
+    </div>
+    <div class="hint" style="margin:12px 0 8px">Per-element effect assignments:</div>
+    <div id="effects-list"></div>
+    <div class="row">
+      <div class="field">
+        <label>Animation Speed</label>
+        <select id="animSpeed">
+          <option value="0.5">Slow (0.5x)</option>
+          <option value="1">Normal (1x)</option>
+          <option value="1.5">Fast (1.5x)</option>
+          <option value="2">Very Fast (2x)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Ticker Speed (sec)</label>
+        <input type="number" id="tickerSpeed" min="10" max="60" value="28">
+        <div class="hint">Lower = faster scroll</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ FOOTER BUTTONS (always visible) ══════════ -->
+<div class="btn-row">
+  <button class="btn primary" onclick="save()">SAVE &amp; APPLY</button>
+  <button class="btn sm" onclick="resetTab()">RESET TAB</button>
+  <button class="btn sm" onclick="clearAll()">CLEAR ALL</button>
+</div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<div class="toast" id="toast"></div>
+
+<script src="./secrets.js"></script>
+<script>
+// ══════════ TABS ══════════
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  // Find the button that matches
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.onclick && b.onclick.toString().indexOf("'" + id + "'") !== -1) b.classList.add('active');
+  });
+}
+
+// ══════════ HELPERS ══════════
+function ls(k) { return localStorage.getItem('sasi_' + k); }
+function lsSet(k, v) { localStorage.setItem('sasi_' + k, v); }
+function lsDel(k) { localStorage.removeItem('sasi_' + k); }
+function toggle(id) { document.getElementById(id).classList.toggle('on'); }
+function isOn(id) { return document.getElementById(id).classList.contains('on'); }
+function setOn(id, v) { document.getElementById(id).className = 'toggle' + (v ? ' on' : ''); }
+function val(id) { return document.getElementById(id).value; }
+function setVal(id, v) { document.getElementById(id).value = v; }
+function syncColor(id) { document.getElementById(id + 'Hex').value = document.getElementById(id).value; }
+function syncColorHex(id) { document.getElementById(id).value = document.getElementById(id + 'Hex').value; }
+function flash(t) { const e = document.getElementById('toast'); e.textContent = t; e.classList.add('show'); setTimeout(() => e.classList.remove('show'), 2500); }
+
+// ══════════ STREAM CONTROL ══════════
+function renderStreamCtrl() {
+  const live = ls('streamLive') === 'true';
+  const ctrl = document.getElementById('stream-ctrl');
+  if (live) {
+    ctrl.innerHTML =
+      '<button class="stream-btn stop" onclick="stopStream()">STOP STREAM</button>' +
+      '<div class="stream-status"><span class="live-indicator"></span>LIVE — chat + alerts active</div>';
+  } else {
+    ctrl.innerHTML =
+      '<button class="stream-btn start" onclick="startStream()">START STREAM</button>' +
+      '<div class="stream-status">Offline — no API calls running</div>';
+  }
+}
+
+function startStream() {
+  lsSet('streamLive', 'true');
+  renderStreamCtrl();
+  updateStatus();
+  flash('STREAM STARTED — refresh overlays in OBS');
+}
+
+function stopStream() {
+  lsSet('streamLive', 'false');
+  renderStreamCtrl();
+  updateStatus();
+  flash('STREAM STOPPED — API calls disabled');
+}
+
+// ══════════ NOTIFICATIONS QUEUE ══════════
+function getNotifQueue() {
+  try {
+    const raw = localStorage.getItem('sasi_notifications_queue');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function clearNotifications() {
+  localStorage.removeItem('sasi_notifications_queue');
+  updateNotifCount();
+  flash('NOTIFICATIONS CLEARED');
+}
+
+function dismissNotif(id) {
+  const queue = getNotifQueue().filter(n => n.id !== id);
+  localStorage.setItem('sasi_notifications_queue', JSON.stringify(queue));
+  updateNotifCount();
+}
+
+function updateNotifCount() {
+  const queue = getNotifQueue();
+  const now = Date.now();
+  const active = queue.filter(n => (n.ts + (n.duration || 60000)) > now);
+
+  // Update count
+  const el = document.getElementById('s-queue');
+  if (el) {
+    el.textContent = active.length + ' active';
+    el.className = 'v ' + (active.length === 0 ? 'ok' : 'warn');
+  }
+
+  // Render list
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+
+  if (active.length === 0) {
+    list.innerHTML = '<div class="notif-empty">No active notifications</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  active.forEach(n => {
+    const elapsed = Math.floor((now - n.ts) / 1000);
+    const elapsedStr = elapsed < 60 ? elapsed + 's' : Math.floor(elapsed / 60) + 'm';
+    const item = document.createElement('div');
+    item.className = 'notif-item ' + (n.type || '');
+    item.innerHTML =
+      '<div class="notif-item-icon"></div>' +
+      '<div class="notif-item-info">' +
+        '<div class="notif-item-title">' + escapeHtml(n.title || '') + '</div>' +
+        '<div class="notif-item-body">' +
+          (n.user ? '<span class="notif-item-user">' + escapeHtml(n.user) + ' → </span>' : '') +
+          escapeHtml(n.body || '') +
+        '</div>' +
+      '</div>' +
+      '<div class="notif-item-time">' + elapsedStr + '</div>' +
+      '<button class="notif-item-dismiss" data-id="' + n.id + '">×</button>';
+    list.appendChild(item);
+  });
+
+  // Wire up dismiss buttons
+  list.querySelectorAll('.notif-item-dismiss').forEach(btn => {
+    btn.onclick = () => dismissNotif(btn.dataset.id);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Update queue count every 2s
+setInterval(updateNotifCount, 2000);
+
+function onPlatformChange() {
+  const p = val('platform');
+  document.getElementById('yt-fields').style.display = p === 'youtube' ? 'block' : 'none';
+  document.getElementById('tw-fields').style.display = p === 'twitch' ? 'block' : 'none';
+}
+
+// ══════════ SOCIALS ══════════
+const DEFAULT_SOCIALS = [
+  { platform:'TWITCH', handle:'@ONLY_SASI' },
+  { platform:'YOUTUBE', handle:'@SASI_STREAMS' },
+  { platform:'INSTAGRAM', handle:'@SASI_PLAYS' },
+  { platform:'X / TWITTER', handle:'@SASI_PLAYS' },
+];
+
+function loadSocials() {
+  const raw = ls('socials');
+  if (raw) { try { return JSON.parse(raw); } catch(e) {} }
+  return null; // null means use config defaults
+}
+
+const PLATFORM_OPTIONS = ['TWITCH','YOUTUBE','INSTAGRAM','X / TWITTER','TIKTOK','DISCORD','FACEBOOK','THREADS'];
+
+function renderSocials(socials) {
+  const list = document.getElementById('socials-list');
+  list.innerHTML = '';
+  socials.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'social-row';
+    const opts = PLATFORM_OPTIONS.map(p =>
+      '<option value="' + p + '"' + (p === (s.platform||'').toUpperCase() ? ' selected' : '') + '>' + p + '</option>'
+    ).join('');
+    row.innerHTML =
+      '<select style="max-width:160px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:6px;color:#fff;padding:8px 10px;font-size:13px;" data-idx="' + i + '" data-field="platform">' + opts + '</select>' +
+      '<input type="text" value="' + (s.handle||'') + '" placeholder="@handle" data-idx="' + i + '" data-field="handle">' +
+      '<button class="del-btn" onclick="removeSocial(' + i + ')">×</button>';
+    list.appendChild(row);
+  });
+}
+
+function getSocialsFromUI() {
+  const rows = document.querySelectorAll('#socials-list .social-row');
+  const result = [];
+  rows.forEach(row => {
+    const sel = row.querySelector('select');
+    const inp = row.querySelector('input');
+    const p = sel ? sel.value.trim() : '';
+    const h = inp ? inp.value.trim() : '';
+    if (p || h) result.push({ platform: p, handle: h });
+  });
+  return result;
+}
+
+function addSocial() {
+  const socials = getSocialsFromUI();
+  socials.push({ platform:'', handle:'' });
+  renderSocials(socials);
+}
+
+function removeSocial(idx) {
+  const socials = getSocialsFromUI();
+  socials.splice(idx, 1);
+  renderSocials(socials);
+}
+
+// ══════════ STREAM INFO EDITOR ══════════
+const SI_TYPES = ['text','youtube-goal','discord-qr','stream-time','social'];
+const SI_TYPE_LABELS = { 'text':'Text', 'youtube-goal':'YouTube Subs Goal', 'discord-qr':'Discord QR', 'stream-time':'Stream Timer', 'social':'Social Link' };
+
+function getDefaultStreamInfo() {
+  return [
+    { type:'youtube-goal', label:'YOUTUBE SUBS', color:'red' },
+    { type:'discord-qr', label:'JOIN DISCORD', server:"SASI's Hub", url:'https://discord.gg/ZSzGcup8Vn', sub:'SCAN TO JOIN' },
+    { type:'text', label:'NEXT STREAM', value:'FRIDAY · 8PM' },
+    { type:'text', label:'SCHEDULE', value:'MON · WED · FRI @ 8PM' },
+    { type:'text', label:'TODAY', value:'REACT VIDEOS' },
+  ];
+}
+
+function loadStreamInfo() {
+  const raw = ls('streamInfo');
+  if (raw) try { return JSON.parse(raw); } catch(e) {}
+  return null;
+}
+
+function renderStreamInfo(items) {
+  const list = document.getElementById('streaminfo-list');
+  list.innerHTML = '';
+  items.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'social-row';
+    row.style.cssText = 'flex-wrap:wrap;gap:6px;padding:10px;margin-bottom:6px;background:rgba(0,0,0,.2);border:1px solid rgba(255,34,0,.1);border-radius:6px;';
+
+    const typeOpts = SI_TYPES.map(t =>
+      '<option value="' + t + '"' + (t === item.type ? ' selected' : '') + '>' + SI_TYPE_LABELS[t] + '</option>'
+    ).join('');
+
+    let fieldsHtml = '<div style="display:flex;gap:6px;width:100%;align-items:center;">' +
+      '<select onchange="changeStreamInfoType(' + i + ',this.value)" style="max-width:180px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:4px;color:#fff;padding:6px 8px;font-size:12px;">' + typeOpts + '</select>' +
+      '<input type="text" value="' + (item.label||'') + '" placeholder="LABEL" data-si="' + i + '" data-f="label" style="max-width:140px;font-size:12px;">' +
+      '<button class="del-btn" onclick="removeStreamInfoItem(' + i + ')">×</button></div>';
+
+    // Type-specific fields
+    if (item.type === 'text') {
+      fieldsHtml += '<input type="text" value="' + (item.value||'') + '" placeholder="Value text" data-si="' + i + '" data-f="value" style="width:100%;font-size:12px;margin-top:4px;">';
+    } else if (item.type === 'youtube-goal') {
+      fieldsHtml += '<select data-si="' + i + '" data-f="color" style="max-width:120px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:4px;color:#fff;padding:6px;font-size:12px;margin-top:4px;">' +
+        ['red','orange','gold'].map(c => '<option value="' + c + '"' + (c === (item.color||'red') ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
+    } else if (item.type === 'discord-qr') {
+      fieldsHtml += '<div style="display:flex;gap:6px;width:100%;margin-top:4px;">' +
+        '<input type="text" value="' + (item.server||'') + '" placeholder="Server name" data-si="' + i + '" data-f="server" style="font-size:12px;">' +
+        '<input type="text" value="' + (item.url||'') + '" placeholder="discord.gg/..." data-si="' + i + '" data-f="url" style="font-size:12px;">' +
+        '</div>';
+    } else if (item.type === 'social') {
+      const pOpts = PLATFORM_OPTIONS.map(p => '<option value="' + p.toLowerCase() + '"' + (p.toLowerCase() === (item.platform||'') ? ' selected' : '') + '>' + p + '</option>').join('');
+      fieldsHtml += '<select data-si="' + i + '" data-f="platform" style="max-width:160px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:4px;color:#fff;padding:6px;font-size:12px;margin-top:4px;">' + pOpts + '</select>';
+    }
+
+    row.innerHTML = fieldsHtml;
+    list.appendChild(row);
+  });
+}
+
+function getStreamInfoFromUI() {
+  const items = [];
+  const rows = document.querySelectorAll('#streaminfo-list > div');
+  rows.forEach((row, i) => {
+    const sel = row.querySelector('select');
+    const type = sel ? sel.value : 'text';
+    const item = { type };
+    row.querySelectorAll('[data-si="' + i + '"]').forEach(el => {
+      item[el.dataset.f] = el.value;
+    });
+    items.push(item);
+  });
+  return items;
+}
+
+function addStreamInfoItem() {
+  const items = getStreamInfoFromUI();
+  items.push({ type:'text', label:'', value:'' });
+  renderStreamInfo(items);
+}
+
+function removeStreamInfoItem(idx) {
+  const items = getStreamInfoFromUI();
+  items.splice(idx, 1);
+  renderStreamInfo(items);
+}
+
+function changeStreamInfoType(idx, newType) {
+  const items = getStreamInfoFromUI();
+  items[idx] = { type:newType, label:items[idx].label || '' };
+  renderStreamInfo(items);
+}
+
+// ══════════ EFFECTS EDITOR ══════════
+const EFFECT_OPTIONS = ['','glitch','shimmer','pulse','neonFlicker','rgbSplit','scanLine','fadeInUp','float','glowPulse'];
+const EFFECT_ELEMENTS = [
+  { sel:'.t-starting', name:'Starting Soon — main text' },
+  { sel:'.t-stream', name:'Starting Soon — "Stream" text' },
+  { sel:'.t-main', name:'BRB — main text' },
+  { sel:'.t-watching', name:'Stream Ending — "WATCHING"' },
+  { sel:'.t-thanks', name:'Stream Ending — "Thanks for"' },
+  { sel:'.t-seeyou', name:'Stream Ending — "SEE YOU SOON"' },
+  { sel:'.scene-name', name:'Live — scene label' },
+  { sel:'.tag-name', name:'Name tag text' },
+  { sel:'.clock-date', name:'Date display' },
+  { sel:'.brand-l1', name:'Brand name' },
+  { sel:'.live-text', name:'LIVE / BRB badge' },
+  { sel:'.countdown-time', name:'Countdown timer' },
+];
+
+function renderEffects() {
+  const list = document.getElementById('effects-list');
+  list.innerHTML = '';
+  const saved = loadEffects();
+  EFFECT_ELEMENTS.forEach((el, i) => {
+    const current = saved[el.sel] || '';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);';
+    const opts = EFFECT_OPTIONS.map(e =>
+      '<option value="' + e + '"' + (e === current ? ' selected' : '') + '>' + (e || '(none)') + '</option>'
+    ).join('');
+    row.innerHTML =
+      '<span style="flex:1;font-size:12px;color:rgba(255,255,255,.6);">' + el.name + '</span>' +
+      '<select data-efx="' + el.sel + '" style="max-width:150px;background:rgba(0,0,0,.3);border:1px solid rgba(255,34,0,.2);border-radius:4px;color:#fff;padding:5px 8px;font-size:11px;">' + opts + '</select>';
+    list.appendChild(row);
+  });
+}
+
+function loadEffects() {
+  const raw = ls('effects');
+  if (raw) try { return JSON.parse(raw); } catch(e) {}
+  return {};
+}
+
+function getEffectsFromUI() {
+  const result = {};
+  document.querySelectorAll('[data-efx]').forEach(sel => {
+    result[sel.dataset.efx] = sel.value;
+  });
+  return result;
+}
+
+function extractVideoId(input) {
+  input = input.trim();
+  const m = input.match(/(?:youtube\.com\/(?:watch\?v=|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (m) return m[1];
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+  return input;
+}
+
+function getYtKeyCount() {
+  const yt = window.SASI_SECRETS && window.SASI_SECRETS.youtube;
+  const keys = (yt && yt.apiKeys) || (yt && yt.apiKey ? [yt.apiKey] : []);
+  return keys.filter(k => k && !k.startsWith('PASTE_')).length;
+}
+
+// ══════════ BG GRIDS ══════════
+const BG_OPTIONS = ['random','hexgrid','particles','ember','matrix','minimal'];
+function initBgGrids() {
+  document.querySelectorAll('.bg-grid').forEach(grid => {
+    const key = grid.dataset.key;
+    grid.innerHTML = '';
+    BG_OPTIONS.forEach(bg => {
+      const opt = document.createElement('div');
+      opt.className = 'bg-opt';
+      opt.textContent = bg.charAt(0).toUpperCase() + bg.slice(1);
+      opt.dataset.val = bg;
+      opt.onclick = () => {
+        grid.querySelectorAll('.bg-opt').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+      };
+      grid.appendChild(opt);
+    });
+  });
+}
+
+function setBgGrid(gridId, value) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.querySelectorAll('.bg-opt').forEach(o => {
+    o.classList.toggle('active', o.dataset.val === value);
+  });
+}
+
+function getBgGrid(gridId) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return '';
+  const active = grid.querySelector('.bg-opt.active');
+  return active ? active.dataset.val : '';
+}
+
+// ══════════ LOAD ══════════
+function load() {
+  // Go Live
+  setVal('platform', ls('activePlatform') || 'youtube');
+  onPlatformChange();
+  setVal('videoId', ls('liveVideoId') || '');
+  const tw = window.SASI_SECRETS && window.SASI_SECRETS.twitch;
+  setVal('twitchChannel', (tw && tw.username) || '(not set)');
+  setVal('countdown', ls('countdown') || '5');
+  setVal('today', ls('today') || '');
+  renderStreamCtrl();
+  updateNotifCount();
+  setOn('fakeToggle', ls('fakeAlerts') === 'true');
+
+  // Starting Soon
+  setBgGrid('bg-starting', ls('bg_startingSoon') || 'random');
+  setVal('ss_badge', ls('ss_badge') || '');
+  setVal('ss_topText', ls('ss_topText') || '');
+  setVal('ss_mainText', ls('ss_mainText') || '');
+  setVal('ss_countdown', ls('ss_countdown') || '5');
+  setVal('ss_nextStream', ls('ss_nextStream') || '');
+  setOn('ss_clock', ls('ss_clock') !== 'false');
+  setOn('ss_ticker', ls('ss_ticker') !== 'false');
+
+  // BRB
+  setBgGrid('bg-brb', ls('bg_brb') || 'random');
+  setVal('brb_badge', ls('brb_badge') || '');
+  setVal('brb_mainText', ls('brb_mainText') || '');
+  setVal('brb_subtext', ls('brb_subtext') || '');
+  setVal('brb_tagline', ls('brb_tagline') || '');
+  setOn('brb_clock', ls('brb_clock') !== 'false');
+  setOn('brb_ticker', ls('brb_ticker') !== 'false');
+
+  // Ending
+  setBgGrid('bg-ending', ls('bg_ending') || 'random');
+  setVal('end_badge', ls('end_badge') || '');
+  setVal('end_tagline', ls('end_tagline') || '');
+  setVal('end_thanks', ls('end_thanks') || '');
+  setVal('end_main', ls('end_main') || '');
+  setVal('end_sub', ls('end_sub') || '');
+  setOn('end_ticker', ls('end_ticker') !== 'false');
+
+  // Live Overlay
+  setVal('sub_items', ls('sub_items') || '');
+  setVal('likes_items', ls('likes_items') || '');
+  setVal('cam_width', ls('cam_width') || '480');
+  setVal('cam_height', ls('cam_height') || '270');
+  setVal('cam_position', ls('cam_position') || 'bottom-left');
+  setVal('cam_margin', ls('cam_margin') || '20');
+  setVal('cam_label', ls('cam_label') || '');
+  setVal('nametag', ls('nametag') || '');
+
+  // Stream Info
+  const savedSI = loadStreamInfo();
+  renderStreamInfo(savedSI || getDefaultStreamInfo());
+
+  // Effects
+  renderEffects();
+
+  // Theme — Brand
+  setVal('brand_name', ls('brand_name') || '');
+  setVal('brand_tagline', ls('brand_tagline') || '');
+  setVal('locale_region', ls('locale_region') || 'en-IN');
+  setVal('locale_currency', ls('locale_currency') || '₹');
+  setVal('ticker_ss', ls('ticker_ss') || '');
+  setVal('ticker_brb', ls('ticker_brb') || '');
+  setVal('ticker_end', ls('ticker_end') || '');
+
+  // Theme — BG/Colors
+  setBgGrid('bg-global', ls('background') || 'random');
+  const cR = ls('colorRed') || '#FF2200', cO = ls('colorOrange') || '#FF7700', cG = ls('colorGold') || '#FFD700';
+  setVal('cRed', cR); setVal('cRedHex', cR);
+  setVal('cOrange', cO); setVal('cOrangeHex', cO);
+  setVal('cGold', cG); setVal('cGoldHex', cG);
+  setOn('glitchToggle', ls('glitch') !== 'false');
+  setVal('animSpeed', ls('animSpeed') || '1');
+  setVal('tickerSpeed', ls('tickerSpeed') || '28');
+
+  // Alerts
+  setVal('alert_t2_min', ls('alert_t2_min') || '100');
+  setVal('alert_t3_min', ls('alert_t3_min') || '500');
+  setVal('alert_t4_min', ls('alert_t4_min') || '2000');
+  setVal('alert_baseDur', ls('alert_baseDur') || '2500');
+  setVal('alert_maxDur', ls('alert_maxDur') || '7000');
+  setVal('alert_memberDur', ls('alert_memberDur') || '6000');
+  setVal('alert_giftBaseDur', ls('alert_giftBaseDur') || '3000');
+  setVal('alert_giftPerUnit', ls('alert_giftPerUnit') || '400');
+  setVal('alert_redeemDur', ls('alert_redeemDur') || '5000');
+
+  // Games
+  setVal('game_wheel_cost', ls('game_wheel_cost') || '1000000');
+  setVal('game_mystery_cost', ls('game_mystery_cost') || '500000');
+  setVal('game_highlight_cost', ls('game_highlight_cost') || '100000');
+  if (ls('game_wheel_rewards')) setVal('game_wheel_rewards', ls('game_wheel_rewards'));
+  if (ls('game_mystery_rewards')) setVal('game_mystery_rewards', ls('game_mystery_rewards'));
+
+  // Socials
+  const savedSocials = loadSocials();
+  renderSocials(savedSocials || DEFAULT_SOCIALS);
+
+  updateStatus();
+}
+
+// ══════════ SAVE ══════════
+function save() {
+  function s(k, v) { v ? lsSet(k, v) : lsDel(k); }
+
+  // Go Live
+  const vid = extractVideoId(val('videoId'));
+  setVal('videoId', vid);
+  s('liveVideoId', vid);
+  lsSet('activePlatform', val('platform'));
+  lsSet('countdown', val('countdown'));
+  s('today', val('today'));
+  lsSet('fakeAlerts', isOn('fakeToggle').toString());
+
+  // Starting Soon
+  s('bg_startingSoon', getBgGrid('bg-starting'));
+  s('ss_badge', val('ss_badge'));
+  s('ss_topText', val('ss_topText'));
+  s('ss_mainText', val('ss_mainText'));
+  s('ss_countdown', val('ss_countdown'));
+  s('ss_nextStream', val('ss_nextStream'));
+  lsSet('ss_clock', isOn('ss_clock').toString());
+  lsSet('ss_ticker', isOn('ss_ticker').toString());
+
+  // BRB
+  s('bg_brb', getBgGrid('bg-brb'));
+  s('brb_badge', val('brb_badge'));
+  s('brb_mainText', val('brb_mainText'));
+  s('brb_subtext', val('brb_subtext'));
+  s('brb_tagline', val('brb_tagline'));
+  lsSet('brb_clock', isOn('brb_clock').toString());
+  lsSet('brb_ticker', isOn('brb_ticker').toString());
+
+  // Ending
+  s('bg_ending', getBgGrid('bg-ending'));
+  s('end_badge', val('end_badge'));
+  s('end_tagline', val('end_tagline'));
+  s('end_thanks', val('end_thanks'));
+  s('end_main', val('end_main'));
+  s('end_sub', val('end_sub'));
+  lsSet('end_ticker', isOn('end_ticker').toString());
+
+  // Stream Info
+  const siItems = getStreamInfoFromUI();
+  if (siItems.length) lsSet('streamInfo', JSON.stringify(siItems));
+  else lsDel('streamInfo');
+
+  // Effects
+  const efx = getEffectsFromUI();
+  lsSet('effects', JSON.stringify(efx));
+
+  // Live Overlay
+  s('sub_items', val('sub_items'));
+  s('likes_items', val('likes_items'));
+  lsSet('cam_width', val('cam_width'));
+  lsSet('cam_height', val('cam_height'));
+  lsSet('cam_position', val('cam_position'));
+  lsSet('cam_margin', val('cam_margin'));
+  s('cam_label', val('cam_label'));
+  s('nametag', val('nametag'));
+
+  // Theme — Brand
+  s('brand_name', val('brand_name'));
+  s('brand_tagline', val('brand_tagline'));
+  s('locale_region', val('locale_region'));
+  s('locale_currency', val('locale_currency'));
+  s('ticker_ss', val('ticker_ss'));
+  s('ticker_brb', val('ticker_brb'));
+  s('ticker_end', val('ticker_end'));
+
+  // Theme — BG/Colors
+  s('background', getBgGrid('bg-global'));
+  lsSet('colorRed', val('cRedHex') || '#FF2200');
+  lsSet('colorOrange', val('cOrangeHex') || '#FF7700');
+  lsSet('colorGold', val('cGoldHex') || '#FFD700');
+  lsSet('glitch', isOn('glitchToggle').toString());
+  lsSet('animSpeed', val('animSpeed'));
+  lsSet('tickerSpeed', val('tickerSpeed'));
+
+  // Alerts
+  lsSet('alert_t2_min', val('alert_t2_min'));
+  lsSet('alert_t3_min', val('alert_t3_min'));
+  lsSet('alert_t4_min', val('alert_t4_min'));
+  lsSet('alert_baseDur', val('alert_baseDur'));
+  lsSet('alert_maxDur', val('alert_maxDur'));
+  lsSet('alert_memberDur', val('alert_memberDur'));
+  lsSet('alert_giftBaseDur', val('alert_giftBaseDur'));
+  lsSet('alert_giftPerUnit', val('alert_giftPerUnit'));
+  lsSet('alert_redeemDur', val('alert_redeemDur'));
+
+  // Games
+  lsSet('game_wheel_cost', val('game_wheel_cost'));
+  lsSet('game_mystery_cost', val('game_mystery_cost'));
+  lsSet('game_highlight_cost', val('game_highlight_cost'));
+  lsSet('game_wheel_rewards', val('game_wheel_rewards'));
+  lsSet('game_mystery_rewards', val('game_mystery_rewards'));
+
+  // Socials
+  const socials = getSocialsFromUI();
+  if (socials.length) lsSet('socials', JSON.stringify(socials));
+  else lsDel('socials');
+
+  updateStatus();
+  flash('SAVED — REFRESH OVERLAYS IN OBS');
+}
+
+// ══════════ RESET / CLEAR ══════════
+const TAB_KEYS = {
+  golive:   ['liveVideoId','activePlatform','countdown','today','fakeAlerts','streamLive'],
+  starting: ['bg_startingSoon','ss_badge','ss_topText','ss_mainText','ss_countdown','ss_nextStream','ss_clock','ss_ticker'],
+  brb:      ['bg_brb','brb_badge','brb_mainText','brb_subtext','brb_tagline','brb_clock','brb_ticker'],
+  ending:   ['bg_ending','end_badge','end_tagline','end_thanks','end_main','end_sub','end_ticker'],
+  live:     ['sub_items','likes_items','cam_width','cam_height','cam_position','cam_margin','cam_label','nametag','streamInfo'],
+  alerts:   ['alert_t2_min','alert_t3_min','alert_t4_min','alert_baseDur','alert_maxDur','alert_memberDur','alert_giftBaseDur','alert_giftPerUnit','alert_redeemDur'],
+  games:    ['game_wheel_cost','game_mystery_cost','game_highlight_cost','game_wheel_rewards','game_mystery_rewards'],
+  theme:    ['brand_name','brand_tagline','locale_region','locale_currency','ticker_ss','ticker_brb','ticker_end','background','colorRed','colorOrange','colorGold','glitch','animSpeed','tickerSpeed','socials','effects'],
+};
+
+function resetTab() {
+  const active = document.querySelector('.tab.active');
+  if (!active) return;
+  const tabId = active.id.replace('tab-', '');
+  const keys = TAB_KEYS[tabId] || [];
+  keys.forEach(k => lsDel(k));
+  load();
+  flash('TAB RESET TO DEFAULTS');
+}
+
+function clearAll() {
+  Object.values(TAB_KEYS).flat().forEach(k => lsDel(k));
+  load();
+  flash('ALL CLEARED — USING CONFIG.JS DEFAULTS');
+}
+
+// ══════════ STATUS ══════════
+function updateStatus() {
+  const platform = val('platform');
+  const vid = val('videoId');
+  const fake = isOn('fakeToggle');
+  const se = window.SASI_SECRETS && window.SASI_SECRETS.streamelements;
+  const tw = window.SASI_SECRETS && window.SASI_SECRETS.twitch;
+
+  s('s-plat', platform === 'twitch' ? 'Twitch' : 'YouTube', 'ok');
+  s('s-chat', platform === 'twitch'
+    ? (tw && tw.username ? 'Twitch IRC (free)' : 'No channel')
+    : 'YouTube Data API',
+    platform === 'twitch' ? (tw && tw.username ? 'ok' : 'err') : 'ok');
+
+  const yt = platform === 'youtube';
+  vis('s-vid-row', yt); vis('s-keys-row', yt); vis('s-hours-row', yt);
+  if (yt) {
+    s('s-vid', vid || 'Not set (will search)', vid ? 'ok' : 'warn');
+    const kc = getYtKeyCount();
+    s('s-keys', kc + ' available', kc >= 2 ? 'ok' : kc === 1 ? 'warn' : 'err');
+    s('s-hours', '~' + Math.floor((kc * 10000) / 720) + ' hrs', Math.floor((kc * 10000) / 720) >= 12 ? 'ok' : 'warn');
+  }
+  const seA = se && se[platform];
+  const jwt = seA && seA.jwt && !seA.jwt.startsWith('PASTE_');
+  s('s-jwt', jwt ? 'Valid' : 'Missing', jwt ? 'ok' : 'err');
+  s('s-fake', fake ? 'ON' : 'OFF', fake ? 'warn' : 'ok');
+
+  function s(id, t, c) { const e = document.getElementById(id); e.textContent = t; e.className = 'v ' + c; }
+  function vis(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; }
+}
+
+// ══════════ INIT ══════════
+initBgGrids();
+load();
+</script>
+</body>
+</html>

@@ -876,6 +876,16 @@
             <button class="btn btn-secondary" id="obs-register-lua">🔗 Re-register Lua in OBS</button>
             <span class="t-small" style="color:var(--text-muted)">Already done during install. Run again if you create a new scene collection.</span>
           </div>
+          <div class="section-hint" style="background:var(--bg-page);border:1px solid var(--bg-divider);border-radius:var(--r-button);padding:var(--sp-3);margin-bottom:var(--sp-3);font-family:var(--font-mono);font-size:var(--text-mono)">
+            <div style="color:var(--text-secondary);font-family:inherit;font-size:var(--text-small);margin-bottom:6px">Manual install (if Re-register fails):</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="color:var(--text-muted);font-family:inherit;font-size:var(--text-small)">In OBS: <strong>Tools → Scripts → +</strong>, point at:</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+              <code id="lua-script-path" style="flex:1;color:var(--text-primary);background:transparent;border:0;padding:0;word-break:break-all">loading...</code>
+              <button class="btn btn-secondary" id="lua-script-copy" style="font-size:10px;padding:6px 12px;flex:0">📋 Copy</button>
+            </div>
+          </div>
           <div class="output-box" id="obs-output"></div>
 
           <div class="section-head" style="margin-top:var(--sp-5)">
@@ -1412,21 +1422,21 @@ function setThemeSaveStatus(text, kind) {
   el.style.color = kind === 'err' ? 'var(--accent-rec)' : kind === 'ok' ? 'var(--accent-online)' : 'var(--text-muted)';
 }
 
-// Hardcoded list of themes the dashboard ships with — used as a fallback when
-// /list-themes 404s (older watcher). Chrome's file:// CORS rules block fetch()
-// for cross-file probing, so we just declare the known themes here instead of
-// trying to discover them. Once the watcher is redeployed and /list-themes
-// works, this list is ignored in favor of the live data.
-const FALLBACK_THEMES = [
-  { folder: 'sasi-overlays',          name: 'active',  id: 'sasi-default', displayName: 'Sasi Default', active: true,  valid: true, missing: [], preview: { primary: '#FF2200', secondary: '#FF7700', accent: '#FFD700', bg: '#050005' } },
-  { folder: 'sasi-overlays-blue',     name: 'blue',    id: 'sasi-blue',    displayName: 'Sasi Blue',    active: false, valid: true, missing: [], preview: { primary: '#0080FF', secondary: '#00BFFF', accent: '#C0C0C0', bg: '#050005' } },
-  { folder: 'sasi-overlays-purple',   name: 'purple',  id: 'sasi-purple',  displayName: 'Sasi Purple',  active: false, valid: true, missing: [], preview: { primary: '#8800FF', secondary: '#FF00C8', accent: '#E0B0FF', bg: '#050005' } },
-  { folder: 'sasi-overlays-minimal',  name: 'minimal', id: 'sasi-minimal', displayName: 'Sasi Minimal', active: false, valid: true, missing: [], preview: { primary: '#FFFFFF', secondary: '#A0A0A0', accent: '#FFFFFF', bg: '#000000' } },
-];
-
-// Convenience: the active record from FALLBACK_THEMES (used elsewhere as a
-// single-card fallback when even the hardcoded list isn't appropriate).
-const FALLBACK_ACTIVE_THEME = FALLBACK_THEMES[0];
+// Single-card fallback for when /list-themes 404s (older watcher build).
+// Once the watcher is redeployed and /list-themes works, this is bypassed
+// in favor of the live folder scan. Sample themes were removed — users
+// branch new themes from the active one via "Save current as theme".
+const FALLBACK_ACTIVE_THEME = {
+  folder: 'sasi-overlays',
+  name: 'active',
+  id: 'sasi-default',
+  displayName: 'Sasi Default',
+  active: true,
+  valid: true,
+  missing: [],
+  preview: { primary: '#FF2200', secondary: '#FF7700', accent: '#FFD700', bg: '#050005' },
+};
+const FALLBACK_THEMES = [FALLBACK_ACTIVE_THEME];
 
 async function refreshThemes() {
   const cards = document.getElementById('theme-cards');
@@ -2502,6 +2512,39 @@ $('obs-import').addEventListener('click', async () => {
     else { setObsOutput(j.output || 'Done.', 'ok'); refreshBackups(); }
   } catch (e) { setObsOutput('Import failed: ' + e.message, 'err'); }
 });
+// Show the absolute path to game-tracker.lua so the user can manually add
+// it to OBS via Tools → Scripts → + (workaround when /register-lua doesn't
+// detect newly-created scene collections). The path comes from /status which
+// includes installDir; fall back to a hardcoded LOCALAPPDATA path.
+(async function showLuaScriptPath() {
+  const el = document.getElementById('lua-script-path');
+  if (!el) return;
+  // Default the path off the conventional install dir. Will be overridden by
+  // /status if the watcher returns its actual installDir.
+  let installDir = 'C:\\Users\\<you>\\AppData\\Local\\clip-prep';
+  try {
+    const r = await fetch(API + '/status');
+    if (r.ok) {
+      const j = await r.json();
+      if (j && j.installDir) installDir = j.installDir.replace(/\//g, '\\');
+    }
+  } catch {}
+  el.textContent = installDir + '\\obs\\game-tracker.lua';
+})();
+
+document.getElementById('lua-script-copy').addEventListener('click', async () => {
+  const text = document.getElementById('lua-script-path').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById('lua-script-copy');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  } catch (e) {
+    alert('Copy failed. Path is:\n\n' + text);
+  }
+});
+
 $('obs-register-lua').addEventListener('click', async () => {
   setObsOutput('Registering game-tracker.lua...', null);
   try {

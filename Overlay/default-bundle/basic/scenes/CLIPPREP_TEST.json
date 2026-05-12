@@ -1,0 +1,60 @@
+{
+    "name":  "CLIPPREP_TEST",
+    "current_scene":  "CLIPPREP IMPORT OK - bundle 2026-05-09 20:29",
+    "current_program_scene":  "CLIPPREP IMPORT OK - bundle 2026-05-09 20:29",
+    "scene_order":  [
+                        {
+                            "name":  "CLIPPREP IMPORT OK - bundle 2026-05-09 20:29"
+                        }
+                    ],
+    "sources":  [
+                    {
+                        "name":  "CLIPPREP IMPORT OK - bundle 2026-05-09 20:29",
+                        "uuid":  "e0e51663-7671-4fb2-96f1-fce639e817ea",
+                        "id":  "scene",
+                        "versioned_id":  "scene",
+                        "settings":  {
+                                         "custom_size":  false,
+                                         "id_counter":  0,
+                                         "items":  [
+
+                                                   ]
+                                     },
+                        "mixers":  0,
+                        "sync":  0,
+                        "flags":  0,
+                        "volume":  1,
+                        "balance":  0.5,
+                        "enabled":  true,
+                        "muted":  false,
+                        "private_settings":  {
+
+                                             },
+                        "hotkeys":  {
+
+                                    }
+                    }
+                ],
+    "transitions":  [
+
+                    ],
+    "groups":  [
+
+               ],
+    "quick_transitions":  [
+
+                          ],
+    "preview_locked":  false,
+    "scaling_enabled":  false,
+    "scaling_level":  0,
+    "scaling_off_x":  0,
+    "scaling_off_y":  0,
+    "modules":  {
+
+                },
+    "resolution":  {
+                       "y":  1080,
+                       "x":  1920
+                   },
+    "version":  2
+}

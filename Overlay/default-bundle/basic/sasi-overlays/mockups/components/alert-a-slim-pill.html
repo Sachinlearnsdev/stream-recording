@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Alert — Variant A: Slim Pill</title>
+<style>
+:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; --bg:#050005; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Inter','Segoe UI',Arial,sans-serif;
+  color:#fff;
+}
+
+/* Stage — pretend this is an .alert-frame in a scene */
+.stage {
+  position:absolute; top:64px; right:64px;
+  width:420px; height:160px;
+  border:1px dashed rgba(255,255,255,.08);
+  border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+}
+.stage-label {
+  position:absolute; top:10px; left:14px;
+  font-size:9px; font-weight:900; letter-spacing:4px;
+  color:rgba(255,255,255,.15); text-transform:uppercase;
+}
+
+/* Slim pill popup */
+.pill {
+  display:flex; align-items:center; gap:14px;
+  padding:14px 22px 14px 14px;
+  background:rgba(8,0,2,.92);
+  border:1px solid rgba(255,34,0,.35);
+  border-radius:100px;
+  box-shadow:0 8px 28px rgba(255,34,0,.22), inset 0 0 14px rgba(0,0,0,.4);
+  min-width:360px;
+  opacity:0; transform:translateX(40px);
+  animation:pillIn .55s cubic-bezier(.2,.9,.3,1.1) forwards,
+             pillOut .5s ease 4.5s forwards;
+  position:relative; overflow:hidden;
+}
+.pill::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.6), transparent);
+}
+@keyframes pillIn {
+  from { opacity:0; transform:translateX(40px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+@keyframes pillOut {
+  from { opacity:1; transform:translateX(0); }
+  to   { opacity:0; transform:translateX(-20px); }
+}
+
+.icon {
+  width:42px; height:42px; border-radius:50%;
+  background:linear-gradient(135deg, var(--red), var(--orange));
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 0 14px rgba(255,34,0,.5);
+}
+.icon svg { width:20px; height:20px; fill:#fff; }
+
+.text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.label {
+  font-size:9px; font-weight:900; letter-spacing:3px;
+  color:var(--orange); text-transform:uppercase;
+  opacity:0; animation:fadeIn .4s ease .3s forwards;
+}
+.name {
+  font-size:17px; font-weight:800; color:#fff;
+  letter-spacing:.3px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  opacity:0; animation:fadeIn .4s ease .4s forwards;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+/* Progress bar at bottom */
+.progress {
+  position:absolute; bottom:0; left:14px; right:14px; height:2px;
+  background:rgba(255,255,255,.08);
+  border-radius:1px; overflow:hidden;
+}
+.progress::after {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:100%;
+  background:linear-gradient(90deg, var(--red), var(--orange));
+  transform-origin:left; transform:scaleX(1);
+  animation:fill 4s linear .5s forwards;
+}
+@keyframes fill { to { transform:scaleX(0); } }
+
+/* Loop */
+.cycle { animation-iteration-count:infinite; animation-duration:6s; }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <span class="stage-label">★ Alert Frame</span>
+  <div class="pill cycle" style="animation:pillIn .55s cubic-bezier(.2,.9,.3,1.1) forwards, pillOut .5s ease 4.5s forwards, loop 6s infinite;">
+    <div class="icon">
+      <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+    </div>
+    <div class="text">
+      <div class="label">New Follower</div>
+      <div class="name">ember_92</div>
+    </div>
+    <div class="progress"></div>
+  </div>
+</div>
+
+<script>
+// Replay loop
+const pill = document.querySelector('.pill');
+function replay() {
+  const clone = pill.cloneNode(true);
+  pill.replaceWith(clone);
+  setTimeout(replay, 6000);
+}
+setTimeout(replay, 6000);
+</script>
+
+</body>
+</html>

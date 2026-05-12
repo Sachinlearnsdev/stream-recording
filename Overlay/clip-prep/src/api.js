@@ -921,7 +921,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
 
   // Resolve a theme folder argument to an absolute path under installDir.
   // ?theme=sasi-overlays           → active theme
-  // ?theme=sasi-overlays-blue      → inactive theme
+  // ?theme=sasi-overlays-<name>   → inactive theme (must exist in installDir)
   // (missing/empty)                → active theme
   function resolveThemeRoot(theme) {
     if (!installDir) return null;
@@ -1371,7 +1371,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       if (!parsed) parsed = defaultSecrets();
       if (!parsed.channels || !parsed.channels[key]) return res.status(404).json({ error: 'channel not found: ' + key });
       const channel = parsed.channels[key];
-      // Resolve target theme: channel.theme is the FOLDER NAME (e.g. 'sasi-overlays' or 'sasi-overlays-blue').
+      // Resolve target theme: channel.theme is the FOLDER NAME (e.g. 'sasi-overlays' or 'sasi-overlays-<name>'). The folder must exist in installDir.
       // Convert to the suffix form that applyThemeByName expects.
       const themeFolder = channel.theme || 'sasi-overlays';
       let archivedAs = null;

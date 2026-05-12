@@ -1,0 +1,33 @@
+﻿advanced-scene-switcher.dll	1.33.1	advanced-scene-switcher
+advanced-scene-switcher-lib.dll		
+aja.dll	32.1.2	OBS AJA Windows module
+aja-output-ui.dll	32.1.2	OBS AJA Output UI
+chrome_elf.dll	127.0.6533.120	Chromium
+coreaudio-encoder.dll	32.1.2	OBS CoreAudio encoder
+decklink.dll	32.1.2	OBS DeckLink Windows module
+decklink-captions.dll	32.1.2	OBS DeckLink Captions module
+decklink-output-ui.dll	32.1.2	OBS Decklink Output UI
+frontend-tools.dll	32.1.2	OBS Frontend Tools
+image-source.dll	32.1.2	OBS image module
+libcef.dll	127.145.7+g2b7d20b+chromium-127.0.6533.120	Chromium Embedded Framework (CEF) Dynamic Link Library
+libEGL.dll	2.1.23296 git hash: e323abb5b08e	ANGLE libEGL Dynamic Link Library
+libGLESv2.dll	2.1.23296 git hash: e323abb5b08e	ANGLE libGLESv2 Dynamic Link Library
+nv-filters.dll	32.1.2	NVIDIA A/V Filters
+obs-browser.dll		
+obs-ffmpeg.dll	32.1.2	OBS FFmpeg module
+obs-filters.dll	32.1.2	OBS A/V Filters
+obs-nvenc.dll	32.1.2	OBS NVENC module
+obs-outputs.dll	32.1.2	OBS output module
+obs-qsv11.dll	32.1.2	OBS QSV encoder
+obs-text.dll	32.1.2	OBS GDI+ text module
+obs-transitions.dll	32.1.2	OBS Transitions module
+obs-vst.dll		
+obs-webrtc.dll		
+obs-websocket.dll		
+obs-x264.dll	32.1.2	OBS x264 encoder
+rtmp-services.dll	32.1.2	OBS RTMP Services
+text-freetype2.dll	32.1.2	OBS FreeType text module
+vlc-video.dll	32.1.2	OBS VLC Plugin
+win-capture.dll		
+win-dshow.dll	32.1.2	OBS DirectShow module
+win-wasapi.dll	32.1.2	OBS WASAPI module

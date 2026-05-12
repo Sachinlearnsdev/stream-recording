@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="../config.js"></script>
+<script src="../secrets.js"></script>
+<script src="../alerts.js"></script>
+<title>Sasi Streams — Be Right Back</title>
+<style>
+/* ================================================
+   SASI STREAMS — BE RIGHT BACK  |  1920x1080
+   Mirrored from starting-soon.html:
+   chat/alert panel LEFT  |  text block RIGHT
+   ================================================ */
+:root {
+  --red:    #FF2200;
+  --orange: #FF7700;
+  --gold:   #FFD700;
+  --bg:     #050005;
+  --dim:    rgba(255,255,255,0.45);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Arial Black', Impact, Arial, sans-serif;
+  color:#fff;
+}
+
+
+
+/* Blobs */
+
+.stage { position:absolute; inset:0; z-index:10; animation:fadeIn 1.2s ease forwards; }
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ================================================
+   BRAND — top-left (identical to starting-soon)
+   ================================================ */
+.brand-wrap {
+  position:absolute; top:30px; left:52px;
+  display:flex; align-items:center; gap:12px;
+  opacity:0; animation:tlIn .7s ease .1s forwards;
+}
+@keyframes tlIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+
+.logo-img {
+  width:52px; height:52px; border-radius:10px; display:block;
+  background:#fff; padding:9px;
+  fill:#FF0000;
+  box-sizing:border-box;
+}
+.brand-rule { width:2px; height:40px; background:linear-gradient(to bottom,transparent,var(--red),transparent); box-shadow:0 0 7px var(--red); }
+.brand-text { display:flex; flex-direction:column; }
+.brand-l1 { font-size:14px; font-weight:900; letter-spacing:5px; color:#fff; line-height:1; }
+.brand-l2 { font-size:8px;  font-weight:700; letter-spacing:7px; color:rgba(255,255,255,.3); margin-top:3px; }
+
+/* ================================================
+   LIVE BADGE — top-right (identical to starting-soon)
+   ================================================ */
+.live-wrap {
+  position:absolute; top:30px; right:30px;
+  opacity:0; animation:trIn .7s ease .2s forwards;
+}
+@keyframes trIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.live-badge {
+  display:flex; align-items:center; gap:8px; padding:8px 14px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  position:relative;
+}
+.live-badge::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,34,0,.5),transparent);
+}
+/* BRB badge — orange + static (no pulse) so it reads as "away", visually distinct from the red pulsing LIVE badge used everywhere else */
+.live-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--orange);
+  box-shadow:0 0 8px var(--orange), 0 0 16px rgba(255,119,0,.5);
+}
+.live-text { font-size:12px; font-weight:900; letter-spacing:4px; color:var(--orange); }
+/* Pause icon glyph — small white bars next to the dot to reinforce "paused" */
+.live-badge::after {
+  content:''; position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  width:6px; height:10px;
+  border-left:2px solid rgba(255,119,0,.7);
+  border-right:2px solid rgba(255,119,0,.7);
+  opacity:.9;
+}
+.live-badge { padding-right:32px; }
+/* chat-dot still pulses red (chat is live), so keep the livePulse keyframe */
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
+
+/* ================================================
+   CLOCK — date only, top-center
+   ================================================ */
+.clock-wrap {
+  position:absolute; top:32px; left:50%; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  opacity:0; animation:fadeIn .7s ease .4s forwards;
+}
+.clock-date {
+  font-size:22px; font-weight:900; letter-spacing:4px;
+  color:#fff; text-transform:uppercase;
+  position:relative; overflow:hidden;
+}
+
+/* ================================================
+   LEFT PANEL — chat only, full height
+   ================================================ */
+.side-panel {
+  position:absolute;
+  left:36px; top:90px;
+  width:420px;
+  bottom:72px;
+  display:flex; flex-direction:column;
+  opacity:0; animation:panelIn .8s ease .6s forwards;
+}
+@keyframes panelIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+
+.chat-frame {
+  flex:1;
+  border:1px solid rgba(255,34,0,.28);
+  border-radius:10px;
+  background:rgba(0,0,0,.18);
+  display:flex; flex-direction:column;
+  overflow:hidden; position:relative;
+  box-shadow:0 0 20px rgba(255,34,0,.06), inset 0 0 30px rgba(0,0,0,.3);
+}
+.chat-frame::before, .chat-frame::after {
+  content:''; position:absolute;
+  background:var(--red); box-shadow:0 0 8px var(--red);
+}
+.chat-frame::before { width:20px; height:2px; top:0; right:0; }
+.chat-frame::after  { width:2px; height:20px; top:0; right:0; }
+
+.chat-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px 9px;
+  border-bottom:1px solid rgba(255,34,0,.15);
+  background:rgba(0,0,0,.35);
+  flex-shrink:0;
+}
+.chat-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--red); box-shadow:0 0 6px var(--red);
+  animation:livePulse 1.2s ease-in-out infinite;
+}
+.chat-title {
+  font-size:9px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,255,255,.5); text-transform:uppercase;
+}
+.chat-icon { width:14px; height:14px; fill:rgba(255,34,0,.6); margin-left:auto; }
+.chat-body  { flex:1; background:transparent; overflow:hidden; min-height:0; }
+
+/* ================================================
+   RIGHT PANEL — alert zone (opposite side from starting-soon)
+   ================================================ */
+.alert-panel {
+  position:absolute;
+  right:52px; bottom:80px;
+  width:520px;
+  opacity:0; animation:alertPanelIn .8s ease .8s forwards;
+  z-index:20;
+}
+@keyframes alertPanelIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.alert-frame {
+  --alert-align: flex-end;
+  width:520px; height:130px;
+  border:none;
+  border-radius:10px;
+  background:transparent;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:5px;
+  position:relative;
+}
+.alert-frame.sasi-has-alert .alert-label,
+.alert-frame.sasi-has-alert .alert-sub { display:none; }
+.alert-label {
+  font-size:8px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,119,0,.35); text-transform:uppercase;
+}
+.alert-sub {
+  font-size:7px; font-weight:700; letter-spacing:3px;
+  color:rgba(255,255,255,.18); text-transform:uppercase;
+}
+
+/* ================================================
+   MAIN TEXT — center-right (MIRRORED: right-aligned)
+   ================================================ */
+.text-block {
+  position:absolute; right:100px; top:50%; transform:translateY(-50%);
+  display:flex; flex-direction:column; align-items:flex-end;
+}
+
+/* "BE RIGHT BACK" container */
+.t-main {
+  font-size:182px; font-weight:900; letter-spacing:-10px; line-height:.82;
+  color:#fff; text-align:right;
+}
+
+/* Typing line — revealed by JS */
+.t-line1 { display:block; min-height:.82em; opacity:0; }
+
+/* Blinking cursor */
+.t-cursor {
+  display:inline-block;
+  width:5px; height:.72em;
+  background:var(--red);
+  margin-left:6px;
+  vertical-align:middle;
+  box-shadow:0 0 8px var(--red);
+  animation:cursorBlink .65s step-end infinite;
+}
+@keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* BACK — scramble-decode reveal */
+.t-back { display:block; opacity:0; }
+
+/* Sub text — triggered by JS after scramble */
+.t-sub {
+  font-size:22px; font-weight:700; font-style:italic;
+  letter-spacing:3px; text-align:right;
+  color:var(--orange);
+  text-shadow:0 0 18px rgba(255,119,0,.45);
+  margin-top:8px;
+  opacity:0; transform:translateY(-10px);
+  transition:opacity .6s ease, transform .6s ease;
+}
+.t-sub.show { opacity:1; transform:translateY(0); }
+
+/* Gold bar */
+.bar {
+  width:0; height:3px; margin-top:20px;
+  background:linear-gradient(270deg,var(--red),var(--gold),var(--orange));
+  border-radius:2px; box-shadow:0 0 14px var(--gold);
+  align-self:flex-end;
+  transition:width .9s ease-out;
+}
+.bar.show { width:560px; }
+
+/* Pulsing dots */
+.dots-wrap {
+  display:flex; align-items:center; gap:18px;
+  margin-top:20px;
+  opacity:0; transform:translateY(-6px);
+  transition:opacity .5s ease, transform .5s ease;
+}
+.dots-wrap.show { opacity:1; transform:translateY(0); }
+@keyframes vIn{from{opacity:0}to{opacity:1}}
+.dot-pulse {
+  width:14px; height:14px; border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 12px var(--red), 0 0 28px rgba(255,34,0,.4);
+}
+.dot-pulse:nth-child(1){ animation:dotPulse 1.8s ease-in-out .0s infinite; }
+.dot-pulse:nth-child(2){ animation:dotPulse 1.8s ease-in-out .3s infinite; }
+.dot-pulse:nth-child(3){ animation:dotPulse 1.8s ease-in-out .6s infinite; }
+@keyframes dotPulse{
+  0%,100%{ transform:scale(1);   opacity:1;   box-shadow:0 0 12px var(--red),0 0 28px rgba(255,34,0,.4); }
+  50%    { transform:scale(.5);  opacity:.25; box-shadow:0 0 4px var(--red); }
+}
+
+/* ================================================
+   BOTTOM TICKER (identical to starting-soon)
+   ================================================ */
+.ticker-wrap {
+  position:absolute; bottom:0; left:0; right:0;
+  height:58px;
+  background:rgba(0,0,0,.8);
+  border-top:1px solid rgba(255,34,0,.22);
+  display:flex; flex-direction:column; align-items:stretch;
+  opacity:0; animation:fadeIn .6s ease 1.8s forwards;
+  z-index:15;
+}
+.ticker-row {
+  height:38px; overflow:hidden;
+  display:flex; align-items:center;
+  background:rgba(0,0,0,.75);
+}
+.ticker-track {
+  display:flex; align-items:center;
+  animation:tickerScroll 28s linear infinite;
+  white-space:nowrap; gap:0;
+}
+@keyframes tickerScroll {
+  from { transform:translateX(0); }
+  to   { transform:translateX(-50%); }
+}
+.ticker-item {
+  display:inline-flex; align-items:center; gap:10px;
+  padding:0 40px;
+  font-size:13px; font-weight:700; letter-spacing:2px; color:rgba(255,255,255,.55);
+}
+.ticker-item .t-icon { width:12px; height:12px; fill:var(--red); opacity:.7; flex-shrink:0; }
+.ticker-item .t-handle { color:rgba(255,255,255,.8); }
+.ticker-dot {
+  width:4px; height:4px; border-radius:50%;
+  background:rgba(255,34,0,.5); flex-shrink:0;
+}
+</style>
+</head>
+<body>
+
+
+<div class="stage">
+
+  <!-- Clock — top-center -->
+  <div class="clock-wrap">
+    <div class="clock-date" id="clock-date">Monday • January 1</div>
+  </div>
+
+  <!-- Brand — top-left (same as starting-soon) -->
+  <div class="brand-wrap">
+    <svg class="logo-img" viewBox="0 0 24 24"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+    <div class="brand-rule"></div>
+    <div class="brand-text">
+      <span class="brand-l1" id="brand-l1"></span>
+      <span class="brand-l2" id="brand-l2"></span>
+    </div>
+  </div>
+
+  <!-- BRB badge — top-right -->
+  <div class="live-wrap">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span class="live-text" id="brb-badge"></span>
+    </div>
+  </div>
+
+  <!-- LEFT side panel — chat only, full height -->
+  <div class="side-panel">
+    <div class="chat-frame">
+      <div class="chat-header">
+        <div class="chat-dot"></div>
+        <span class="chat-title">Live Chat</span>
+        <svg class="chat-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      </div>
+      <div class="chat-body"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT side — alert zone (opposite of starting-soon) -->
+  <div class="alert-panel">
+    <div class="alert-frame">
+      <span class="alert-label">Alert Zone</span>
+      <span class="alert-sub">Waiting for alerts</span>
+    </div>
+  </div>
+
+  <!-- Text block — center-right (MIRRORED) -->
+  <div class="text-block">
+    <div class="t-main">
+      <div class="t-line1" id="t-line1"><span class="t-cursor" id="t-cursor"></span></div>
+      <div class="t-back"  id="t-back"></div>
+    </div>
+    <span class="t-sub" id="brb-subtext"></span>
+    <div class="bar"></div>
+    <div class="dots-wrap">
+      <div class="dot-pulse"></div>
+      <div class="dot-pulse"></div>
+      <div class="dot-pulse"></div>
+    </div>
+  </div>
+
+</div><!-- /stage -->
+
+<!-- Bottom ticker — outside .stage -->
+<div class="ticker-wrap">
+  <div class="ticker-row">
+    <div class="ticker-track" id="ticker-track"></div>
+  </div>
+</div>
+
+<script>
+// Config loaded from config.js (SASI_CONFIG)
+
+// ---- Apply brand from config ----
+document.getElementById('brand-l1').textContent    = SASI_CONFIG.brand.name;
+document.getElementById('brand-l2').textContent    = SASI_CONFIG.brb.tagline;
+document.getElementById('brb-badge').textContent   = SASI_CONFIG.brb.badge;
+document.getElementById('brb-subtext').textContent = SASI_CONFIG.brb.subtext;
+document.getElementById('t-back').textContent = SASI_CONFIG.brb.mainText.split('\n')[1] || 'BACK';
+
+// ---- Clock visibility ----
+const _clockShow = (SASI_CONFIG.brb._clock && SASI_CONFIG.brb._clock.show !== undefined) ? SASI_CONFIG.brb._clock.show : SASI_CONFIG.clock.show;
+if (!_clockShow) {
+  document.querySelector('.clock-wrap').style.display = 'none';
+}
+
+// ---- Typing + stamp effect (loops every ~8s) ----
+(function(){
+  const line1  = document.getElementById('t-line1');
+  const cursor = document.getElementById('t-cursor');
+  const back   = document.getElementById('t-back');
+  const TEXT   = SASI_CONFIG.brb.mainText.split('\n')[0];
+
+  line1.style.opacity = '1';
+
+  const subEl  = document.querySelector('.t-sub');
+  const barEl  = document.querySelector('.bar');
+  const dotsEl = document.querySelector('.dots-wrap');
+
+  function reset() {
+    // Clear typed text (keep cursor node)
+    while (line1.firstChild !== cursor) {
+      line1.removeChild(line1.firstChild);
+    }
+    // Reset BACK
+    back.textContent = '';
+    back.style.opacity = '0';
+    // Restore cursor blink
+    cursor.style.animation = '';
+    cursor.style.opacity   = '1';
+    // Hide sub elements
+    subEl.classList.remove('show');
+    barEl.classList.remove('show');
+    dotsEl.classList.remove('show');
+  }
+
+  const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#@$%&!?><';
+  function scrambleDecode(el, target, onDone) {
+    el.style.opacity = '1';
+    let frame = 0;
+    const totalFrames = 40;          // more frames = longer overall
+    const scrambleOnly = 15;          // first N frames: pure random chaos
+    const decodeStart  = scrambleOnly; // then characters start locking in
+
+    function tick() {
+      frame++;
+
+      // Speed slows down as we progress (starts fast, ends slow)
+      // Frame 1-15: 50ms (fast scramble)
+      // Frame 16-30: 80ms (slowing)
+      // Frame 31-40: 130ms (settling)
+      const phase = frame <= scrambleOnly ? 0 : frame <= 30 ? 1 : 2;
+      const delay = [50, 80, 130][phase];
+
+      if (frame <= scrambleOnly) {
+        // Pure random — no letters locked yet
+        el.textContent = target.split('').map(c => {
+          if (c === ' ') return ' ';
+          return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        }).join('');
+      } else {
+        // Progressively lock in characters left-to-right
+        const progress = (frame - decodeStart) / (totalFrames - decodeStart);
+        const revealed = Math.floor(progress * target.length);
+        el.textContent = target.split('').map((c, i) => {
+          if (i < revealed) return c;  // locked
+          if (c === ' ') return ' ';
+          // Characters near the lock point "almost" settle — flicker between correct and random
+          if (i === revealed && Math.random() > 0.4) return c;
+          return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        }).join('');
+      }
+
+      if (frame >= totalFrames) {
+        el.textContent = target;
+        if (onDone) onDone();
+        return;
+      }
+      setTimeout(tick, delay);
+    }
+    tick();
+  }
+
+  function runSequence() {
+    reset();
+    let i = 0;
+
+    function type() {
+      if (i < TEXT.length) {
+        line1.insertBefore(document.createTextNode(TEXT[i]), cursor);
+        i++;
+        setTimeout(type, TEXT[i - 1] === ' ' ? 180 : 95);
+      } else {
+        // Typing done — brief pause, hide cursor, scramble-decode BACK
+        setTimeout(() => {
+          cursor.style.animation = 'none';
+          cursor.style.opacity   = '0';
+          const backText = SASI_CONFIG.brb.mainText.split('\n')[1] || 'BACK';
+          scrambleDecode(back, backText, () => {
+            // Slide in sub elements after scramble settles
+            setTimeout(() => subEl.classList.add('show'), 200);
+            setTimeout(() => barEl.classList.add('show'), 500);
+            setTimeout(() => dotsEl.classList.add('show'), 800);
+            // Hold for 6s then repeat
+            setTimeout(runSequence, 6000);
+          });
+        }, 320);
+      }
+    }
+    type();
+  }
+
+  // First run — delayed so page fully settles
+  setTimeout(runSequence, 2200);
+})();
+
+// ---- Clock (date only) ----
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function updateClock(){
+  const n = new Date();
+  document.getElementById('clock-date').textContent =
+    `${DAYS[n.getDay()]} • ${MONTHS[n.getMonth()]} ${n.getDate()}`;
+}
+updateClock();
+setInterval(updateClock, 60000);
+
+// Scramble-decode effect on date
+const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789•';
+function scrambleDecode(el){
+  const target = el.textContent;
+  let frame = 0;
+  const total = 22;
+  const iv = setInterval(()=>{
+    frame++;
+    const revealed = Math.floor((frame/total)*target.length);
+    el.textContent = target.split('').map((c,i)=>{
+      if(i < revealed) return c;
+      if(c === ' ') return ' ';
+      return CHARS[Math.floor(Math.random()*CHARS.length)];
+    }).join('');
+    if(frame >= total){ el.textContent = target; clearInterval(iv); }
+  }, 40);
+}
+const dateEl = document.getElementById('clock-date');
+setTimeout(()=>scrambleDecode(dateEl), 600);
+setInterval(()=>scrambleDecode(dateEl), 12000);
+
+// ---- Bottom ticker ----
+const TICKER_ICONS = {
+  twitch:   `<svg class="t-icon" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>`,
+  youtube:  `<svg class="t-icon" viewBox="0 0 24 24"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>`,
+  instagram:`<svg class="t-icon" viewBox="0 0 24 24"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12c0 3.259.014 3.668.072 4.948.058 1.278.262 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24c3.259 0 3.668-.014 4.948-.072 1.278-.058 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.635.558-2.913.06-1.28.072-1.689.072-4.948 0-3.259-.014-3.667-.072-4.947-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg>`,
+  twitter:  `<svg class="t-icon" viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>`,
+};
+const PLATFORM_ICON = { TWITCH:'twitch', YOUTUBE:'youtube', INSTAGRAM:'instagram', 'X / TWITTER':'twitter', TWITTER:'twitter' };
+const TICKER_TEXT   = { TWITCH:'Follow on Twitch', YOUTUBE:'Subscribe on YouTube', INSTAGRAM:'Follow on Instagram', 'X / TWITTER':'Follow on X', TWITTER:'Follow on X' };
+const TICKER_ITEMS  = [
+  ...Object.values(SASI_CONFIG.socials).map(s => ({
+    icon:   PLATFORM_ICON[s.platform.toUpperCase()] || 'twitch',
+    text:   TICKER_TEXT[s.platform.toUpperCase()]   || s.platform,
+    handle: s.handle,
+  })),
+  { icon:'twitch', text: SASI_CONFIG.tickerExtras[1].text, handle: SASI_CONFIG.tickerExtras[1].handle },
+];
+const track = document.getElementById('ticker-track');
+[...TICKER_ITEMS, ...TICKER_ITEMS].forEach((item, i) => {
+  const el = document.createElement('span');
+  el.className = 'ticker-item';
+  el.innerHTML = `${TICKER_ICONS[item.icon]}<span>${item.text}</span><span class="t-handle">${item.handle}</span>`;
+  track.appendChild(el);
+  if (i < TICKER_ITEMS.length * 2 - 1) {
+    const dot = document.createElement('span'); dot.className = 'ticker-dot'; track.appendChild(dot);
+  }
+});
+track.style.animationDuration = SASI_CONFIG.ticker.speed + 's';
+if (!SASI_CONFIG.ticker.show.brb) {
+  document.querySelector('.ticker-wrap').style.display = 'none';
+}
+
+</script>
+</body>
+</html>

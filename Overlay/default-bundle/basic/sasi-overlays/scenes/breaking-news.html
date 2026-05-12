@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sasi Streams — Breaking News</title>
+<script src="../config.js"></script>
+<script src="../secrets.js"></script>
+<script src="../alerts.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Arial Black', Impact, Arial, sans-serif;
+  color:#fff;
+}
+
+@keyframes fadeIn      { from{opacity:0} to{opacity:1} }
+@keyframes slideUp     { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideDown   { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulseRed    { 0%,100%{box-shadow:0 0 12px var(--red),0 0 24px rgba(255,34,0,.4)} 50%{box-shadow:0 0 4px var(--red)} }
+@keyframes tickerScroll{ from{transform:translateX(100%)} to{transform:translateX(-100%)} }
+
+/* ─────────── BREAKING BANNER (top) ─────────── */
+.breaking-bar {
+  position:absolute; top:0; left:0; right:0;
+  height:78px;
+  background:rgba(0,0,0,.8);
+  border-bottom:1px solid rgba(255,34,0,.28);
+  box-shadow:0 4px 24px rgba(255,34,0,.1);
+  display:flex; align-items:center;
+  z-index:20;
+  opacity:0; animation:slideDown .8s ease forwards;
+}
+/* Brand gradient top line */
+.breaking-bar::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+}
+/* Brand gradient bottom line */
+.breaking-bar::after {
+  content:''; position:absolute; bottom:-1px; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+  box-shadow:0 0 10px var(--red);
+}
+
+/* Brand-style badge (was clip-path polygon) */
+.breaking-badge {
+  display:flex; align-items:center; gap:12px;
+  margin-left:30px;
+  padding:12px 20px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  position:relative;
+}
+/* Brand gradient top line on the badge itself */
+.breaking-badge::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+}
+/* Red top-right corner L-tick to match other brand frames */
+.breaking-badge::after {
+  content:''; position:absolute; top:0; right:0;
+  width:14px; height:1.5px;
+  background:var(--red); box-shadow:0 0 6px var(--red);
+}
+.breaking-dot {
+  width:10px; height:10px; border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 8px var(--red), 0 0 16px rgba(255,34,0,.5);
+  animation:pulseRed 1.2s ease-in-out infinite;
+}
+.breaking-text {
+  font-size:22px; font-weight:900; letter-spacing:5px;
+  color:var(--red);
+  text-shadow:0 0 14px rgba(255,34,0,.35);
+}
+
+.breaking-headline {
+  flex:1;
+  padding:0 140px 0 36px;
+  font-size:30px; font-weight:900; letter-spacing:2px;
+  color:#fff;
+  text-transform:uppercase;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 2px 6px rgba(0,0,0,.7);
+}
+
+/* ─────────── LIVE BADGE (top-right) ─────────── */
+.live-badge {
+  position:absolute; top:21px; right:30px;
+  display:flex; align-items:center; gap:8px;
+  padding:8px 14px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  z-index:25;
+  opacity:0; animation:fadeIn .8s ease .5s forwards;
+}
+.live-badge::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+}
+.live-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 8px var(--red), 0 0 16px rgba(255,34,0,.5);
+  animation:pulseRed 1.2s ease-in-out infinite;
+}
+.live-text {
+  font-size:12px; font-weight:900; letter-spacing:4px;
+  color:var(--red);
+}
+
+/* ─────────── CAMERA / NEWS DESK ─────────── */
+.cam-frame {
+  position:absolute;
+  left:60px; top:120px;
+  width:1290px; height:780px;
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(255,34,0,.3);
+  border-radius:8px;
+  box-shadow:0 0 30px rgba(255,34,0,.15), inset 0 0 40px rgba(0,0,0,.5);
+  opacity:0; animation:slideUp .8s ease .3s forwards;
+}
+.cam-frame::before {
+  content:''; position:absolute; top:0; left:12px; right:12px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+}
+.cam-corner {
+  position:absolute;
+  width:24px; height:24px;
+  border:2px solid var(--orange);
+  box-shadow:0 0 8px var(--orange);
+}
+.cam-corner.tl { top:-1px; left:-1px; border-right:none; border-bottom:none; }
+.cam-corner.tr { top:-1px; right:-1px; border-left:none; border-bottom:none; }
+.cam-corner.bl { bottom:-1px; left:-1px; border-right:none; border-top:none; }
+.cam-corner.br { bottom:-1px; right:-1px; border-left:none; border-top:none; }
+
+/* Cam label inside frame */
+.cam-label {
+  position:absolute; top:18px; left:24px;
+  display:flex; align-items:center; gap:8px;
+  padding:6px 12px;
+  background:rgba(0,0,0,.7);
+  border-radius:4px;
+  border-left:2px solid var(--red);
+}
+.cam-label-dot {
+  width:6px; height:6px; border-radius:50%;
+  background:var(--red);
+  animation:pulseRed 1.2s ease-in-out infinite;
+}
+.cam-label-text {
+  font-size:10px; font-weight:900; letter-spacing:3px;
+  color:#fff;
+}
+
+/* ─────────── RIGHT SIDE PANEL ─────────── */
+.side-panel {
+  position:absolute;
+  right:30px; top:120px;
+  width:480px; height:780px;
+  display:flex; flex-direction:column; gap:14px;
+  opacity:0; animation:slideUp .8s ease .4s forwards;
+}
+
+.side-block {
+  background:rgba(8,0,2,.85);
+  border:1px solid rgba(255,34,0,.3);
+  border-radius:8px;
+  padding:18px 22px;
+  position:relative;
+}
+.side-block::before {
+  content:''; position:absolute; top:0; left:12px; right:12px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+}
+.side-block-label {
+  font-size:9px; font-weight:900; letter-spacing:5px;
+  color:var(--orange); text-transform:uppercase;
+  margin-bottom:8px;
+}
+.side-block-value {
+  font-size:22px; font-weight:900; letter-spacing:1px;
+  color:#fff;
+  text-shadow:0 0 12px rgba(255,34,0,.4);
+  line-height:1.2;
+}
+.side-block-sub {
+  font-size:12px; font-weight:700;
+  color:rgba(255,255,255,.5);
+  margin-top:4px;
+}
+
+/* Headlines scroll list */
+.headlines-block {
+  flex:1;
+  display:flex; flex-direction:column;
+}
+.headlines-list {
+  flex:1;
+  overflow:hidden;
+  display:flex; flex-direction:column; gap:10px;
+  margin-top:6px;
+}
+.headline-item {
+  padding:10px 12px;
+  background:rgba(255,34,0,.05);
+  border-left:3px solid var(--red);
+  border-radius:4px;
+}
+.headline-num {
+  font-size:9px; font-weight:900; letter-spacing:2px;
+  color:var(--orange);
+}
+.headline-text {
+  font-size:13px; font-weight:700;
+  color:#fff;
+  margin-top:3px;
+  line-height:1.3;
+}
+
+/* ─────────── BOTTOM TICKER ─────────── */
+.ticker-bar {
+  position:absolute; bottom:0; left:0; right:0;
+  height:54px;
+  background:rgba(0,0,0,.8);
+  border-top:1px solid rgba(255,34,0,.22);
+  box-shadow:0 -4px 20px rgba(255,34,0,.1);
+  display:flex; align-items:center;
+  z-index:20;
+  opacity:0; animation:slideUp .8s ease .5s forwards;
+}
+.ticker-bar::before {
+  content:''; position:absolute; top:-1px; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+  box-shadow:0 0 10px var(--red);
+}
+/* Brand-style ticker label (was clip-path polygon) */
+.ticker-label {
+  display:flex; align-items:center;
+  margin-left:24px;
+  padding:8px 14px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  position:relative;
+}
+.ticker-label::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+}
+.ticker-label-text {
+  font-size:11px; font-weight:900; letter-spacing:4px;
+  color:var(--red);
+}
+.ticker-content {
+  flex:1; overflow:hidden;
+  position:relative;
+  height:100%;
+  display:flex; align-items:center;
+}
+.ticker-track {
+  display:flex; gap:60px;
+  white-space:nowrap;
+  animation:tickerScroll 50s linear infinite;
+  padding-left:40px;
+}
+.ticker-item {
+  font-size:18px; font-weight:700; letter-spacing:1px;
+  color:#fff;
+}
+.ticker-item .sep {
+  color:var(--orange); margin:0 12px;
+}
+.ticker-item strong { color:var(--gold); }
+
+/* ─────────── ALERT ZONE (bottom-left, outside cam) ─────────── */
+.alert-panel {
+  position:absolute;
+  left:60px; bottom:68px;
+  width:520px;
+  z-index:30;
+  opacity:0; animation:slideUp .8s ease .9s forwards;
+}
+.alert-panel .alert-frame {
+  position:relative;
+  width:520px; height:130px;
+  border:none;
+  border-radius:10px;
+  background:transparent;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:5px;
+}
+.alert-panel .alert-frame.sasi-has-alert .alert-label,
+.alert-panel .alert-frame.sasi-has-alert .alert-sub { display:none; }
+.alert-label {
+  font-size:8px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,119,0,.35); text-transform:uppercase;
+}
+.alert-sub {
+  font-size:7px; font-weight:700; letter-spacing:3px;
+  color:rgba(255,255,255,.18); text-transform:uppercase;
+}
+</style>
+</head>
+<body>
+
+<!-- BREAKING news bar (top) -->
+<div class="breaking-bar">
+  <div class="breaking-badge">
+    <div class="breaking-dot"></div>
+    <span class="breaking-text">BREAKING</span>
+  </div>
+  <div class="breaking-headline" id="headline">SASI STREAMS GOES LIVE — VIEWERS REPORT EXTREME ENTERTAINMENT</div>
+</div>
+
+<!-- LIVE badge -->
+<div class="live-badge">
+  <div class="live-dot"></div>
+  <span class="live-text">LIVE</span>
+</div>
+
+<!-- Camera frame (news desk) -->
+<div class="cam-frame">
+  <div class="cam-corner tl"></div>
+  <div class="cam-corner tr"></div>
+  <div class="cam-corner bl"></div>
+  <div class="cam-corner br"></div>
+  <div class="cam-label">
+    <div class="cam-label-dot"></div>
+    <span class="cam-label-text">LIVE FROM STUDIO</span>
+  </div>
+
+
+</div>
+
+<!-- Alert zone — bottom-left, outside cam -->
+<div class="alert-panel">
+  <div class="alert-frame">
+    <span class="alert-label">Alert Zone</span>
+    <span class="alert-sub">Waiting for alerts</span>
+  </div>
+</div>
+
+<!-- Right side panel -->
+<div class="side-panel">
+  <div class="side-block">
+    <div class="side-block-label">★ Anchor</div>
+    <div class="side-block-value" id="anchor-name">SASI STREAMS</div>
+    <div class="side-block-sub">LIVE — Stream Studio</div>
+  </div>
+
+  <div class="side-block">
+    <div class="side-block-label">★ Topic</div>
+    <div class="side-block-value" id="topic-text">TODAY'S BROADCAST</div>
+  </div>
+
+  <div class="side-block headlines-block">
+    <div class="side-block-label">★ Top Stories</div>
+    <div class="headlines-list" id="headlines-list">
+      <!-- injected by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- Bottom ticker -->
+<div class="ticker-bar">
+  <div class="ticker-label">
+    <span class="ticker-label-text">★ NEWS TICKER</span>
+  </div>
+  <div class="ticker-content">
+    <div class="ticker-track" id="ticker-track">
+      <!-- injected by JS -->
+    </div>
+  </div>
+</div>
+
+<script>
+const C = SASI_CONFIG;
+
+// ── Editable headlines (random pick) ──
+const HEADLINES = [
+  'SASI STREAMS GOES LIVE — VIEWERS REPORT EXTREME ENTERTAINMENT',
+  'BREAKING: STREAMER ATTEMPTS NEW WORLD RECORD ON CAM',
+  'INVESTIGATION: WHY ARE FOLLOWERS RISING SO FAST?',
+  'EXCLUSIVE: SASI BREAKS SILENCE ON RAGE QUIT INCIDENT',
+  'LIVE: COMMUNITY ROAR REACHES ALL TIME HIGH',
+  'BREAKING: NEW CHALLENGE UNLOCKED ON STREAM',
+];
+
+// Top stories list
+const STORIES = [
+  'Stream views explode as community grows',
+  'New games dropping next week — viewers in shock',
+  'Sasi spotted laughing too hard at chat',
+  'Followers from 12 countries spotted in chat tonight',
+  'Mod team reports record-breaking message volume',
+];
+
+// Ticker items
+const TICKER = [
+  '🔴 LIVE: Stream in progress',
+  'Sasi Streams broadcasting LIVE',
+  'Subscribe to get notified for next broadcast',
+  'Follow on YouTube + Twitch + Instagram',
+  'Join the Discord — link in bio',
+  'New episodes Mon · Wed · Fri @ 8PM',
+  'BREAKING: Chat is going wild tonight',
+];
+
+// Apply
+document.getElementById('headline').textContent = HEADLINES[Math.floor(Math.random() * HEADLINES.length)];
+document.getElementById('anchor-name').textContent = (C.brand && C.brand.name) || 'SASI STREAMS';
+
+// Today's topic from streamInfo if available
+const today = (C.streamInfo && C.streamInfo.items || []).find(i => i.label === 'TODAY');
+document.getElementById('topic-text').textContent = today ? today.value : "TODAY'S BROADCAST";
+
+// Render top stories
+const list = document.getElementById('headlines-list');
+STORIES.slice(0, 4).forEach((s, i) => {
+  const el = document.createElement('div');
+  el.className = 'headline-item';
+  el.innerHTML = '<div class="headline-num">STORY ' + String(i+1).padStart(2,'0') + '</div><div class="headline-text">' + s + '</div>';
+  list.appendChild(el);
+});
+
+// Build ticker track (duplicated for seamless scroll)
+const track = document.getElementById('ticker-track');
+const allItems = TICKER.concat(TICKER);  // double for seamless loop
+track.innerHTML = allItems.map(item =>
+  '<div class="ticker-item">' + item + '<span class="sep">★</span></div>'
+).join('');
+
+// Rotate headline every 12 seconds
+let hIdx = 0;
+setInterval(() => {
+  hIdx = (hIdx + 1) % HEADLINES.length;
+  const el = document.getElementById('headline');
+  el.style.opacity = '0';
+  setTimeout(() => {
+    el.textContent = HEADLINES[hIdx];
+    el.style.opacity = '1';
+  }, 300);
+}, 12000);
+document.getElementById('headline').style.transition = 'opacity .3s ease';
+</script>
+</body>
+</html>

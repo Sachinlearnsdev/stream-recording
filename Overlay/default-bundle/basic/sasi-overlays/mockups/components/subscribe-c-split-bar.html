@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Subscribe — Variant C: Split Bar</title>
+<style>
+:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; --bg:#050005; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Inter','Segoe UI',Arial,sans-serif;
+  color:#fff;
+}
+
+/* Bottom split bar — left and right halves meet in the middle */
+.stage {
+  position:absolute; bottom:90px; left:50%; transform:translateX(-50%);
+  width:980px; height:76px;
+  display:flex;
+}
+
+.half {
+  flex:1;
+  background:rgba(8,0,2,.94);
+  border-top:1px solid rgba(255,34,0,.4);
+  border-bottom:1px solid rgba(255,34,0,.4);
+  display:flex; align-items:center;
+  position:relative;
+  overflow:hidden;
+  box-shadow:inset 0 0 24px rgba(0,0,0,.5);
+}
+.half::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--red), transparent);
+}
+
+.half.left {
+  border-left:1px solid rgba(255,34,0,.4);
+  justify-content:flex-end;
+  padding-right:24px;
+  transform:translateX(-100%);
+  animation:slideInL .55s cubic-bezier(.2,.9,.3,1) forwards,
+             slideOutL .45s ease 5.5s forwards;
+}
+.half.right {
+  border-right:1px solid rgba(255,34,0,.4);
+  justify-content:flex-start;
+  padding-left:24px;
+  transform:translateX(100%);
+  animation:slideInR .55s cubic-bezier(.2,.9,.3,1) forwards,
+             slideOutR .45s ease 5.5s forwards;
+}
+@keyframes slideInL  { to { transform:translateX(0); } }
+@keyframes slideOutL { to { transform:translateX(-100%); opacity:0; } }
+@keyframes slideInR  { to { transform:translateX(0); } }
+@keyframes slideOutR { to { transform:translateX(100%); opacity:0; } }
+
+/* Seam in the middle — red vertical line */
+.seam {
+  position:absolute; top:0; bottom:0; left:50%;
+  width:2px; background:var(--red);
+  box-shadow:0 0 12px var(--red), 0 0 24px rgba(255,34,0,.5);
+  opacity:0;
+  animation:seamIn .25s ease .55s forwards,
+             seamOut .3s ease 5.6s forwards;
+}
+@keyframes seamIn  { to { opacity:1; } }
+@keyframes seamOut { to { opacity:0; } }
+
+.icon {
+  width:48px; height:48px; border-radius:12px;
+  background:linear-gradient(135deg, var(--red), #8a0f00);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 0 20px rgba(255,34,0,.5);
+  opacity:0; transform:scale(.6);
+  animation:iconIn .45s cubic-bezier(.2,1.2,.3,1) .75s forwards,
+             bellRing .4s ease 1.2s 3;
+}
+.icon svg { width:24px; height:24px; fill:#fff; }
+@keyframes iconIn { to { opacity:1; transform:scale(1); } }
+@keyframes bellRing {
+  0%,100% { transform:rotate(0); }
+  25%     { transform:rotate(14deg); }
+  50%     { transform:rotate(-12deg); }
+  75%     { transform:rotate(6deg); }
+}
+
+.main {
+  font-size:26px; font-weight:900; letter-spacing:6px;
+  color:#fff; text-transform:uppercase;
+  text-shadow:0 0 16px rgba(255,34,0,.45);
+  opacity:0; transform:translateX(12px);
+  animation:textIn .5s ease .85s forwards;
+}
+.sub {
+  display:flex; flex-direction:column; gap:2px;
+  opacity:0; transform:translateX(-12px);
+  animation:textIn .5s ease .9s forwards;
+}
+.sub .top {
+  font-size:9px; font-weight:900; letter-spacing:4px;
+  color:var(--orange); text-transform:uppercase;
+}
+.sub .bot {
+  font-size:10px; font-weight:700; letter-spacing:1px;
+  color:rgba(255,255,255,.5);
+}
+@keyframes textIn { to { opacity:1; transform:translateX(0); } }
+
+.half.left  .main { margin-right:14px; }
+.half.right .icon { margin-right:14px; }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="half left">
+    <div class="main">SUBSCRIBE</div>
+    <div class="icon">
+      <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+    </div>
+  </div>
+  <div class="seam"></div>
+  <div class="half right">
+    <div class="sub">
+      <span class="top">Ring the bell</span>
+      <span class="bot">Get notified every time we go live</span>
+    </div>
+  </div>
+</div>
+
+<script>
+setTimeout(() => location.reload(), 6800);
+</script>
+
+</body>
+</html>

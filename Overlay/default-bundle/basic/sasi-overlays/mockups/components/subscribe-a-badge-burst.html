@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Subscribe — Variant A: Badge Burst</title>
+<style>
+:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; --bg:#050005; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Inter','Segoe UI',Arial,sans-serif;
+  color:#fff;
+}
+
+.wrap {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:340px; height:340px;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* Outer glow rings — pulse outward */
+.ring {
+  position:absolute; inset:0;
+  border:2px solid var(--red);
+  border-radius:50%;
+  opacity:0;
+  animation:ringOut 2.2s ease-out infinite;
+}
+.ring.r2 { animation-delay:.6s; }
+.ring.r3 { animation-delay:1.2s; }
+@keyframes ringOut {
+  0%   { opacity:.8; transform:scale(.6); border-width:3px; }
+  60%  { opacity:.35; }
+  100% { opacity:0; transform:scale(1.6); border-width:1px; }
+}
+
+/* Central badge */
+.badge {
+  position:relative; z-index:5;
+  width:200px; height:200px; border-radius:50%;
+  background:radial-gradient(circle at 50% 42%, #FF4400, #8a0f00 70%, #300600 100%);
+  border:2px solid var(--gold);
+  box-shadow:
+    0 0 50px rgba(255,34,0,.6),
+    0 0 120px rgba(255,34,0,.35),
+    inset 0 0 30px rgba(0,0,0,.5);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  opacity:0; transform:scale(.4) rotate(-12deg);
+  animation:badgeIn .6s cubic-bezier(.2,1.3,.3,1) .2s forwards,
+             badgeOut .45s ease 5.2s forwards;
+}
+@keyframes badgeIn {
+  to { opacity:1; transform:scale(1) rotate(0); }
+}
+@keyframes badgeOut {
+  to { opacity:0; transform:scale(.85); }
+}
+
+.badge::before {
+  content:''; position:absolute; inset:6px;
+  border:1px dashed rgba(255,215,0,.35);
+  border-radius:50%;
+  animation:badgeSpin 14s linear infinite;
+}
+@keyframes badgeSpin { to { transform:rotate(360deg); } }
+
+.bell {
+  width:52px; height:52px;
+  opacity:0;
+  animation:bellIn .4s ease .55s forwards,
+             bellRing .5s ease 1.1s 3;
+}
+.bell svg { width:100%; height:100%; fill:var(--gold); filter:drop-shadow(0 0 12px rgba(255,215,0,.6)); }
+@keyframes bellIn { to { opacity:1; } }
+@keyframes bellRing {
+  0%,100% { transform:rotate(0); }
+  20%     { transform:rotate(16deg); }
+  40%     { transform:rotate(-14deg); }
+  60%     { transform:rotate(8deg); }
+  80%     { transform:rotate(-4deg); }
+}
+
+.label-top {
+  font-size:10px; font-weight:900; letter-spacing:5px;
+  color:var(--gold); text-transform:uppercase;
+  text-shadow:0 0 10px rgba(255,215,0,.6);
+  opacity:0; animation:labelIn .4s ease .7s forwards;
+}
+.label-main {
+  font-size:22px; font-weight:900; letter-spacing:4px;
+  color:#fff; text-transform:uppercase;
+  text-shadow:0 0 14px rgba(255,34,0,.5);
+  opacity:0; animation:labelIn .4s ease .85s forwards;
+}
+@keyframes labelIn { to { opacity:1; } }
+
+/* Sub-text below badge */
+.caption {
+  position:absolute; bottom:-46px; left:50%; transform:translateX(-50%);
+  font-size:10px; font-weight:700; letter-spacing:4px;
+  color:rgba(255,255,255,.45); text-transform:uppercase;
+  white-space:nowrap;
+  opacity:0; animation:labelIn .5s ease 1s forwards;
+}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="wrap">
+  <div class="ring"></div>
+  <div class="ring r2"></div>
+  <div class="ring r3"></div>
+  <div class="badge">
+    <div class="label-top">Ring the</div>
+    <div class="bell">
+      <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+    </div>
+    <div class="label-main">Subscribe</div>
+    <div class="caption">NEVER MISS A STREAM</div>
+  </div>
+</div>
+
+<script>
+const wrap = document.getElementById('wrap');
+function replay() {
+  const clone = wrap.cloneNode(true);
+  wrap.replaceWith(clone);
+  setTimeout(() => location.reload(), 6500);
+}
+setTimeout(replay, 6500);
+</script>
+
+</body>
+</html>

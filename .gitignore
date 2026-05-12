@@ -13,10 +13,18 @@ obs-export/
 obs-export-*/
 *-bundle/
 # ... EXCEPT Overlay/default-bundle/ — vendored once via dashboard export,
-# auto-imports on fresh-OBS installs so iex becomes one-click. Scrub personal
-# paths from any files inside before committing.
+# auto-imports on fresh-OBS installs so iex becomes one-click.
 !Overlay/default-bundle/
 !Overlay/default-bundle/**
+
+# Hard re-deny credential-shaped files anywhere under default-bundle/.
+# OBS exports include OAuth refresh tokens (basic.ini in profile dirs),
+# stream-key files (service.json), API keys (legacy secrets.js inside
+# old-layout overlays). Belt-and-braces: even if someone re-vendors a
+# bundle without scrubbing, these patterns won't make it into git.
+Overlay/default-bundle/**/basic.ini
+Overlay/default-bundle/**/service.json
+Overlay/default-bundle/**/secrets.js
 
 # Overlay secrets (API keys) — never commit
 Overlay/sasi-secrets.js

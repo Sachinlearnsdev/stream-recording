@@ -1,0 +1,7 @@
+﻿# Third-party OBS plugins detected on the source PC.
+# Plugin BINARIES are bundled in program-plugins/ and auto-installed
+# by _obs-import.ps1 - no manual download needed on the new PC.
+# (Stock OBS DLLs are filtered out - see system-plugins.txt for raw list.)
+
+- advanced-scene-switcher  v1.33.1  [data dir; 20 subfolder DLL(s); sidecars: advanced-scene-switcher-lib.dll]
+    advanced-scene-switcher

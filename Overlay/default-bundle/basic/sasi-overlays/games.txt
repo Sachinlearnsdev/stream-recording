@@ -1,0 +1,167 @@
+════════════════════════════════════════════════════════════
+  SASI STREAMS — VIEWER GAMES MASTER LIST
+  Pick which ones you want in your games panel
+════════════════════════════════════════════════════════════
+
+CURRENT (already in just-chatting overlay):
+─────────────────────────────────────────────
+  🎰 Wheel of Fortune         1M pts   8-segment spinning wheel, random funny challenge for streamer
+  📦 Mystery Box              500K     Random reward reveal (pick game, name in outro, etc.)
+  💬 Highlight Message        100K     Viewer's chat message displayed as big golden card on screen
+
+
+══════════════════════════════════════════════════════
+CATEGORY 1 — VISUAL CHAOS (cam/screen effects)
+══════════════════════════════════════════════════════
+  🪞 Mirror World             800K     Entire stream flips upside down for 1 minute
+  📸 Mirror Cam               100K     Webcam flipped horizontally for 5 minutes
+  🌃 Black & White            300K     Stream goes monochrome for 2 minutes
+  🌀 Slow Mo Mode             2M       Stream visually goes into slow-motion filter for 30 sec
+  💨 Speed Up Mode            1M       Cam playback rate 1.5x for 1 min (talks fast)
+  🎨 Color Filter             200K     Random crazy color filter on cam (sepia, glitch) for 1 min
+  📺 Channel Surf             1.5M     TV static + scene flickers between all scenes for 20 sec
+  🎢 Roller Coaster           2M       Cam tilts, shakes, zooms randomly for 60 sec
+  🌪️  Tornado Mode             100K     Whole stream shakes/spins for 5 sec
+  🌙 Lights Out               1M       Stream goes dark for 30 sec — only dim cam visible
+  🛸 UFO Abduction            5M       UFO beam steals webcam for 30 sec, replaced with abduction animation
+  🦷 Dentist Mode             800K     Streamer must speak with comically wide smile for 2 min
+  🎨 Paint My Cam             700K     Random graffiti/scribble animation appears on webcam for 1 min
+  🪞 Doppelganger             1M       Duplicate of streamer's face appears in corner of screen
+  🎭 Disguise Mode            1M       Real-time face filter (clown, mustache, alien — viewer picks) for 5 min
+  ⚖️  Inverted Sky             1M       Top/bottom of screen swapped for 30 sec
+
+
+══════════════════════════════════════════════════════
+CATEGORY 2 — STREAMER FORCED ACTIONS (you must do something)
+══════════════════════════════════════════════════════
+  🚪 Force BRB                3M       Forces streamer into BRB scene immediately for 3 min
+  🤐 Silent Round             750K     Streamer can't talk for one full match
+  🎯 No-Look Round            500K     Streamer plays one round without looking at screen
+  🦶 One-Hand Mode            1M       Streamer plays one round one-handed
+  🎮 Inverted Controls        500K     Inverts mouse/aim for 1 round
+  🚫 Ban a Word               1M       Viewer chooses a word, streamer can't say it for 10 min (counter shows slips)
+  🌐 Translate Game           200K     Streamer must speak in google-translated language for 1 min
+  🎤 Karaoke Lock             2M       Lyrics scroll on screen, streamer must sing along
+  🎬 Director's Cut           2M       Viewer picks streamer's "scene direction" for 5 min (cooking show host, news anchor, etc.)
+  🪄 Reverse Day              2M       Streamer must do everything backwards for 3 min
+  🧙 Wizard's Curse           1.5M     Random curse: speak in rhymes / 3 words per sentence / end every line with "bro"
+  🛎️  Service Bell             500K     Bell rings, viewer's "order" appears — streamer is the chef
+  🤫 Whisper Mode             750K     Must speak below 30dB for 5 min
+  👵 Grandma Mode             1M       Must talk like an old grandma for 3 min
+  🤐 Dentist Visit            800K     Pretend you're at the dentist — only mumble for 2 min
+  🎭 Persona Mode             1M       Streamer talks in chosen accent/character for 5 min
+
+
+══════════════════════════════════════════════════════
+CATEGORY 3 — LUCK / RANDOM GAMES
+══════════════════════════════════════════════════════
+  🎲 D20 Roll                 50K      Roll a d20 — 20 = jackpot, 1 = streamer punishment
+  🃏 Card Pull                750K     Draw a card, suit determines action (♠️ challenge / ♥️ reward / ♦️ shoutout / ♣️ song)
+  🎰 Slot Machine             1M       3 reels, match symbols for varying rewards
+  🪙 Coin Flip                100K     50/50 — winner picks next game
+  🎯 Streak Roulette          3M       Streamer plays one round — lose = +10 min stream, win = viewer loses points
+
+
+══════════════════════════════════════════════════════
+CATEGORY 4 — VIEWER STATUS / RECOGNITION
+══════════════════════════════════════════════════════
+  🎟️  VIP Pass                 5M       Viewer gets gold VIP badge in chat for rest of stream
+  🌟 Star of the Stream       2M       Viewer's name pinned to the top of screen for entire stream
+  🥇 Champion Title           3M       Viewer becomes "Stream Champion" — name shown in title overlay for 30 min
+  📜 Manifest Destiny         3M       Viewer types a "stream prophecy" — streamer must try to fulfill it
+  🥷 Ninja Steal              4M       Viewer "steals" the viewer count briefly — ticker shows "stolen by @user"
+  📓 Live Diary               1M       Viewer writes a "diary entry" — appears as handwritten note on screen
+  📰 Breaking News Headline   750K     Fake breaking news banner crawls bottom of stream for 2 min with viewer's headline
+
+
+══════════════════════════════════════════════════════
+CATEGORY 5 — STREAM META / TIME / SCENE
+══════════════════════════════════════════════════════
+  ⏱️  Add Stream Time          10M      Adds 30 min to today's stream length
+  ⏳ Speed Up Stream          5M       Cuts 15 min from today's stream end time
+  🎬 Replay Old Clip          1.5M     Random clip from past streams plays on overlay for 30 sec
+  📺 Force Scene Switch       1M       Switch to a chosen scene for 1 min
+  🛒 Pin Product              2M       Viewer's chosen product/affiliate link pins to top of stream for 5 min
+  📌 Pin Discord              500K     Discord invite QR pinned to corner for 5 min
+
+
+══════════════════════════════════════════════════════
+CATEGORY 6 — CHAT-BASED (no overlay event)
+══════════════════════════════════════════════════════
+  📣 Loudspeaker (TTS)        250K     Viewer's message read aloud through stream audio
+  🎤 Take Over Mic            5M       Viewer's TTS message plays through stream audio (longer)
+  🤖 AI Roast                 1.5M     AI-generated roast of streamer pops up as giant card
+  📣 Hype Horn                250K     Air horn sound + animated horn — viewer's name shouted as "HYPE FROM @user"
+  🎺 Fanfare                  200K     Royal fanfare audio + animated trumpet for 3 sec
+  🎪 Circus Theme             300K     Circus music starts playing on stream for 1 min
+
+
+══════════════════════════════════════════════════════
+CATEGORY 7 — INTERACTIVE / SKILL CHALLENGES
+══════════════════════════════════════════════════════
+  💣 Time Bomb                1M       Viewer plants a "bomb" — explodes in 2 min unless chat solves a riddle
+  🏆 Bounty Board             1M       Viewer posts a bounty challenge ("beat this level in 5 min" — streamer attempts)
+  🎯 Speedrun Bingo           750K     Bingo card overlay appears, chat fills it together
+  🃏 Quiz Master              500K     Viewer asks a trivia question, streamer must answer correctly
+  🎲 Build Order              750K     Viewer dictates streamer's next 5 in-game actions
+  🎰 Sub Goal Challenge       2M       If viewers reach a sub goal in 30 min, streamer does X
+  🎭 Show & Tell              500K     Streamer must show an item from their desk on cam
+
+
+══════════════════════════════════════════════════════
+CATEGORY 8 — IRL CHALLENGES (low effort, fun)
+══════════════════════════════════════════════════════
+  🥤 Energy Drink Chug        1M       Streamer chugs an energy drink on cam
+  🍕 Order Food               10M      Viewer chooses streamer's next meal (DoorDash voucher)
+  🧊 Ice Bucket               5M       Ice bucket challenge on cam
+  🚰 Take a Sip               100K     Streamer must take a sip of water immediately (hydration accountability)
+  💃 Dance Break              500K     Streamer dances for 30 sec on cam
+
+
+══════════════════════════════════════════════════════
+CATEGORY 9 — RARE / EXPENSIVE PRESTIGE EVENTS (10M+)
+══════════════════════════════════════════════════════
+  🛸 UFO Abduction            5M       (see Visual Chaos)
+  ⏱️  Add Stream Time          10M      (see Stream Meta)
+  🍕 Order Food               10M      (see IRL)
+  💎 Diamond Drop             20M      Massive diamond animation drops from top, "Diamond Donor: @user" displayed for 1 hour
+  👑 Stream King              50M      Viewer becomes "King of the Stream" — title bar reads their name for the rest of the day, gold confetti
+  🌌 Reality Glitch           15M      Stream glitches hard for 10 sec — RGB split, pixel sort, frame skips
+
+
+══════════════════════════════════════════════════════
+CATEGORY 10 — CHAT/ROLEPLAY DRAMA
+══════════════════════════════════════════════════════
+  ⚖️  Court Session            1M       Random "judge" overlay, viewer presents a "case" against streamer
+  🚨 Insurance Claim          800K     Viewer files a "claim" — animated form fills out
+  🎤 Hot Take                 500K     Streamer must give a controversial opinion on chosen topic
+  ☕ Tea Spill                1.5M     Viewer asks a personal question, streamer must answer
+  📣 Heckle Time              500K     Chat gets to type insults that show on screen for 1 min
+
+
+══════════════════════════════════════════════════════
+RECOMMENDATIONS BY VIBE
+══════════════════════════════════════════════════════
+
+  IF YOU WANT VARIETY (5 tiles):
+    Wheel + Mystery Box + Highlight + Card Pull + UFO Abduction
+
+  IF YOU WANT CHEAP ENGAGEMENT (5 tiles):
+    Wheel + Highlight + Mirror Cam + D20 Roll + Service Bell
+
+  IF YOU WANT EXPENSIVE PRESTIGE ONLY (5 tiles):
+    Wheel + Mystery Box + Director's Cut + UFO Abduction + Diamond Drop
+
+  IF YOU WANT VISUAL CHAOS (5 tiles):
+    Wheel + Mystery Box + Disguise Mode + Roller Coaster + Channel Surf
+
+  IF YOU WANT VIEWER RECOGNITION (5 tiles):
+    Wheel + Mystery Box + Highlight + VIP Pass + Star of the Stream
+
+  IF YOU WANT INTERACTIVE (5 tiles):
+    Wheel + Mystery Box + Quiz Master + Build Order + Time Bomb
+
+
+══════════════════════════════════════════════════════
+PICK YOUR FINAL LIST AND TELL CLAUDE WHICH TO IMPLEMENT
+══════════════════════════════════════════════════════

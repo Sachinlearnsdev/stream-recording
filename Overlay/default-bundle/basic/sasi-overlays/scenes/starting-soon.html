@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="../config.js"></script>
+<script src="../secrets.js"></script>
+<script src="../alerts.js"></script>
+<title>Sasi Streams — Starting Soon</title>
+<style>
+/* ================================================
+   SASI STREAMS — STARTING SOON  |  1920x1080
+   Edit CONFIG in <script> to customise
+   ================================================ */
+:root {
+  --red:    #FF2200;
+  --orange: #FF7700;
+  --gold:   #FFD700;
+  --bg:     #050005;
+  --dim:    rgba(255,255,255,0.45);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Arial Black', Impact, Arial, sans-serif;
+  color:#fff;
+}
+
+
+
+/* Blobs */
+
+.stage { position:absolute; inset:0; z-index:10; animation:fadeIn 1.2s ease forwards; }
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ================================================
+   BRAND — lower top-left (not first row)
+   ================================================ */
+.brand-wrap {
+  position:absolute; top:30px; left:52px;
+  display:flex; align-items:center; gap:12px;
+  opacity:0; animation:tlIn .7s ease .1s forwards;
+}
+@keyframes tlIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+
+.logo-img {
+  width:52px; height:52px; border-radius:10px; display:block;
+  background:#fff; padding:9px;
+  fill:#FF0000;
+  box-sizing:border-box;
+}
+.brand-rule { width:2px; height:40px; background:linear-gradient(to bottom,transparent,var(--red),transparent); box-shadow:0 0 7px var(--red); }
+.brand-text { display:flex; flex-direction:column; }
+.brand-l1 { font-size:14px; font-weight:900; letter-spacing:5px; color:#fff; line-height:1; }
+.brand-l2 { font-size:8px;  font-weight:700; letter-spacing:7px; color:rgba(255,255,255,.3); margin-top:3px; }
+
+/* ================================================
+   FOLLOW & CONNECT — prominent, below brand
+   ================================================ */
+.follow-wrap {
+  display:none;
+  position:absolute; top:164px; left:52px;
+  opacity:0; animation:tlIn .7s ease .3s forwards;
+}
+.follow-label {
+  font-size:8px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,119,0,.6); margin-bottom:10px;
+  text-transform:uppercase;
+}
+.follow-socials { display:flex; flex-direction:column; gap:8px; }
+.follow-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 14px;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,34,0,.2);
+  border-left:2px solid var(--red);
+  border-radius:0 6px 6px 0;
+  box-shadow:0 0 12px rgba(255,34,0,.05);
+  transition:border-color .2s, box-shadow .2s;
+}
+.follow-item:hover { border-color:rgba(255,34,0,.6); box-shadow:0 0 18px rgba(255,34,0,.12); }
+.follow-icon { width:16px; height:16px; fill:var(--red); opacity:.85; flex-shrink:0; }
+.follow-platform { font-size:7px; font-weight:900; letter-spacing:3px; color:rgba(255,255,255,.3); width:60px; }
+.follow-handle   { font-size:13px; font-weight:900; letter-spacing:1px; color:#fff; }
+
+/* ================================================
+   LIVE BADGE — top-right corner
+   ================================================ */
+.live-wrap {
+  position:absolute; top:30px; right:30px;
+  opacity:0; animation:trIn .7s ease .2s forwards;
+}
+@keyframes trIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.live-badge {
+  display:flex; align-items:center; gap:8px; padding:8px 14px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,34,0,.32);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  position:relative;
+}
+.live-badge::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,34,0,.5),transparent);
+}
+.live-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--red);
+  box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5);
+  animation:livePulse 1.2s ease-in-out infinite;
+}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
+.live-text { font-size:12px; font-weight:900; letter-spacing:4px; color:var(--red); }
+
+/* ================================================
+   MAIN TEXT — center-left
+   ================================================ */
+.text-block {
+  position:absolute; left:100px; top:50%; transform:translateY(-50%);
+  display:flex; flex-direction:column; align-items:flex-start;
+}
+
+/* "STREAM" neon flicker */
+.t-stream {
+  font-size:70px; font-weight:900; font-style:italic;
+  letter-spacing:10px; text-transform:uppercase; color:var(--red);
+  text-shadow:0 0 1px rgba(255,34,0,.9), 0 0 3px rgba(255,34,0,.4);
+  opacity:0;
+  animation:streamIn .7s ease .3s forwards;
+  line-height:1;
+  position:relative;
+}
+@keyframes streamIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes streamGlitch {
+  /* Normal most of the time */
+  0%,38%,100% { opacity:1; transform:skewX(-4deg) translate(0,0); text-shadow:0 0 12px rgba(255,34,0,.6),0 0 24px rgba(255,34,0,.2); clip-path:none; filter:none; }
+  /* Fast flicker burst */
+  39%   { opacity:0; }
+  39.3% { opacity:1; }
+  39.6% { opacity:0; }
+  40%   { opacity:1; }
+  40.4% { opacity:.15; }
+  40.8% { opacity:1; }
+  /* Slice distort — chunk 1 */
+  42%   { transform:skewX(-4deg) translate(-6px,0); clip-path:polygon(0 0,100% 0,100% 30%,0 30%); text-shadow:5px 0 var(--orange),-3px 0 var(--red),0 0 8px var(--red); filter:brightness(1.4); }
+  42.3% { transform:skewX(-4deg) translate(5px,0);  clip-path:none; text-shadow:0 0 1px rgba(255,255,255,.9),0 0 3px var(--red); filter:none; }
+  /* Slice distort — chunk 2 */
+  43%   { transform:skewX(-4deg) translate(-4px,1px); clip-path:polygon(0 45%,100% 45%,100% 70%,0 70%); text-shadow:-4px 0 var(--red),6px 0 var(--orange); filter:brightness(1.3) contrast(1.2); }
+  43.4% { transform:skewX(-4deg) translate(3px,-1px); clip-path:polygon(0 20%,100% 20%,100% 50%,0 50%); text-shadow:3px 0 var(--red); filter:none; }
+  43.8% { transform:skewX(-4deg) translate(0,0); clip-path:none; text-shadow:0 0 1px rgba(255,255,255,.9),0 0 3px var(--red); }
+  /* Horizontal skew tear */
+  44.5% { transform:skewX(-14deg) translate(-3px,0) scaleX(1.04); clip-path:none; text-shadow:4px 0 var(--orange),-4px 0 var(--red); filter:brightness(1.2); }
+  44.9% { transform:skewX(-4deg) translate(0,0); clip-path:none; text-shadow:0 0 1px rgba(255,255,255,.9),0 0 3px var(--red); filter:none; }
+  45%   { opacity:1; }
+  /* Second hit later */
+  71%   { opacity:1; transform:skewX(-4deg) translate(0,0); clip-path:none; }
+  71.4% { opacity:0; }
+  71.7% { opacity:1; transform:skewX(-4deg) translate(-5px,0); clip-path:polygon(0 55%,100% 55%,100% 100%,0 100%); text-shadow:4px 0 var(--red); }
+  72%   { transform:skewX(-4deg) translate(4px,0); clip-path:none; text-shadow:none; }
+  72.4% { transform:skewX(-4deg) translate(0,0); }
+}
+
+/* "STARTING" */
+.t-starting {
+  font-size:182px; font-weight:900; letter-spacing:-10px; line-height:.82;
+  color:#fff;
+  opacity:0;
+  position:relative;
+  animation:bigIn .9s cubic-bezier(.22,1,.36,1) .42s forwards;
+}
+@keyframes bigIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+@keyframes startGlow {
+  0%,100% {
+    text-shadow:0 0 30px rgba(255,34,0,.4), 0 0 60px rgba(255,34,0,.15), 0 0 100px rgba(255,34,0,.05);
+  }
+  50% {
+    text-shadow:0 0 60px rgba(255,34,0,.9), 0 0 120px rgba(255,34,0,.5), 0 0 200px rgba(255,34,0,.2);
+  }
+}
+
+/* "SOON" — hover animation */
+.t-soon {
+  font-size:66px; font-weight:700; letter-spacing:26px;
+  color:var(--orange); margin-top:2px; margin-right:-26px;
+  opacity:0; animation:soonIn .7s ease .65s forwards, soonPulse 4s ease-in-out 3.5s infinite;
+  cursor:default;
+  display:inline-block;
+  transition:letter-spacing .4s ease, text-shadow .4s ease, color .3s ease;
+}
+@keyframes soonIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes soonPulse {
+  0%,100% { transform:scale(1); }
+  50%     { transform:scale(1.018); }
+}
+.t-soon:hover {
+  letter-spacing:36px;
+  color:#fff;
+  text-shadow:0 0 30px rgba(255,119,0,.9), 0 0 60px rgba(255,34,0,.4);
+}
+
+/* Gold bar */
+.bar {
+  width:0; height:3px; margin-top:20px;
+  background:linear-gradient(90deg,var(--red),var(--gold),var(--orange));
+  border-radius:2px; box-shadow:0 0 14px var(--gold);
+  animation:barG .9s ease-out .9s forwards;
+}
+@keyframes barG{from{width:0}to{width:560px}}
+
+/* Countdown timer */
+.countdown-wrap {
+  margin-top:18px;
+  opacity:0; animation:vIn .5s ease 1.1s forwards;
+  display:flex; align-items:center; gap:14px;
+}
+@keyframes vIn{from{opacity:0}to{opacity:1}}
+.countdown-time {
+  font-size:58px; font-weight:900; letter-spacing:8px;
+  color:#fff;
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 0 20px rgba(255,34,0,.5), 0 0 40px rgba(255,34,0,.15);
+}
+.countdown-time span { color:var(--red); animation:colonBlink 1s step-end infinite; }
+@keyframes colonBlink{0%,100%{opacity:1}50%{opacity:.15}}
+.countdown-label {
+  font-size:8px; font-weight:700; letter-spacing:5px;
+  color:rgba(255,119,0,.45); text-transform:uppercase;
+}
+/* Flash when done */
+.countdown-time.done {
+  animation:countdownDone 1s ease-in-out infinite;
+  color:var(--red);
+}
+@keyframes countdownDone {
+  0%,100% { text-shadow:0 0 20px rgba(255,34,0,.5); }
+  50%     { text-shadow:0 0 50px rgba(255,34,0,1), 0 0 90px rgba(255,34,0,.5); }
+}
+
+/* ================================================
+   RIGHT — LOGO RING
+   ================================================ */
+.right-panel {
+  display:none !important;
+  opacity:0; animation:rpIn .9s ease .5s forwards;
+}
+@keyframes rpIn{from{opacity:0;transform:translateY(-50%) translateX(20px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
+
+.logo-ring-wrap { position:relative; width:280px; height:280px; }
+.ring-svg { position:absolute; inset:0; width:100%; height:100%; animation:ringRot 20s linear infinite; }
+@keyframes ringRot{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.ring-inner-rot { position:absolute; inset:0; width:100%; height:100%; animation:ringRot 30s linear infinite reverse; }
+.ring-mid {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:232px; height:232px; border-radius:50%;
+  border:1.5px solid rgba(255,34,0,.3);
+  box-shadow:0 0 18px rgba(255,34,0,.15), inset 0 0 18px rgba(255,34,0,.06);
+  animation:ringGlow 2.8s ease-in-out infinite;
+}
+@keyframes ringGlow{0%,100%{box-shadow:0 0 18px rgba(255,34,0,.15),inset 0 0 18px rgba(255,34,0,.06)}50%{box-shadow:0 0 36px rgba(255,34,0,.4),inset 0 0 28px rgba(255,34,0,.14)}}
+.ring-clip {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:196px; height:196px; border-radius:50%;
+  overflow:hidden; background:#080000;
+  border:1px solid rgba(255,34,0,.18);
+}
+.ring-logo-img {
+  width:100%; height:100%; object-fit:cover;
+  mix-blend-mode:screen; filter:brightness(1.1) contrast(1.05);
+}
+
+/* ================================================
+   NEXT STREAM — glitch blink (bottom center)
+   ================================================ */
+.next-stream {
+  display:none !important;
+  opacity:0; animation:nsIn .6s ease 1.6s forwards;
+}
+@keyframes nsIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+.ns-label {
+  font-size:9px; font-weight:900; letter-spacing:6px;
+  color:rgba(255,119,0,.5); text-transform:uppercase;
+}
+.ns-value {
+  font-size:22px; font-weight:900; letter-spacing:4px;
+  color:#fff;
+  animation: nsGlitch 5s ease-in-out 3s infinite;
+  position:relative;
+}
+/* Glitch + blink — delayed 3s, then periodic */
+@keyframes nsGlitch {
+  0%,82%,100% { opacity:1; transform:translate(0,0); text-shadow:none; clip-path:none; }
+  /* blink burst */
+  83%  { opacity:0; }
+  83.4%{ opacity:1; }
+  83.8%{ opacity:0; }
+  84.2%{ opacity:1; }
+  /* glitch slices */
+  86%  { transform:translate(-3px,0); clip-path:polygon(0 20%,100% 20%,100% 40%,0 40%); text-shadow:2px 0 var(--red),-2px 0 var(--orange); }
+  86.5%{ transform:translate(3px,0);  clip-path:none; text-shadow:none; }
+  87%  { transform:translate(-2px,1px); clip-path:polygon(0 60%,100% 60%,100% 80%,0 80%); text-shadow:-2px 0 var(--red); }
+  87.5%{ transform:translate(0,0); clip-path:none; text-shadow:none; }
+  90%  { opacity:1; }
+}
+
+/* ================================================
+   CLOCK — date only (time hidden)
+   ================================================ */
+.clock-time { display:none; }
+.clock-wrap {
+  position:absolute; top:32px; left:50%; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  opacity:0; animation:fadeIn .7s ease .4s forwards;
+}
+.clock-time {
+  font-size:38px; font-weight:900; letter-spacing:6px;
+  color:#fff;
+  text-shadow:0 0 18px rgba(255,34,0,.6), 0 0 36px rgba(255,34,0,.2);
+}
+.clock-time span { color:var(--red); animation:colonBlink 1s step-end infinite; }
+@keyframes colonBlink{0%,100%{opacity:1}50%{opacity:.15}}
+.clock-date {
+  font-size:22px; font-weight:900; letter-spacing:4px;
+  color:#fff; text-transform:uppercase;
+  position:relative;
+  overflow:hidden;
+}
+
+/* ================================================
+   BOTTOM TICKER
+   ================================================ */
+.ticker-wrap {
+  position:absolute; bottom:0; left:0; right:0;
+  height:58px;
+  background:rgba(0,0,0,.8);
+  border-top:1px solid rgba(255,34,0,.22);
+  display:flex; flex-direction:column; align-items:stretch;
+  opacity:0; animation:fadeIn .6s ease 1.8s forwards;
+  z-index:15;
+}
+.ticker-tag {
+  display:none;
+}
+.ticker-row {
+  height:38px; overflow:hidden;
+  display:flex; align-items:center;
+  background:rgba(0,0,0,.75);
+}
+.ticker-track {
+  display:flex; align-items:center;
+  animation:tickerScroll 28s linear infinite;
+  white-space:nowrap;
+  gap:0;
+}
+@keyframes tickerScroll {
+  from { transform:translateX(0); }
+  to   { transform:translateX(-50%); }
+}
+.ticker-item {
+  display:inline-flex; align-items:center; gap:10px;
+  padding:0 40px;
+  font-size:13px; font-weight:700; letter-spacing:2px; color:rgba(255,255,255,.55);
+}
+.ticker-item .t-icon { width:12px; height:12px; fill:var(--red); opacity:.7; flex-shrink:0; }
+.ticker-item .t-handle { color:rgba(255,255,255,.8); }
+.ticker-dot {
+  width:4px; height:4px; border-radius:50%;
+  background:rgba(255,34,0,.5);
+  flex-shrink:0;
+}
+
+/* ================================================
+   RIGHT PANEL — chat fills full height
+   ================================================ */
+.side-panel {
+  position:absolute;
+  right:36px; top:90px;
+  width:420px;
+  bottom:72px;
+  display:flex; flex-direction:column;
+  opacity:0; animation:panelIn .8s ease .6s forwards;
+}
+@keyframes panelIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* Chat frame — full height */
+.chat-frame {
+  flex:1;
+  border:1px solid rgba(255,34,0,.28);
+  border-radius:10px;
+  background:rgba(0,0,0,.18);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+  position:relative;
+  box-shadow:0 0 20px rgba(255,34,0,.06), inset 0 0 30px rgba(0,0,0,.3);
+}
+.chat-frame::before, .chat-frame::after {
+  content:''; position:absolute;
+  background:var(--red); box-shadow:0 0 8px var(--red);
+}
+.chat-frame::before { width:20px; height:2px; top:0; left:0; }
+.chat-frame::after  { width:2px; height:20px; top:0; left:0; }
+
+.chat-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px 9px;
+  border-bottom:1px solid rgba(255,34,0,.15);
+  background:rgba(0,0,0,.35);
+  flex-shrink:0;
+}
+.chat-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 6px var(--red);
+  animation:livePulse 1.2s ease-in-out infinite;
+}
+.chat-title {
+  font-size:9px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,255,255,.5); text-transform:uppercase;
+}
+.chat-icon {
+  width:14px; height:14px; fill:rgba(255,34,0,.6); margin-left:auto;
+}
+.chat-body {
+  flex:1;
+  background:transparent;
+  overflow:hidden;
+  min-height:0;
+}
+
+/* ================================================
+   LEFT PANEL — alert zone
+   ================================================ */
+.alert-panel {
+  position:absolute;
+  left:52px; bottom:80px;
+  width:520px;
+  opacity:0; animation:alertPanelIn .8s ease .8s forwards;
+  z-index:20;
+}
+@keyframes alertPanelIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.alert-frame {
+  width:520px; height:130px;
+  border:none;
+  border-radius:10px;
+  background:transparent;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:5px;
+  position:relative;
+}
+.alert-frame.sasi-has-alert .alert-label,
+.alert-frame.sasi-has-alert .alert-sub { display:none; }
+.alert-label {
+  font-size:8px; font-weight:900; letter-spacing:5px;
+  color:rgba(255,119,0,.35); text-transform:uppercase;
+}
+.alert-sub {
+  font-size:7px; font-weight:700; letter-spacing:3px;
+  color:rgba(255,255,255,.18); text-transform:uppercase;
+}
+</style>
+</head>
+<body>
+
+
+<div class="stage">
+
+  <!-- Clock — top center -->
+  <div class="clock-wrap">
+    <div class="clock-time" id="clock-time">00<span>:</span>00<span>:</span>00</div>
+    <div class="clock-date" id="clock-date">Monday • January 1</div>
+  </div>
+
+  <!-- Brand — lower top-left -->
+  <div class="brand-wrap">
+    <svg class="logo-img" viewBox="0 0 24 24"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+    <div class="brand-rule"></div>
+    <div class="brand-text">
+      <span class="brand-l1" id="brand-l1"></span>
+      <span class="brand-l2" id="brand-l2"></span>
+    </div>
+  </div>
+
+  <!-- Follow & Connect — below brand -->
+  <div class="follow-wrap">
+    <div class="follow-label">Follow & Connect</div>
+    <div class="follow-socials" id="follow-socials"></div>
+  </div>
+
+  <!-- LIVE badge — top-right -->
+  <div class="live-wrap">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span class="live-text" id="ss-badge"></span>
+    </div>
+  </div>
+
+  <!-- Main text — center -->
+  <div class="text-block">
+    <div class="t-stream" id="t-stream"></div>
+    <div class="t-starting" id="t-starting"></div>
+    <div class="bar"></div>
+    <div class="countdown-wrap">
+      <div class="countdown-time" id="countdown">05<span>:</span>00</div>
+      <div class="countdown-label">GOING LIVE</div>
+    </div>
+  </div>
+
+  <!-- Right side panel — chat only, full height -->
+  <div class="side-panel">
+    <div class="chat-frame">
+      <div class="chat-header">
+        <div class="chat-dot"></div>
+        <span class="chat-title">Live Chat</span>
+        <svg class="chat-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      </div>
+      <div class="chat-body"></div>
+    </div>
+  </div>
+
+  <!-- Left side — alert zone (below main text) -->
+  <div class="alert-panel">
+    <div class="alert-frame">
+      <span class="alert-label">Alert Zone</span>
+      <span class="alert-sub">Waiting for alerts</span>
+    </div>
+  </div>
+
+  <!-- Logo ring — right -->
+  <div class="right-panel">
+    <div class="logo-ring-wrap">
+      <!-- Outer rotating dashes -->
+      <svg class="ring-svg" viewBox="0 0 280 280">
+        <circle cx="140" cy="140" r="135" fill="none" stroke="rgba(255,34,0,.25)" stroke-width="1.5"
+          stroke-dasharray="8 6" stroke-linecap="round"/>
+      </svg>
+      <!-- Inner counter-rotating dashes -->
+      <svg class="ring-inner-rot" viewBox="0 0 280 280">
+        <circle cx="140" cy="140" r="122" fill="none" stroke="rgba(255,119,0,.15)" stroke-width="1"
+          stroke-dasharray="4 10" stroke-linecap="round"/>
+      </svg>
+      <div class="ring-mid"></div>
+      <div class="ring-clip">
+        <img class="ring-logo-img" id="logo-ring" src="../assets/Sasi_Streams_logo.png" alt="">
+      </div>
+    </div>
+  </div>
+
+  <!-- Next stream -->
+  <div class="next-stream">
+    <div class="ns-label">Next Stream</div>
+    <div class="ns-value" id="ns-value"></div>
+  </div>
+
+</div>
+
+<!-- Bottom ticker — outside .stage so it sits over everything -->
+<div class="ticker-wrap">
+  <div class="ticker-tag">LIVE SOON</div>
+  <div class="ticker-row">
+    <div class="ticker-track" id="ticker-track"></div>
+  </div>
+</div>
+
+<script>
+// ====================================================================
+//  CONFIG
+// ====================================================================
+// Config loaded from config.js (SASI_CONFIG)
+const CONFIG = {
+  nextStream: SASI_CONFIG.startingSoon.nextStream,
+  socials:    SASI_CONFIG.socials,
+};
+// ======================================================================
+
+document.getElementById('ns-value').textContent = SASI_CONFIG.startingSoon.nextStream;
+
+// ---- Apply brand from config ----
+document.getElementById('brand-l1').textContent = SASI_CONFIG.brand.name;
+document.getElementById('brand-l2').textContent = SASI_CONFIG.brand.tagline;
+document.getElementById('ss-badge').textContent = SASI_CONFIG.startingSoon.badge;
+document.getElementById('t-stream').textContent = SASI_CONFIG.startingSoon.topText;
+document.getElementById('t-starting').textContent = SASI_CONFIG.startingSoon.mainText;
+
+// ---- Clock visibility ----
+const _clockShow = (SASI_CONFIG.startingSoon._clock && SASI_CONFIG.startingSoon._clock.show !== undefined) ? SASI_CONFIG.startingSoon._clock.show : SASI_CONFIG.clock.show;
+if (!_clockShow) {
+  document.querySelector('.clock-wrap').style.display = 'none';
+}
+
+// ---- Clock ----
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function updateClock(){
+  const n = new Date();
+  const h = String(n.getHours()).padStart(2,'0');
+  const m = String(n.getMinutes()).padStart(2,'0');
+  const s = String(n.getSeconds()).padStart(2,'0');
+  document.getElementById('clock-time').innerHTML =
+    `${h}<span>:</span>${m}<span>:</span>${s}`;
+  document.getElementById('clock-date').textContent =
+    `${DAYS[n.getDay()]} • ${MONTHS[n.getMonth()]} ${n.getDate()}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Date scramble-decode effect
+const CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789•';
+function scrambleDecode(el){
+  const target = el.textContent;
+  let frame = 0;
+  const total = 22;
+  const iv = setInterval(()=>{
+    frame++;
+    const revealed = Math.floor((frame/total)*target.length);
+    el.textContent = target.split('').map((c,i)=>{
+      if(i < revealed) return c;
+      if(c === ' ') return ' ';
+      return CHARS[Math.floor(Math.random()*CHARS.length)];
+    }).join('');
+    if(frame >= total){ el.textContent = target; clearInterval(iv); }
+  }, 40);
+}
+const dateEl = document.getElementById('clock-date');
+setTimeout(()=>scrambleDecode(dateEl), 600);
+setInterval(()=>scrambleDecode(dateEl), 12000);
+
+// ---- Bottom ticker ----
+const TICKER_ICONS = {
+  twitch:   `<svg class="t-icon" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>`,
+  youtube:  `<svg class="t-icon" viewBox="0 0 24 24"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>`,
+  instagram:`<svg class="t-icon" viewBox="0 0 24 24"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12c0 3.259.014 3.668.072 4.948.058 1.278.262 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24c3.259 0 3.668-.014 4.948-.072 1.278-.058 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.635.558-2.913.06-1.28.072-1.689.072-4.948 0-3.259-.014-3.667-.072-4.947-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg>`,
+  twitter:  `<svg class="t-icon" viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>`,
+};
+const PLATFORM_ICON = { TWITCH:'twitch', YOUTUBE:'youtube', INSTAGRAM:'instagram', 'X / TWITTER':'twitter', TWITTER:'twitter' };
+const TICKER_TEXT   = { TWITCH:'Follow on Twitch', YOUTUBE:'Subscribe on YouTube', INSTAGRAM:'Follow on Instagram', 'X / TWITTER':'Follow on X', TWITTER:'Follow on X' };
+const TICKER_ITEMS  = [
+  ...Object.values(SASI_CONFIG.socials).map(s => ({
+    icon:   PLATFORM_ICON[s.platform.toUpperCase()] || 'twitch',
+    text:   TICKER_TEXT[s.platform.toUpperCase()]   || s.platform,
+    handle: s.handle,
+  })),
+  { icon:'twitch', text: SASI_CONFIG.tickerExtras[0].text, handle: SASI_CONFIG.tickerExtras[0].handle },
+];
+// Duplicate for seamless loop
+const track = document.getElementById('ticker-track');
+[...TICKER_ITEMS, ...TICKER_ITEMS].forEach((item, i) => {
+  const el = document.createElement('span');
+  el.className = 'ticker-item';
+  el.innerHTML = `${TICKER_ICONS[item.icon]}<span>${item.text}</span><span class="t-handle">${item.handle}</span>`;
+  track.appendChild(el);
+  if (i < TICKER_ITEMS.length * 2 - 1) {
+    const dot = document.createElement('span'); dot.className = 'ticker-dot'; track.appendChild(dot);
+  }
+});
+track.style.animationDuration = SASI_CONFIG.ticker.speed + 's';
+if (!SASI_CONFIG.ticker.show.startingSoon) {
+  document.querySelector('.ticker-wrap').style.display = 'none';
+}
+
+// ---- Follow & Connect socials ----
+const ICONS = {
+  twitch:    `<svg class="follow-icon" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>`,
+  youtube:   `<svg class="follow-icon" viewBox="0 0 24 24"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>`,
+  instagram: `<svg class="follow-icon" viewBox="0 0 24 24"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12c0 3.259.014 3.668.072 4.948.058 1.278.262 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24c3.259 0 3.668-.014 4.948-.072 1.278-.058 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.635.558-2.913.06-1.28.072-1.689.072-4.948 0-3.259-.014-3.667-.072-4.947-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg>`,
+  twitter:   `<svg class="follow-icon" viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>`,
+};
+
+const followEl = document.getElementById('follow-socials');
+Object.entries(CONFIG.socials).forEach(([key, s]) => {
+  const item = document.createElement('div');
+  item.className = 'follow-item';
+  item.innerHTML = `${ICONS[key]}<span class="follow-platform">${s.platform}</span><span class="follow-handle">${s.handle}</span>`;
+  followEl.appendChild(item);
+});
+
+// ---- Countdown timer ----
+(function(){
+  const el = document.getElementById('countdown');
+  let totalSec = SASI_CONFIG.startingSoon.countdown * 60;
+
+  function render() {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    el.innerHTML = `${String(m).padStart(2,'0')}<span>:</span>${String(s).padStart(2,'0')}`;
+  }
+
+  render();
+
+  const iv = setInterval(() => {
+    if (totalSec <= 0) {
+      clearInterval(iv);
+      el.innerHTML = '00<span>:</span>00';
+      el.classList.add('done');
+      return;
+    }
+    totalSec--;
+    render();
+  }, 1000);
+})();
+
+// ================================================
+</script>
+</body>
+</html>

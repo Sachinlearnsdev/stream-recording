@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Alert Popup — Redesign</title>
+<style>
+:root {
+  --red:#FF2200; --orange:#FF7700; --gold:#FFD700;
+  --bg:#050005;
+  --cyan:#5cd2ff;
+  --green:#00ff9c;
+  --blue:#3b82f6;       /* subscriber tier */
+  --blue-light:#93c5fd; /* subscriber progress gradient tail */
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1920px; height:1080px; overflow:hidden;
+  background:#050005;
+  font-family:'Inter','Helvetica Neue',Arial,sans-serif;
+  color:#fff;
+}
+
+/* ── Stage laid out like a real scene's alert zone ── */
+.stage {
+  position:absolute;
+  left:80px; top:80px;
+  width:420px;
+}
+.stage-head {
+  display:flex; align-items:baseline; gap:12px;
+  margin-bottom:14px;
+}
+.stage-tag {
+  font-size:9px; font-weight:900; letter-spacing:4px;
+  color:var(--orange); text-transform:uppercase;
+  padding:3px 9px;
+  background:rgba(255,119,0,.1);
+  border:1px solid rgba(255,119,0,.35);
+  border-radius:3px;
+}
+.stage-title {
+  font-size:16px; font-weight:900; letter-spacing:2px;
+  color:#fff; text-transform:uppercase;
+}
+.stage-meta {
+  font-size:10px; color:rgba(255,255,255,.35); letter-spacing:1px;
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* This wrapper mimics a scene's .alert-zone-wrap at 370×110 */
+.alert-frame {
+  position:relative;
+  width:370px; height:110px;
+  border:1px dashed rgba(255,255,255,.08);
+  border-radius:8px;
+}
+.alert-frame::before {
+  content:'alert frame · 370 × 110';
+  position:absolute; bottom:-22px; left:0;
+  font-size:9px; letter-spacing:2px; color:rgba(255,255,255,.25);
+  text-transform:uppercase;
+  font-family:'Inter',Arial,sans-serif;
+}
+
+/* ════════════════════════════════════════════════
+   REDESIGNED POPUP
+   ════════════════════════════════════════════════ */
+.sasi-alert-popup {
+  /* Default tier color = red; :has(.tier-X) rules below override per event */
+  --tier-rgb: 255, 34, 0;
+
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(120% 100% at 0% 50%, rgba(var(--tier-rgb), .15), rgba(8,0,2,.96) 60%),
+    rgba(8,0,2,.96);
+  border:1px solid rgba(var(--tier-rgb), .4);
+  border-radius:8px;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.3),
+    0 10px 30px rgba(0,0,0,.5),
+    0 0 40px rgba(var(--tier-rgb), .12),
+    inset 0 0 30px rgba(0,0,0,.3);
+  padding:0;
+  display:flex;
+  align-items:center;
+  opacity:0;
+  transform:translateY(10px) scale(.96);
+  z-index:50;
+  font-family:'Inter','Helvetica Neue',Arial,sans-serif;
+  pointer-events:none;
+  overflow:hidden;
+}
+/* Tier color overrides — box background/border/glow follow the event type */
+.sasi-alert-popup:has(.tier-follower)   { --tier-rgb: 157, 92, 255; }
+.sasi-alert-popup:has(.tier-subscriber) { --tier-rgb: 59, 130, 246; }
+.sasi-alert-popup:has(.tier-cheer)      { --tier-rgb: 92, 210, 255; }
+.sasi-alert-popup:has(.tier-tip)        { --tier-rgb: 0, 255, 156; }
+.sasi-alert-popup:has(.tier-raid)       { --tier-rgb: 255, 34, 0; }
+.sasi-alert-popup:has(.tier-points)     { --tier-rgb: 236, 72, 153; }
+
+/* Brand gradient top hairline */
+.sasi-alert-popup::before {
+  content:''; position:absolute; top:0; left:10px; right:10px; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(var(--tier-rgb), .65), transparent);
+}
+/* Top-right corner tick */
+.sasi-alert-popup::after {
+  content:''; position:absolute; top:0; right:0;
+  width:16px; height:2px;
+  background:rgb(var(--tier-rgb)); box-shadow:0 0 8px rgb(var(--tier-rgb));
+}
+
+/* Entry */
+.sasi-alert-popup.in {
+  opacity:1;
+  transform:translateY(0) scale(1);
+  transition:opacity .35s ease, transform .5s cubic-bezier(.16,1,.3,1);
+  animation:flashIn .7s ease-out;
+}
+/* Flash uses var(--tier-rgb) so every tier flashes in its own color */
+@keyframes flashIn {
+  0%   { box-shadow:0 0 0 1px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.5), 0 0 0    rgba(var(--tier-rgb), 0),   inset 0 0 30px rgba(0,0,0,.3); }
+  18%  { box-shadow:0 0 0 1px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.5), 0 0 80px rgba(var(--tier-rgb), .45), inset 0 0 30px rgba(0,0,0,.3); }
+  100% { box-shadow:0 0 0 1px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.5), 0 0 40px rgba(var(--tier-rgb), .12), inset 0 0 30px rgba(0,0,0,.3); }
+}
+
+/* Exit */
+.sasi-alert-popup.out {
+  opacity:0;
+  transform:translateY(-6px) scale(.98);
+  transition:opacity .28s ease, transform .32s ease;
+}
+
+/* ── ICON: circular badge with gradient fill, pops in on entry ── */
+.sasi-alert-icon {
+  position:relative;
+  width:72px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  height:100%;
+}
+.sasi-alert-icon::before {
+  content:'';
+  position:absolute;
+  left:50%; top:50%;
+  width:48px; height:48px;
+  transform:translate(-50%, -50%);
+  border-radius:50%;
+  background:linear-gradient(135deg, var(--red), #8a0f00);
+  box-shadow:
+    0 0 22px rgba(255,34,0,.5),
+    inset 0 -3px 10px rgba(0,0,0,.4),
+    inset 0 2px 4px rgba(255,255,255,.12);
+  z-index:1;
+}
+/* Thin orbital ring */
+.sasi-alert-icon::after {
+  content:'';
+  position:absolute;
+  left:50%; top:50%;
+  width:58px; height:58px;
+  transform:translate(-50%, -50%);
+  border-radius:50%;
+  border:1px dashed rgba(255,34,0,.35);
+  animation:spin 12s linear infinite;
+}
+@keyframes spin { to { transform:translate(-50%,-50%) rotate(360deg); } }
+
+.sasi-alert-icon svg {
+  position:relative; z-index:2;
+  width:24px; height:24px; fill:#fff;
+  filter:drop-shadow(0 0 6px rgba(255,255,255,.35));
+}
+.sasi-alert-popup.in .sasi-alert-icon svg {
+  animation:iconPop .6s cubic-bezier(.2,1.4,.3,1) .1s backwards;
+}
+@keyframes iconPop {
+  0%   { transform:scale(.3) rotate(-12deg); opacity:0; }
+  70%  { transform:scale(1.15) rotate(4deg);  opacity:1; }
+  100% { transform:scale(1) rotate(0);        opacity:1; }
+}
+
+/* ── TIER COLORING ── each event type recolors the badge + border glow */
+.sasi-alert-icon.tier-follower::before { background:linear-gradient(135deg, #9d5cff, #3b0a80); box-shadow:0 0 22px rgba(157,92,255,.55), inset 0 -3px 10px rgba(0,0,0,.4), inset 0 2px 4px rgba(255,255,255,.12); }
+.sasi-alert-icon.tier-follower::after  { border-color:rgba(157,92,255,.4); }
+
+.sasi-alert-icon.tier-subscriber::before { background:linear-gradient(135deg, var(--blue), #0a2d6e); box-shadow:0 0 22px rgba(59,130,246,.55), inset 0 -3px 10px rgba(0,0,0,.4), inset 0 2px 4px rgba(255,255,255,.12); }
+.sasi-alert-icon.tier-subscriber::after  { border-color:rgba(59,130,246,.4); }
+
+.sasi-alert-icon.tier-cheer::before { background:linear-gradient(135deg, var(--cyan), #0a4060); box-shadow:0 0 22px rgba(92,210,255,.5), inset 0 -3px 10px rgba(0,0,0,.4), inset 0 2px 4px rgba(255,255,255,.12); }
+.sasi-alert-icon.tier-cheer::after  { border-color:rgba(92,210,255,.35); }
+
+.sasi-alert-icon.tier-tip::before { background:linear-gradient(135deg, var(--green), #014a30); box-shadow:0 0 22px rgba(0,255,156,.5), inset 0 -3px 10px rgba(0,0,0,.4), inset 0 2px 4px rgba(255,255,255,.12); }
+.sasi-alert-icon.tier-tip::after  { border-color:rgba(0,255,156,.35); }
+
+.sasi-alert-icon.tier-raid::before { background:linear-gradient(135deg, var(--red), #5c0000); box-shadow:0 0 22px rgba(255,34,0,.6), inset 0 -3px 10px rgba(0,0,0,.4), inset 0 2px 4px rgba(255,255,255,.12); }
+.sasi-alert-icon.tier-raid::after  { border-color:rgba(255,34,0,.4); }
+
+.sasi-alert-icon.tier-points::before { background:linear-gradient(135deg, #ec4899, #6a1a3d); box-shadow:0 0 22px rgba(236,72,153,.55), inset 0 -3px 10px rgba(0,0,0,.4), inset 0 2px 4px rgba(255,255,255,.12); }
+.sasi-alert-icon.tier-points::after  { border-color:rgba(236,72,153,.4); }
+
+/* ── CONTENT ── */
+.sasi-alert-content {
+  flex:1;
+  padding:14px 18px 14px 8px;
+  display:flex; flex-direction:column; justify-content:center; gap:3px;
+  min-width:0;
+  overflow:hidden;
+  position:relative;
+}
+.sasi-alert-label {
+  font-size:9px; font-weight:900; letter-spacing:3px;
+  text-transform:uppercase;
+  line-height:1;
+  display:flex; align-items:center; gap:6px;
+  opacity:0; transform:translateX(-6px);
+  color:var(--orange);
+}
+.sasi-alert-popup.in .sasi-alert-label {
+  animation:slideInL .4s ease .25s forwards;
+}
+@keyframes slideInL { to { opacity:1; transform:translateX(0); } }
+
+/* Tier-colored label */
+.tier-follower ~ .sasi-alert-content .sasi-alert-label { color:#b896ff; }
+.tier-subscriber ~ .sasi-alert-content .sasi-alert-label { color:var(--blue); }
+.tier-cheer ~ .sasi-alert-content .sasi-alert-label { color:var(--cyan); }
+.tier-tip ~ .sasi-alert-content .sasi-alert-label { color:var(--green); }
+.tier-raid ~ .sasi-alert-content .sasi-alert-label { color:var(--red); }
+.tier-points ~ .sasi-alert-content .sasi-alert-label { color:#f9a8d4; }
+
+.sasi-alert-label::after {
+  content:''; flex:1; height:1px;
+  background:linear-gradient(90deg, currentColor, transparent);
+  opacity:.4;
+}
+
+.sasi-alert-name {
+  font-size:20px; font-weight:900;
+  letter-spacing:.3px;
+  color:#fff;
+  text-shadow:0 0 14px rgba(255,34,0,.3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  line-height:1.1;
+  opacity:0; transform:translateX(-8px);
+}
+.sasi-alert-popup.in .sasi-alert-name {
+  animation:slideInL .5s cubic-bezier(.16,1,.3,1) .35s forwards;
+}
+
+.sasi-alert-name .amt {
+  color:var(--gold);
+  margin-left:8px;
+  font-size:17px;
+  font-weight:900;
+  padding:1px 8px;
+  background:rgba(255,215,0,.1);
+  border:1px solid rgba(255,215,0,.4);
+  border-radius:3px;
+  text-shadow:0 0 10px rgba(255,215,0,.55);
+  vertical-align:2px;
+}
+
+.sasi-alert-message {
+  font-size:12px; font-weight:500; line-height:1.4;
+  color:rgba(255,255,255,.85);
+  font-style:italic;
+  margin-top:4px;
+  padding-left:10px;
+  /* Quote border picks up the tier color so it matches the rest of the box */
+  border-left:2px solid rgba(var(--tier-rgb), .55);
+  max-height:36px;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  opacity:0;
+}
+.sasi-alert-popup.in .sasi-alert-message {
+  animation:slideInL .45s ease .5s forwards;
+}
+
+/* ── PROGRESS bar — gradient colors shift per tier ── */
+.sasi-alert-progress {
+  position:absolute; bottom:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--red), var(--orange));
+  transform-origin:right;
+  transform:scaleX(1);
+}
+.sasi-alert-popup.in .sasi-alert-progress {
+  animation:drain 4.5s linear forwards;
+}
+@keyframes drain { to { transform:scaleX(0); } }
+
+/* Tier-colored progress */
+.sasi-alert-popup:has(.tier-follower)   .sasi-alert-progress { background:linear-gradient(90deg, #9d5cff, #d4b8ff); }
+.sasi-alert-popup:has(.tier-subscriber) .sasi-alert-progress { background:linear-gradient(90deg, var(--blue), var(--blue-light)); }
+.sasi-alert-popup:has(.tier-cheer)      .sasi-alert-progress { background:linear-gradient(90deg, var(--cyan), #c4eeff); }
+.sasi-alert-popup:has(.tier-tip)        .sasi-alert-progress { background:linear-gradient(90deg, var(--green), #a0ffd9); }
+.sasi-alert-popup:has(.tier-raid)       .sasi-alert-progress { background:linear-gradient(90deg, var(--red), #ff9080); }
+.sasi-alert-popup:has(.tier-points)     .sasi-alert-progress { background:linear-gradient(90deg, #ec4899, #f9a8d4); }
+
+/* Points-tier override: the .amt chip is pink (not gold) because these aren't money */
+.sasi-alert-popup:has(.tier-points) .sasi-alert-name .amt {
+  color:#f9a8d4;
+  background:rgba(236,72,153,.12);
+  border-color:rgba(236,72,153,.5);
+  text-shadow:0 0 10px rgba(236,72,153,.55);
+}
+
+/* Super-chat — the box stays tier-colored (green for tip). The only super-chat
+   specific touch is the gold .amt pill + the gold-bordered message quote. */
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="stage-head">
+    <span class="stage-tag">NEW</span>
+    <span class="stage-title">Alert Popup Redesign</span>
+    <span class="stage-meta">cycles every 5s</span>
+  </div>
+  <div class="alert-frame" id="frame"></div>
+</div>
+
+<script>
+const ICONS = {
+  follower:   '<svg viewBox="0 0 24 24"><path d="M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 10c-4 0-8 2-8 6v2h16v-2c0-4-4-6-8-6z"/></svg>',
+  subscriber: '<svg viewBox="0 0 24 24"><path d="M12 2l2.39 7.36H22l-6.19 4.5L18.18 22 12 17.27 5.82 22l2.37-8.14L2 9.36h7.61z"/></svg>',
+  cheer:      '<svg viewBox="0 0 24 24"><path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z"/></svg>',
+  tip:        '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/></svg>',
+  raid:       '<svg viewBox="0 0 24 24"><path d="M19.8 10.7L4.2 5l-.7 1.9L17.6 12 3.5 17.1l.7 1.9 15.6-5.7c.8-.3.8-1.5 0-1.6z"/></svg>',
+  points:     '<svg viewBox="0 0 24 24"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>',
+};
+
+const LABELS = {
+  follower:'New Follower',
+  subscriber:'New Subscriber',
+  cheer:'Cheer',
+  tip:'Super Chat',
+  raid:'Incoming Raid',
+  points:'Points Redeem',
+};
+
+const EVENTS = [
+  { type:'follower',   name:'ember_92' },
+  { type:'subscriber', name:'mikhail',  extra:'Tier 1 · month 3' },
+  { type:'cheer',      name:'cozyfox',  amount:'500 BITS' },
+  { type:'tip',        name:'raven_b',  amount:'₹1,250', message:'been watching forever, finally pulled the trigger 🔥' },
+  { type:'points',     name:'kai_h',    amount:'500 PTS', message:'highlight my message please 🙏' },
+  { type:'raid',       name:'jules',    amount:'48 viewers' },
+  { type:'tip',        name:'tanvi',    amount:'₹500',   message:'big fan, keep it up!' },
+  { type:'points',     name:'sora',     amount:'1,000 PTS', message:'do the rage quit compilation' },
+];
+
+const frame = document.getElementById('frame');
+let popup = null;
+let i = 0;
+
+function showAlert() {
+  const e = EVENTS[i % EVENTS.length];
+  i++;
+
+  // Remove previous popup if any
+  if (popup) {
+    popup.classList.remove('in');
+    popup.classList.add('out');
+    const old = popup;
+    setTimeout(() => old.remove(), 350);
+  }
+
+  const isSuperChat = e.type === 'tip' && !!e.message;
+
+  popup = document.createElement('div');
+  popup.className = 'sasi-alert-popup' + (isSuperChat ? ' superchat' : '');
+
+  const amtHtml = e.amount ? `<span class="amt">${e.amount}</span>` : '';
+  const msgHtml = e.message ? `<div class="sasi-alert-message">${e.message}</div>` : '';
+
+  popup.innerHTML = `
+    <div class="sasi-alert-icon tier-${e.type}">${ICONS[e.type]}</div>
+    <div class="sasi-alert-content">
+      <div class="sasi-alert-label">${isSuperChat ? 'Super Chat' : LABELS[e.type]}</div>
+      <div class="sasi-alert-name">${e.name}${amtHtml}</div>
+      ${msgHtml}
+    </div>
+    <div class="sasi-alert-progress"></div>
+  `;
+
+  frame.appendChild(popup);
+  requestAnimationFrame(() => popup.classList.add('in'));
+}
+
+// First alert after a brief pause, then cycle every 5s
+setTimeout(showAlert, 500);
+setInterval(showAlert, 5000);
+</script>
+
+</body>
+</html>
