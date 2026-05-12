@@ -29,17 +29,53 @@ try {
   # HTML stinger auto-record + several other live-edit features.
   # The watcher auto-starts at Windows login; if it's offline the URL just
   # fails to load and the user can hit the Start Menu shortcut to launch it.
-  $desktopDir = [Environment]::GetFolderPath('Desktop')
-  $desktopLnk = Join-Path $desktopDir 'Sasi Studio.lnk'
-  $dlnk = $ws.CreateShortcut($desktopLnk)
-  $dlnk.TargetPath       = "$env:windir\System32\cmd.exe"
-  $dlnk.Arguments        = '/c start "" "http://127.0.0.1:6789/dashboard.html"'
-  $dlnk.WorkingDirectory = $WorkingDir
-  $dlnk.IconLocation     = 'shell32.dll,14'
-  $dlnk.Description      = 'Open the Sasi Studio dashboard'
-  $dlnk.WindowStyle      = 7  # minimized — the cmd window flashes briefly only
-  $dlnk.Save()
-  Write-Output ('Desktop shortcut: ' + $desktopLnk)
+  #
+  # OneDrive: on accounts with OneDrive enabled, [Environment]::GetFolderPath
+  # returns the redirected OneDrive\Desktop path. The .lnk sometimes never
+  # shows up on the actual desktop because of OneDrive sync state. Create the
+  # shortcut at BOTH the OS-canonical Desktop AND the raw %USERPROFILE%\Desktop
+  # so at least one is visible regardless of OneDrive state.
+
+  function Write-DesktopShortcut($targetDir) {
+    if (-not $targetDir) { return $null }
+    if (-not (Test-Path -LiteralPath $targetDir)) {
+      try { New-Item -ItemType Directory -Force -Path $targetDir | Out-Null }
+      catch { Write-Output ('  (skip ' + $targetDir + ': cannot create — ' + $_.Exception.Message + ')'); return $null }
+    }
+    $lnkPath = Join-Path $targetDir 'Sasi Studio.lnk'
+    try {
+      $s = $ws.CreateShortcut($lnkPath)
+      $s.TargetPath       = "$env:windir\System32\cmd.exe"
+      $s.Arguments        = '/c start "" "http://127.0.0.1:6789/dashboard.html"'
+      $s.WorkingDirectory = $WorkingDir
+      $s.IconLocation     = 'shell32.dll,14'
+      $s.Description      = 'Open the Sasi Studio dashboard'
+      $s.WindowStyle      = 7  # minimized — the cmd window flashes briefly only
+      $s.Save()
+      return $lnkPath
+    } catch {
+      Write-Output ('  (skip ' + $lnkPath + ': ' + $_.Exception.Message + ')')
+      return $null
+    }
+  }
+
+  $candidates = @(
+    [Environment]::GetFolderPath('Desktop'),
+    (Join-Path $env:USERPROFILE 'Desktop'),
+    (Join-Path $env:USERPROFILE 'OneDrive\Desktop')
+  ) | Where-Object { $_ } | Sort-Object -Unique
+
+  $created = @()
+  foreach ($d in $candidates) {
+    $made = Write-DesktopShortcut $d
+    if ($made) { $created += $made }
+  }
+  if ($created.Count -gt 0) {
+    foreach ($p in $created) { Write-Output ('Desktop shortcut: ' + $p) }
+  } else {
+    Write-Output 'WARNING: No Desktop shortcut created. Paste this URL into your browser to open the dashboard:'
+    Write-Output '  http://127.0.0.1:6789/dashboard.html'
+  }
 
   exit 0
 } catch {
