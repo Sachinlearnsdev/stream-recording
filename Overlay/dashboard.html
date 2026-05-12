@@ -1049,6 +1049,87 @@
 <script>
 const API = 'http://127.0.0.1:6789';
 
+// ============================================================
+//  In-app notifications + dialogs
+//
+//  Replaces window.alert() / window.confirm() with toast pop-ins
+//  and a styled modal. Why: alert/confirm look out-of-place (native
+//  browser chrome), interrupt the user with a focus-stealing modal
+//  even for trivial info, and are sometimes blocked by Brave/etc.
+//
+//  Use:
+//    toast('Saved', 'ok')                              // ok | err | warn | null
+//    toast('Long-running task started', null, 5000)    // optional ms duration
+//    if (await confirmDialog('Delete this thing?'))    // returns Promise<bool>
+//    confirmDialog('msg', { okText: 'Delete', danger: true })
+//
+//  Toasts stack top-right and self-dismiss. Dialogs are click-outside
+//  -to-cancel. Both are theme-token aware.
+// ============================================================
+function toast(message, kind, durationMs) {
+  let host = document.getElementById('__sasi-toast-host');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = '__sasi-toast-host';
+    host.style.cssText = 'position:fixed;top:16px;right:16px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:420px';
+    document.body.appendChild(host);
+  }
+  const accent = kind === 'err'  ? 'var(--accent-rec)'
+              : kind === 'ok'   ? 'var(--accent-online)'
+              : kind === 'warn' ? 'var(--accent-warn)'
+              : 'var(--text-secondary)';
+  const el = document.createElement('div');
+  el.style.cssText = 'pointer-events:auto;padding:10px 14px;border-radius:8px;background:var(--bg-card);border:1px solid var(--bg-divider);border-left:3px solid ' + accent + ';color:var(--text-primary);font-size:13px;line-height:1.4;opacity:0;transform:translateX(20px);transition:opacity 180ms ease, transform 180ms ease;cursor:pointer;font-family:var(--font-ui, inherit)';
+  el.textContent = String(message == null ? '' : message);
+  el.addEventListener('click', () => dismiss());
+  host.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateX(0)'; });
+  let removed = false;
+  function dismiss() {
+    if (removed) return;
+    removed = true;
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(20px)';
+    setTimeout(() => el.remove(), 220);
+  }
+  setTimeout(dismiss, durationMs || 3500);
+  return dismiss;  // caller can early-dismiss programmatically
+}
+
+function confirmDialog(message, opts) {
+  opts = opts || {};
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99998;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 150ms;font-family:var(--font-ui, inherit)';
+    const okStyle = opts.danger
+      ? 'background:var(--accent-rec);color:#fff;border:1px solid var(--accent-rec)'
+      : 'background:var(--accent-online);color:var(--bg-page);border:1px solid var(--accent-online)';
+    overlay.innerHTML = '<div style="background:var(--bg-card);border:1px solid var(--bg-divider);border-radius:12px;padding:24px;max-width:480px;width:90%;box-shadow:0 12px 32px rgba(0,0,0,0.5)">'
+      + '<div style="white-space:pre-line;color:var(--text-primary);margin-bottom:20px;font-size:14px;line-height:1.5">' + String(message == null ? '' : message).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end">'
+      + '<button id="__cd-cancel" style="padding:8px 16px;border-radius:6px;background:var(--bg-page);color:var(--text-primary);border:1px solid var(--bg-divider);font-size:13px;cursor:pointer;font-family:inherit">' + (opts.cancelText || 'Cancel') + '</button>'
+      + '<button id="__cd-ok" style="padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700;font-family:inherit;' + okStyle + '">' + (opts.okText || 'OK') + '</button>'
+      + '</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+    const cleanup = (val) => {
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.remove(), 160);
+      document.removeEventListener('keydown', onKey);
+      resolve(val);
+    };
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+      else if (e.key === 'Enter') cleanup(true);
+    }
+    document.addEventListener('keydown', onKey);
+    overlay.querySelector('#__cd-ok').addEventListener('click', () => cleanup(true));
+    overlay.querySelector('#__cd-cancel').addEventListener('click', () => cleanup(false));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(false); });
+    setTimeout(() => overlay.querySelector('#__cd-ok').focus(), 50);
+  });
+}
+
 // CSRF wrapper — adds X-Clip-Prep:1 to mutating requests.
 // The deployed api.js requires this header; matching CORS config allows it.
 if (!window.__sasiFetchWrapped) {
@@ -1234,7 +1315,7 @@ async function buildTileGrid(kind) {
         btn.classList.add('copied');
         setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
       } catch (err) {
-        alert('Copy failed. URL is:\n\n' + btn.dataset.copyUrl);
+        toast('Copy failed. URL: ' + btn.dataset.copyUrl, 'err', 6000);
       }
     });
   });
@@ -1582,7 +1663,7 @@ function renderMakeActiveButton(t) {
   `;
   const suffix = t.folder.replace(/^sasi-overlays-?/, '');
   document.getElementById('theme-card-apply').addEventListener('click', async () => {
-    if (!confirm('Apply theme "' + (t.id || suffix) + '"?\n\nYour current active theme will be archived as sasi-overlays-<id>/ so you can revert.')) return;
+    if (!await confirmDialog('Apply theme "' + (t.id || suffix) + '"?\n\nYour current active theme will be archived as sasi-overlays-<id>/ so you can revert.', { okText: 'Apply' })) return;
     setThemeStatus('Applying ' + (t.id || suffix) + '...', null);
     try {
       const r = await fetch(API + '/apply-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: suffix }) });
@@ -1596,7 +1677,7 @@ function renderMakeActiveButton(t) {
     } catch (e) { setThemeStatus('Apply failed: ' + e.message, 'err'); }
   });
   document.getElementById('theme-card-delete').addEventListener('click', async () => {
-    if (!confirm('Delete theme "' + suffix + '" PERMANENTLY?\n\nFolder ' + t.folder + ' will be removed from disk. There is NO undo.')) return;
+    if (!await confirmDialog('Delete theme "' + suffix + '" PERMANENTLY?\n\nFolder ' + t.folder + ' will be removed from disk. There is NO undo.', { okText: 'Delete', danger: true })) return;
     try {
       const r = await fetch(API + '/delete-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: suffix }) });
       const j = await r.json().catch(() => ({}));
@@ -2141,7 +2222,7 @@ $('now-start').addEventListener('click', (e) => {
   // Default href handles the click; nothing else needed here.
 });
 $('now-stop').addEventListener('click', async () => {
-  if (!confirm('Stop the watcher? It will not auto-restart until you launch it again.')) return;
+  if (!await confirmDialog('Stop the watcher?\n\nIt will not auto-restart until you launch it again (Start Menu → clip-prep, or click Start in the dashboard).', { okText: 'Stop watcher', danger: true })) return;
   try { await fetch(API + '/stop', { method:'POST' }); } catch {}
 });
 $('now-open-dump').addEventListener('click', async () => {
@@ -2155,7 +2236,7 @@ $('now-open-target').addEventListener('click', async () => {
   try { await fetch(API + '/open-folder', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path:t}) }); } catch {}
 });
 $('now-restart').addEventListener('click', async () => {
-  if (!confirm('Restart the watcher?')) return;
+  if (!await confirmDialog('Restart the watcher?\n\nIn-flight HTTP requests may drop. Recording sessions are not affected.', { okText: 'Restart' })) return;
   try { await fetch(API + '/restart', { method:'POST' }); } catch {}
 });
 
@@ -2197,7 +2278,7 @@ async function refreshMix() {
     target.querySelectorAll('[data-delmix]').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (btn.disabled || btn.dataset.splitState !== 'split') return;
-        if (!confirm('Send original mix file to Recycle Bin?')) return;
+        if (!await confirmDialog('Send original mix file to Recycle Bin?\n\nThe per-game split files stay on disk.', { okText: 'Recycle', danger: true })) return;
         try {
           const r = await fetch(API + '/delete-mix', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({basename:btn.dataset.delmix}) });
           if (!r.ok) { const j = await r.json().catch(()=>({})); alert('Delete failed: ' + (j.error || 'http '+r.status)); }
@@ -2292,22 +2373,46 @@ $('cfg-save').addEventListener('click', async () => {
 });
 
 // --- Keep-MKV toggle ---
+// Dirty-flag pattern: between the user's click and the next /status response,
+// the PUT /config write hasn't been mirrored into the in-memory config object
+// the watcher serves over /status. Without coordination, pollStatus would
+// render the stale value back over the user's choice. We hold a "user wants
+// this" intent and skip render until /status agrees.
+window.__keepMkvPending = null;  // null = no pending change, true/false = waiting for server to confirm
 function renderKeepMkv(s) {
   if (!s) return;
   const cb = $('cfg-keep-mkv');
-  if (document.activeElement !== cb) cb.checked = s.config?.keepMkv !== false;
+  const serverValue = s.config?.keepMkv !== false;
+  // If we have a pending user change AND the server reports it, clear the
+  // pending flag — server caught up. After that the natural render path runs.
+  if (window.__keepMkvPending !== null && serverValue === window.__keepMkvPending) {
+    window.__keepMkvPending = null;
+  }
+  // While pending, render the user's intent. After clear, render server truth.
+  cb.checked = window.__keepMkvPending !== null ? window.__keepMkvPending : serverValue;
   $('cfg-keep-mkv-label').textContent = cb.checked ? 'Keep .mkv after .mp4 (more disk)' : 'Discard .mkv after .mp4 (saves disk)';
 }
 const _origPoll3 = pollStatus;
 pollStatus = async function() { await _origPoll3(); try { renderKeepMkv(window.__sasiStatus); } catch (e) { console.warn('[renderKeepMkv]', e); } };
 $('cfg-keep-mkv').addEventListener('change', async (e) => {
   const checked = e.target.checked;
+  window.__keepMkvPending = checked;  // hold intent until server confirms
   $('cfg-keep-mkv-label').textContent = 'Saving...';
   try {
     const r = await fetch(API + '/config', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({keepMkv:checked}) });
-    if (!r.ok) { e.target.checked = !checked; alert('Save failed'); return; }
+    if (!r.ok) {
+      window.__keepMkvPending = null;
+      e.target.checked = !checked;
+      toast('Save failed (HTTP ' + r.status + ')', 'err');
+      return;
+    }
     $('cfg-keep-mkv-label').textContent = checked ? 'Keep .mkv after .mp4 (more disk)' : 'Discard .mkv after .mp4 (saves disk)';
-  } catch (err) { e.target.checked = !checked; alert('Save failed: ' + err.message); }
+    toast('Keep MKV: ' + (checked ? 'ON' : 'OFF'), 'ok');
+  } catch (err) {
+    window.__keepMkvPending = null;
+    e.target.checked = !checked;
+    toast('Save failed: ' + err.message, 'err');
+  }
 });
 
 // --- Game folders editor (full v1-style: filter / add / export / import / raw json toggle / table) ---
@@ -2335,26 +2440,41 @@ function renderGamesTable() {
   target.innerHTML = entries.map(([exe, val]) => {
     const folder = folderText(val);
     const complex = isComplexEntry(val);
+    const ruleCount = complex && Array.isArray(val.if_running) ? val.if_running.length : 0;
+    const rulesBadge = complex
+      ? `<span title="${ruleCount} if_running rule(s) — edit via RAW JSON" style="font-size:9px;color:var(--accent-warn);padding:2px 6px;border:1px solid rgba(255,176,32,0.3);border-radius:var(--r-chip);white-space:nowrap">RULES · ${ruleCount}</span>`
+      : '<span></span>';
+    // Complex entries: the input edits the .default field. Rules are
+    // preserved untouched; the user just sees the fallback folder name.
     return `<div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;padding:8px 10px;border-bottom:1px solid var(--bg-divider);align-items:center">
       <code style="color:var(--text-secondary);font-size:var(--text-mono);font-family:var(--font-mono);word-break:break-all">${escapeHtml(exe)}</code>
-      <input type="text" data-edit-exe="${escapeHtml(exe)}" value="${escapeHtml(folder)}" ${complex ? 'readonly title="Complex entry — edit via RAW JSON"' : ''} style="width:100%;padding:5px 8px;font-size:var(--text-small);background:var(--bg-card);color:var(--text-primary);border:1px solid var(--bg-divider);border-radius:var(--r-chip);font-family:inherit">
-      ${complex ? '<span style="font-size:9px;color:var(--accent-warn);padding:2px 6px;border:1px solid rgba(255,176,32,0.3);border-radius:var(--r-chip)">RULES</span>' : '<span></span>'}
-      <button class="btn btn-destructive" data-del-exe="${escapeHtml(exe)}" style="font-size:9px;padding:4px 8px">×</button>
+      <input type="text" data-edit-exe="${escapeHtml(exe)}" value="${escapeHtml(folder)}" title="${complex ? 'Editing .default; if_running rules preserved (edit them via RAW JSON below)' : 'Folder name routed to'}" style="width:100%;padding:5px 8px;font-size:var(--text-small);background:var(--bg-card);color:var(--text-primary);border:1px solid var(--bg-divider);border-radius:var(--r-chip);font-family:inherit">
+      ${rulesBadge}
+      <button class="btn btn-destructive" data-del-exe="${escapeHtml(exe)}" style="font-size:9px;padding:4px 8px" title="Delete this mapping">×</button>
     </div>`;
   }).join('');
 
   target.querySelectorAll('[data-edit-exe]').forEach(input => {
     input.addEventListener('input', () => {
       const exe = input.dataset.editExe;
-      gamesMap[exe] = input.value;
+      const cur = gamesMap[exe];
+      // For complex entries, only update .default so the if_running rules
+      // survive. For simple string entries, just replace the whole value.
+      if (isComplexEntry(cur)) {
+        cur.default = input.value;
+      } else {
+        gamesMap[exe] = input.value;
+      }
       setGamesFeedback('● Unsaved changes — auto-save on blur.', 'warn');
     });
     input.addEventListener('blur', saveGames);
   });
   target.querySelectorAll('[data-del-exe]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!confirm('Delete mapping for "' + btn.dataset.delExe + '"?')) return;
-      delete gamesMap[btn.dataset.delExe];
+    btn.addEventListener('click', async () => {
+      const exe = btn.dataset.delExe;
+      const ok = await confirmDialog('Delete the "' + exe + '" -> "' + folderText(gamesMap[exe]) + '" mapping?\n\nFuture recordings of ' + exe + '.exe will fall back to the auto-extracted name.');
+      if (!ok) return;
+      delete gamesMap[exe];
       renderGamesTable();
       saveGames();
     });
@@ -2422,7 +2542,8 @@ $('games-export-btn').addEventListener('click', () => {
   setGamesFeedback('Exported.', 'ok');
 });
 
-// Import
+// Import — with conflict-aware 3-way chooser (Replace / Skip / Cancel).
+// Compute conflicts up front so the user can decide before any write happens.
 $('games-import-btn').addEventListener('click', () => $('games-import-file').click());
 $('games-import-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -2431,17 +2552,72 @@ $('games-import-file').addEventListener('change', async (e) => {
     const text = await file.text();
     const parsed = JSON.parse(text);
     if (typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('JSON must be an object');
-    const confirmMsg = `Import will MERGE ${Object.keys(parsed).length} entries into your existing ${Object.keys(gamesMap).length} entries (incoming wins on conflicts). Continue?`;
-    if (!confirm(confirmMsg)) { e.target.value = ''; return; }
-    gamesMap = { ...gamesMap, ...parsed };
+
+    const incoming = Object.keys(parsed);
+    const conflicts = incoming.filter(k => gamesMap.hasOwnProperty(k));
+    const newOnes = incoming.length - conflicts.length;
+    const previewConflicts = conflicts.slice(0, 6).map(k => '  · ' + k + ' (current: "' + folderText(gamesMap[k]) + '" -> incoming: "' + folderText(parsed[k]) + '")').join('\n');
+    const moreConflicts = conflicts.length > 6 ? '\n  ...and ' + (conflicts.length - 6) + ' more' : '';
+
+    const message = `Importing ${incoming.length} entries:\n  · ${newOnes} new\n  · ${conflicts.length} conflicts with existing entries\n` +
+      (conflicts.length > 0 ? '\nConflicts:\n' + previewConflicts + moreConflicts + '\n' : '') +
+      '\nHow do you want to handle conflicts?';
+
+    const strategy = await chooseDialog(message, [
+      { label: 'Cancel', value: null },
+      { label: 'Skip existing (keep mine)', value: 'skip' },
+      { label: 'Replace existing (incoming wins)', value: 'replace', danger: conflicts.length > 0 },
+    ]);
+    if (strategy === null) { e.target.value = ''; return; }
+
+    let added = 0, replaced = 0, skipped = 0;
+    for (const [k, v] of Object.entries(parsed)) {
+      if (!gamesMap.hasOwnProperty(k)) { gamesMap[k] = v; added++; }
+      else if (strategy === 'replace') { gamesMap[k] = v; replaced++; }
+      else { skipped++; }
+    }
     renderGamesTable();
     saveGames();
-    setGamesFeedback('Imported ' + Object.keys(parsed).length + ' entries.', 'ok');
+    setGamesFeedback(`Imported: +${added} new, ${replaced} replaced, ${skipped} skipped.`, 'ok');
+    toast(`Games imported: +${added} new, ${replaced} replaced, ${skipped} skipped.`, 'ok');
   } catch (err) {
     setGamesFeedback('Import failed: ' + err.message, 'err');
+    toast('Games import failed: ' + err.message, 'err');
   }
   e.target.value = '';
 });
+
+// Multi-button chooser — used by the games-import conflict picker. Returns
+// the .value of the clicked button, or null on dismiss/escape/click-outside.
+function chooseDialog(message, buttons) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99998;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 150ms;font-family:var(--font-ui, inherit)';
+    const buttonHtml = buttons.map((b, i) => {
+      const style = b.danger
+        ? 'background:var(--accent-rec);color:#fff;border:1px solid var(--accent-rec)'
+        : b.value === null
+          ? 'background:var(--bg-page);color:var(--text-primary);border:1px solid var(--bg-divider)'
+          : 'background:var(--bg-card);color:var(--text-primary);border:1px solid var(--bg-divider)';
+      return `<button data-idx="${i}" style="padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;font-family:inherit;${style}">${String(b.label).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</button>`;
+    }).join('');
+    overlay.innerHTML = '<div style="background:var(--bg-card);border:1px solid var(--bg-divider);border-radius:12px;padding:24px;max-width:560px;width:90%;box-shadow:0 12px 32px rgba(0,0,0,0.5)">'
+      + '<div style="white-space:pre-line;color:var(--text-primary);margin-bottom:20px;font-size:13px;line-height:1.5;font-family:var(--font-mono, monospace)">' + String(message == null ? '' : message).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">' + buttonHtml + '</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+    const cleanup = (val) => {
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.remove(), 160);
+      document.removeEventListener('keydown', onKey);
+      resolve(val);
+    };
+    function onKey(e) { if (e.key === 'Escape') cleanup(null); }
+    document.addEventListener('keydown', onKey);
+    overlay.querySelectorAll('[data-idx]').forEach(b => b.addEventListener('click', () => cleanup(buttons[parseInt(b.dataset.idx)].value)));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
+  });
+}
 
 // RAW JSON toggle
 $('games-toggle-raw').addEventListener('click', () => {
@@ -2553,7 +2729,7 @@ document.getElementById('lua-script-copy').addEventListener('click', async () =>
     btn.textContent = '✓ Copied';
     setTimeout(() => { btn.textContent = orig; }, 1500);
   } catch (e) {
-    alert('Copy failed. Path is:\n\n' + text);
+    toast('Copy failed. Path: ' + text, 'err', 6000);
   }
 });
 
@@ -2595,7 +2771,7 @@ async function refreshBackups() {
     }).join('');
     target.querySelectorAll('[data-restore]').forEach(btn => btn.addEventListener('click', async () => {
       const name = btn.dataset.restore;
-      if (!confirm('Restore from ' + name + '?')) return;
+      if (!await confirmDialog('Restore OBS state from "' + name + '"?\n\nYour current OBS state is auto-backed up before the restore (look for _clip-prep-backup-<timestamp>/ in %APPDATA%\\obs-studio\\).', { okText: 'Restore' })) return;
       setObsOutput('Restoring from ' + name + '...', null);
       try {
         const r = await fetch(API + '/restore-obs-backup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}) });
@@ -2606,7 +2782,7 @@ async function refreshBackups() {
     }));
     target.querySelectorAll('[data-recycle]').forEach(btn => btn.addEventListener('click', async () => {
       const name = btn.dataset.recycle;
-      if (!confirm('Send ' + name + ' to Recycle Bin?')) return;
+      if (!await confirmDialog('Send "' + name + '" to Recycle Bin?', { okText: 'Recycle', danger: true })) return;
       try {
         const r = await fetch(API + '/delete-obs-backup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}) });
         if (!r.ok) { const j = await r.json(); setObsOutput('Delete failed: ' + (j.error || 'unknown'), 'err'); }
@@ -2621,7 +2797,7 @@ refreshBackups();
 // --- Danger zone ---
 // (cfg-restart / cfg-stop moved to hero card buttons — see now-restart / now-stop above)
 $('cfg-uninstall').addEventListener('click', async () => {
-  if (!confirm('Remove auto-start + shortcuts + URL protocol?\n\nFiles in your install dir, OBS scenes, recordings, and keys all STAY on disk.\nRe-run bootstrap.bat or the iex one-liner to reinstall.')) return;
+  if (!await confirmDialog('Remove auto-start + shortcuts + URL protocol?\n\nFiles in your install dir, OBS scenes, recordings, and keys all STAY on disk.\nRe-run bootstrap.bat or the iex one-liner to reinstall.', { okText: 'Uninstall', danger: true })) return;
   try {
     const r = await fetch(API + '/uninstall', { method:'POST' });
     if (r.ok) alert('Uninstalled. Watcher will not auto-start on next login.\n\nTo fully remove all files, use the Full Reset section below.');
@@ -2834,8 +3010,8 @@ function renderNotifs() {
     renderNotifs();
   }));
 }
-$('gl-notif-clear').addEventListener('click', () => {
-  if (!confirm('Clear all notifications?')) return;
+$('gl-notif-clear').addEventListener('click', async () => {
+  if (!await confirmDialog('Clear all notifications?\n\nThe queue is local — clearing only affects this dashboard.', { okText: 'Clear' })) return;
   localStorage.removeItem('sasi_notifications_queue');
   renderNotifs();
 });
@@ -2927,7 +3103,7 @@ document.querySelectorAll('[data-test-tier]').forEach(btn => {
       if (iframe && iframe.contentWindow && iframe.contentWindow.SASI_ALERTS_TEST) {
         iframe.contentWindow.SASI_ALERTS_TEST.fireFakeTip(amount);
       } else {
-        alert('Test fired (₹' + amount + '). Open the In-Game scene in Overlays to see the alert.');
+        toast('Test fired (₹' + amount + '). Open the In-Game scene in Overlays to see the alert.', 'ok');
       }
     }, 300);
   });
@@ -3039,7 +3215,7 @@ function fireGameTest(type) {
         body: 'Test from dashboard', duration: 6000,
       });
     } else {
-      alert('Test fired but ' + type + ' trigger not loaded yet (iframe still loading?). Try again in 2 seconds.');
+      toast('Test fired but ' + type + ' trigger not loaded yet (iframe still loading?). Try again in 2 seconds.', 'warn');
     }
   }, 1500);
 }
@@ -3238,11 +3414,11 @@ $('ch-add-btn').addEventListener('click', () => {
   if (!key) return;
   const trimmed = key.trim().toLowerCase();
   if (!/^[a-z0-9_-]{1,40}$/.test(trimmed)) {
-    alert('Channel key must be lowercase letters, numbers, dash, underscore (1-40 chars).');
+    toast('Channel key must be lowercase letters, numbers, dash, underscore (1-40 chars).', 'err');
     return;
   }
   if (keysState.channels[trimmed]) {
-    alert('Channel "' + trimmed + '" already exists.');
+    toast('Channel "' + trimmed + '" already exists.', 'err');
     return;
   }
   keysState.channels[trimmed] = {
@@ -3258,10 +3434,10 @@ $('ch-add-btn').addEventListener('click', () => {
 $('ch-delete-btn').addEventListener('click', () => {
   if (!editingChannel) return;
   if (editingChannel === keysState.activeChannel) {
-    alert('Cannot delete the ACTIVE channel. Switch to a different channel on the Go Live tab first.');
+    toast('Cannot delete the ACTIVE channel. Switch to a different channel on the Go Live tab first.', 'err', 5000);
     return;
   }
-  if (!confirm('Delete channel "' + editingChannel + '" PERMANENTLY?\n\nAll keys + brand for this channel are removed from sasi-secrets.js. There is NO undo.')) return;
+  if (!await confirmDialog('Delete channel "' + editingChannel + '" PERMANENTLY?\n\nAll keys + brand for this channel are removed from sasi-secrets.js. There is NO undo.', { okText: 'Delete channel', danger: true })) return;
   delete keysState.channels[editingChannel];
   editingChannel = null;
   renderChannelDropdown();
