@@ -15,14 +15,19 @@
 param(
   [string]$RepoRoot = '',
   [string]$BundlePath = '',
+  # Subdir under -RepoRoot to use as the bundle source. Defaults to "obs-export"
+  # (legacy path next to the repo). install.bat passes "default-bundle" so the
+  # vendored bundle inside the install dir gets used.
+  [string]$BundleSubdir = 'obs-export',
   [Parameter(Mandatory=$true)][string]$LuaPath
 )
 
 $ErrorActionPreference = 'Stop'
 
-# Resolve bundle dir. -BundlePath wins; -RepoRoot fallback for the legacy
-# "obs-export sits next to the repo" layout.
-$exportDir = if ($BundlePath) { $BundlePath } elseif ($RepoRoot) { Join-Path $RepoRoot 'obs-export' } else { '' }
+# Resolve bundle dir. -BundlePath wins; -RepoRoot + -BundleSubdir is the
+# common case (subdir defaults to obs-export but install.bat passes
+# default-bundle to point at the vendored bundle in the install dir).
+$exportDir = if ($BundlePath) { $BundlePath } elseif ($RepoRoot) { Join-Path $RepoRoot $BundleSubdir } else { '' }
 if (-not $exportDir) {
   Write-Output "ERROR: pass -BundlePath <folder-with-manifest.json+basic/> or -RepoRoot <path>"
   exit 1
