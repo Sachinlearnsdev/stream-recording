@@ -3431,7 +3431,7 @@ $('ch-add-btn').addEventListener('click', () => {
   renderChannelDropdown();
 });
 
-$('ch-delete-btn').addEventListener('click', () => {
+$('ch-delete-btn').addEventListener('click', async () => {
   if (!editingChannel) return;
   if (editingChannel === keysState.activeChannel) {
     toast('Cannot delete the ACTIVE channel. Switch to a different channel on the Go Live tab first.', 'err', 5000);
