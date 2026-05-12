@@ -15,6 +15,12 @@ echo   Install dir: !SCRIPT_DIR!
 echo ========================================
 echo.
 
+rem  Per-install warning log. Each step that hits a soft failure ("non-fatal")
+rem  also appends a line here so the final summary can surface them all at
+rem  once instead of the user scrolling back through console output.
+set "WARN_LOG=!SCRIPT_DIR!install-warnings.log"
+del "!WARN_LOG!" 2>nul
+
 rem ---------- Step 1: Bootstrap config.json if missing ----------
 if not exist "!SCRIPT_DIR!config.json" (
   echo [1/9] config.json not found - creating with defaults...
@@ -78,21 +84,28 @@ if errorlevel 1 (
 
 rem ---------- Step 6: Auto-register game-tracker.lua in OBS scenes ----------
 rem  Best-effort: if OBS has been opened at least once, scene-collection JSONs
-rem  exist and we can register the script automatically. If not (fresh OBS),
-rem  the script prints a "no scenes yet" message and exits 0.
+rem  exist and we can register the script automatically. On fresh installs
+rem  the bundle import (step 8) handles Lua registration for the imported
+rem  collections, so we can short-circuit if no scenes folder exists yet.
 echo.
-echo [6/9] Registering game-tracker.lua in existing OBS scene collections...
-powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\register-lua.ps1" -LuaPath "!SCRIPT_DIR!obs\game-tracker.lua"
-if errorlevel 1 (
-  echo Note: register-lua.ps1 failed ^(non-fatal^). Use the dashboard's "Register Lua" button after opening OBS once.
+echo [6/9] Registering game-tracker.lua in OBS scene collections...
+if not exist "%APPDATA%\obs-studio\basic\scenes" (
+  echo   No %%APPDATA%%\obs-studio\basic\scenes yet ^(fresh OBS^) - step 8's bundle import will register Lua there.
+) else (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\register-lua.ps1" -LuaPath "!SCRIPT_DIR!obs\game-tracker.lua"
+  if errorlevel 1 (
+    echo Note: register-lua.ps1 failed ^(non-fatal^). Use the dashboard's "Register Lua" button after opening OBS once.
+    echo [step 6] register-lua.ps1 failed - use dashboard's Register Lua button after opening OBS once. >> "!WARN_LOG!"
+  )
 )
 
 rem ---------- Step 7: Generate sample-blue theme so user has 2 themes to test swap ----------
 echo.
-echo [7/9] Generating sample-blue theme (so dashboard Themes section has alternates to test)...
+echo [7/9] Generating sample-blue theme (alternate to test theme-swap UI)...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\generate-sample-theme.ps1" -InstallDir "!SCRIPT_DIR!"
 if errorlevel 1 (
   echo Note: generate-sample-theme.ps1 failed ^(non-fatal^). You'll start with one theme.
+  echo [step 7] generate-sample-theme failed - you'll only have the default theme; not a real problem. >> "!WARN_LOG!"
 )
 
 rem ---------- Step 8: Auto-import default OBS bundle on truly-fresh OBS ----------
@@ -120,7 +133,10 @@ rem  remaining args and PowerShell prompts for the missing -LuaPath.
 set "_SD_NB=!SCRIPT_DIR!"
 if "!_SD_NB:~-1!"=="\" set "_SD_NB=!_SD_NB:~0,-1!"
 powershell -NoProfile -ExecutionPolicy Bypass -File "!_SD_NB!\scripts\obs-import.ps1" -RepoRoot "!_SD_NB!" -BundleSubdir "default-bundle" -LuaPath "!_SD_NB!\obs\game-tracker.lua"
-if errorlevel 1 echo Note: default bundle import failed ^(non-fatal^). Use the dashboard's Import OBS Bundle button manually.
+if errorlevel 1 (
+  echo Note: default bundle import failed ^(non-fatal^). Use the dashboard's Import OBS Bundle button manually.
+  echo [step 8] default-bundle import failed - use Import OBS Bundle button in the dashboard. >> "!WARN_LOG!"
+)
 goto :_bundle_done
 
 :_bundle_skip_none
@@ -145,18 +161,30 @@ echo.
 echo ========================================
 echo   INSTALL COMPLETE
 echo ========================================
-echo   - Watcher auto-starts on every Windows login (hidden in background).
-echo   - If it crashes or gets stopped: Win key -^> type "clip-prep" -^> Enter.
-echo   - Setup/Dashboard pages let you change paths and edit game folders.
-echo   - To see live logs at any time, run start.bat in a cmd window.
-echo.
-echo   The clip-prep Lua script was auto-registered in your OBS scene
-echo   collections. If OBS was open during install, restart it for the
-echo   change to take effect. If you add a new scene collection later,
-echo   use the dashboard's "Register Lua" button to wire it up.
+echo   Dashboard:    http://127.0.0.1:6789/dashboard.html ^(opening now^)
+echo   Install dir:  !SCRIPT_DIR!
+echo   Auto-start:   on every Windows login ^(hidden in background^)
+echo   Restart cmd:  Win key -^> "clip-prep" -^> Enter
+echo   Live logs:    run start.bat in a cmd window
 echo ========================================
+
+rem  Surface every non-fatal warning collected during the run as a single
+rem  summary block so the user doesn't need to scroll back through the
+rem  scattered "Note: ... (non-fatal)" lines.
+if exist "!WARN_LOG!" (
+  echo.
+  echo ========================================
+  echo   WARNINGS during install ^(non-fatal^)
+  echo ========================================
+  type "!WARN_LOG!"
+  echo.
+  echo Full log: !WARN_LOG!
+  echo ========================================
+) else (
+  echo.
+  echo All steps clean - no warnings.
+)
 echo.
-pause
 exit /b 0
 
 :BootstrapConfig

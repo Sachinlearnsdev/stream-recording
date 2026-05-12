@@ -21,18 +21,12 @@ echo ========================================
 echo   Source:  !REPO_CLIPPREP!
 echo   Install: !INSTALL_DIR!
 echo.
-echo This will:
-echo   1. Install Node.js if missing (winget)
-echo   2. Install OBS Studio if missing (winget)
-echo   3. Install ffmpeg if missing (winget)
-echo   4. Copy clip-prep source to !INSTALL_DIR!
-echo   5. Run install.bat from there (npm deps, auto-start, shortcut, protocol)
-echo   6. Open the dashboard
+echo Steps: Node + OBS + ffmpeg (winget if missing) -^> copy source -^>
+echo run install.bat -^> open dashboard. Takes 1-5 min on a fresh PC.
 echo.
-echo   To restore an OBS bundle afterward: dashboard -^> Import OBS Bundle.
-echo   IMPORTANT: Close OBS before continuing if you'll be importing a bundle.
+echo NOTE: close OBS first if you have it open (the bundle auto-import
+echo locks scene-collection JSONs while OBS is running).
 echo.
-pause
 
 rem ---------- Step 1: Node.js ----------
 echo.
@@ -231,27 +225,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo ========================================
-echo   BOOTSTRAP COMPLETE
-echo ========================================
-echo   Install dir: !INSTALL_DIR!
-echo   The watcher is running, dashboard is open in your browser.
-echo   Win key - "clip-prep" - Enter launches the watcher anytime.
+echo Bootstrap complete. install.bat printed the per-step summary above.
+echo If install.bat surfaced warnings, see install-warnings.log in the
+echo install dir. The dashboard is open in your browser already.
 echo.
-echo ========================================
-echo   OBS LUA SCRIPT - AUTO-REGISTERED
-echo ========================================
-echo   The clip-prep Lua script was auto-registered in your existing OBS
-echo   scene collections. If OBS was open, restart it for the change to
-echo   take effect. You should see "[clip-prep] subscribed to Game Capture"
-echo   in the Script Log dock.
-echo.
-echo   If you create a NEW scene collection later, click the "Register Lua"
-echo   button in the dashboard to wire it up too.
-echo ========================================
-echo.
-echo   Bundle ops are in the dashboard:
-echo     - Restore an OBS bundle: Import OBS Bundle button
-echo     - Back up current setup:  Export OBS Bundle button
-echo.
-pause
