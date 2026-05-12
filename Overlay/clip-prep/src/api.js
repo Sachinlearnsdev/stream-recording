@@ -16,6 +16,23 @@ const execAsync = promisify(exec);
 const toOsPath  = (p) => (p == null ? '' : String(p).replace(/\//g, path.sep));
 const toWebPath = (p) => (p == null ? '' : String(p).replace(/\\/g, '/'));
 
+// Serializer for theme / stinger / channel-switch mutations. These all
+// involve atomic-rename operations on disk and can leave the system in a
+// broken state if two requests interleave (e.g., double-click on apply-theme
+// makes both requests archive the current active in step 1, then the second
+// finds no active to swap with in step 2 — net result: no active theme,
+// OBS browser sources all 404).
+//
+// Tasks queue: serialize via a chained Promise. Each caller awaits the
+// current `themeOpQueue`, then becomes the new tail. Errors in one task
+// don't poison the queue because we always advance after settled.
+let themeOpQueue = Promise.resolve();
+function withThemeLock(fn) {
+  const next = themeOpQueue.then(() => fn(), () => fn());
+  themeOpQueue = next.catch(() => {});
+  return next;
+}
+
 // Run a PowerShell script with an explicit argv. Avoids any shell parsing of
 // the path arguments â€” the only correct way to pass user-supplied paths to a
 // child process. Returns { code, stdout, stderr }.
@@ -528,6 +545,12 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   app.post('/delete-mix', async (req, res) => {
     const { basename } = req.body || {};
     if (!basename) return res.status(400).json({ error: 'body.basename required' });
+    // Path-traversal guard: basename gets used in path.join with mixDir, so a
+    // value like '../../foo' would resolve OUTSIDE the mix folder and recycle
+    // unrelated files. isSafeFilename rejects /, \, .., control chars, and
+    // Windows-reserved <>:"|?*. The CSRF guard already blocks cross-origin
+    // callers but this is the right depth of defense for a destructive op.
+    if (!isSafeFilename(basename)) return res.status(400).json({ error: 'invalid basename (no path separators, .., or control chars)' });
     if (splitsInProgress.has(basename)) {
       return res.status(409).json({ error: 'split in progress; wait until it completes' });
     }
@@ -565,6 +588,8 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   app.post('/split-mix', async (req, res) => {
     const { basename, precise } = req.body || {};
     if (!basename) return res.status(400).json({ error: 'body.basename required' });
+    // Path-traversal guard — same reason as /delete-mix above.
+    if (!isSafeFilename(basename)) return res.status(400).json({ error: 'invalid basename (no path separators, .., or control chars)' });
     if (splitsInProgress.has(basename)) {
       return res.status(409).json({ error: 'split already in progress for this file' });
     }
@@ -1150,8 +1175,10 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     if (!installDir) return res.status(500).json({ error: 'installDir not configured' });
     const name = (req.body && req.body.name) ? String(req.body.name).trim() : '';
     try {
-      const result = await applyThemeByName(name);
-      log.info(`apply-theme: ${name} now active${result.archivedAs ? ' (previous â†’ ' + result.archivedAs + ')' : ''}`);
+      // withThemeLock serializes concurrent /apply-theme + /save-theme + etc.
+      // so a double-click can't archive the active twice and lose it.
+      const result = await withThemeLock(() => applyThemeByName(name));
+      log.info(`apply-theme: ${name} now active${result.archivedAs ? ' (previous -> ' + result.archivedAs + ')' : ''}`);
       res.json({ ok: true, ...result });
     } catch (err) {
       const status = err.status || 500;
@@ -1176,8 +1203,10 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     if (!existsSync(activeFolder)) return res.status(400).json({ error: 'no active theme to save' });
     if (existsSync(dest)) return res.status(409).json({ error: 'theme already exists: sasi-overlays-' + name + ' (delete it first or pick another name)' });
     try {
-      await fs.cp(activeFolder, dest, { recursive: true, force: false });
-      log.info(`save-theme: copied active â†’ sasi-overlays-${name}`);
+      // Serialize with apply/delete-theme so a concurrent /apply-theme can't
+      // rename the active folder out from under us while fs.cp is mid-copy.
+      await withThemeLock(() => fs.cp(activeFolder, dest, { recursive: true, force: false }));
+      log.info(`save-theme: copied active -> sasi-overlays-${name}`);
       res.json({ ok: true, savedAs: 'sasi-overlays-' + name });
     } catch (err) {
       log.error(`save-theme failed: ${err.message}`);
@@ -1194,7 +1223,9 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     const target = path.join(installDir, 'sasi-overlays-' + name);
     if (!existsSync(target)) return res.status(404).json({ error: 'theme not found' });
     try {
-      await fs.rm(target, { recursive: true, force: true });
+      // Serialize with apply/save-theme — concurrent /apply-theme could be
+      // mid-rename of the same folder we're about to delete.
+      await withThemeLock(() => fs.rm(target, { recursive: true, force: true }));
       log.info(`delete-theme: removed sasi-overlays-${name}`);
       res.json({ ok: true });
     } catch (err) {
@@ -1295,28 +1326,33 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       const clean = dataBase64.replace(/^data:[^,]+,/, '');
       const buf = Buffer.from(clean, 'base64');
       if (buf.length === 0) return res.status(400).json({ error: 'decoded data is empty' });
-      if (buf.length > 50 * 1024 * 1024) return res.status(413).json({ error: 'stinger > 50 MB â€” keep it under 5 seconds' });
+      if (buf.length > 50 * 1024 * 1024) return res.status(413).json({ error: 'stinger > 50 MB - keep it under 5 seconds' });
       const dest = path.join(stingersDir, filename);
-      await fs.writeFile(dest, buf);
-      log.info(`upload-stinger: ${dest} (${buf.length} bytes)`);
 
-      let archivedAs = null;
-      let activated = false;
-      if (activate) {
-        const active = path.join(stingersDir, 'stinger-active.webm');
-        if (existsSync(active)) {
-          const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
-          const archive = path.join(stingersDir, 'stinger-active-archived-' + stamp + '.webm');
-          await fs.rename(active, archive);
-          archivedAs = path.basename(archive);
+      // Serialize the activate step with the other theme/stinger ops to prevent
+      // a concurrent /apply-stinger from racing with our rename + copyFile.
+      const result = await withThemeLock(async () => {
+        await fs.writeFile(dest, buf);
+        log.info(`upload-stinger: ${dest} (${buf.length} bytes)`);
+        let archivedAs = null;
+        let activated = false;
+        if (activate) {
+          const active = path.join(stingersDir, 'stinger-active.webm');
+          if (existsSync(active)) {
+            const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
+            const archive = path.join(stingersDir, 'stinger-active-archived-' + stamp + '.webm');
+            await fs.rename(active, archive);
+            archivedAs = path.basename(archive);
+          }
+          // We copy (not rename) so the original generated file is preserved in the
+          // grid as the "source webm" and stinger-active.webm becomes a duplicate
+          // pointing at the same content. Lets the user swap back later.
+          await fs.copyFile(dest, active);
+          activated = true;
         }
-        // We copy (not rename) so the original generated file is preserved in the
-        // grid as the "source webm" and stinger-active.webm becomes a duplicate
-        // pointing at the same content. Lets the user swap back later.
-        await fs.copyFile(dest, active);
-        activated = true;
-      }
-      res.json({ ok: true, filename, bytes: buf.length, activated, archivedAs });
+        return { archivedAs, activated };
+      });
+      res.json({ ok: true, filename, bytes: buf.length, activated: result.activated, archivedAs: result.archivedAs });
     } catch (err) {
       log.error(`upload-stinger failed: ${err.message}`);
       res.status(500).json({ error: err.message });
@@ -1334,23 +1370,26 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     const active = path.join(stingersDir, 'stinger-active.webm');
     if (!existsSync(target)) return res.status(404).json({ error: 'stinger file not found: ' + file });
     try {
-      let archivedAs = null;
-      if (existsSync(active)) {
-        const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
-        const archive = path.join(stingersDir, 'stinger-active-archived-' + stamp + '.webm');
-        await fs.rename(active, archive);
-        archivedAs = path.basename(archive);
-      }
-      try {
-        await fs.rename(target, active);
-      } catch (renameErr) {
-        // Rollback archive
-        if (archivedAs && !existsSync(active)) {
-          await fs.rename(path.join(stingersDir, archivedAs), active).catch(() => {});
+      const archivedAs = await withThemeLock(async () => {
+        let archivedAs = null;
+        if (existsSync(active)) {
+          const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
+          const archive = path.join(stingersDir, 'stinger-active-archived-' + stamp + '.webm');
+          await fs.rename(active, archive);
+          archivedAs = path.basename(archive);
         }
-        throw renameErr;
-      }
-      log.info(`apply-stinger: ${file} now active${archivedAs ? ' (previous â†’ ' + archivedAs + ')' : ''}`);
+        try {
+          await fs.rename(target, active);
+        } catch (renameErr) {
+          // Rollback archive
+          if (archivedAs && !existsSync(active)) {
+            await fs.rename(path.join(stingersDir, archivedAs), active).catch(() => {});
+          }
+          throw renameErr;
+        }
+        return archivedAs;
+      });
+      log.info(`apply-stinger: ${file} now active${archivedAs ? ' (previous -> ' + archivedAs + ')' : ''}`);
       res.json({ ok: true, active: 'stinger-active.webm', archivedAs });
     } catch (err) {
       log.error(`apply-stinger failed: ${err.message}`);
@@ -1396,29 +1435,35 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     const key = (req.body && req.body.key) ? String(req.body.key).trim() : '';
     if (!key || !/^[a-zA-Z0-9_-]{1,40}$/.test(key)) return res.status(400).json({ error: 'invalid channel key' });
     try {
-      let parsed = null;
-      if (existsSync(secretsPath)) parsed = parseSecretsFile(await fs.readFile(secretsPath, 'utf8'));
-      if (!parsed) parsed = defaultSecrets();
-      if (!parsed.channels || !parsed.channels[key]) return res.status(404).json({ error: 'channel not found: ' + key });
-      const channel = parsed.channels[key];
-      // Resolve target theme: channel.theme is the FOLDER NAME (e.g. 'sasi-overlays' or 'sasi-overlays-<name>'). The folder must exist in installDir.
-      // Convert to the suffix form that applyThemeByName expects.
-      const themeFolder = channel.theme || 'sasi-overlays';
-      let archivedAs = null;
-      if (themeFolder === 'sasi-overlays') {
-        // Already the active folder name â€” no swap needed.
-      } else if (themeFolder.startsWith('sasi-overlays-')) {
-        const suffix = themeFolder.slice('sasi-overlays-'.length);
-        const result = await applyThemeByName(suffix);
-        archivedAs = result.archivedAs;
-      } else {
-        return res.status(400).json({ error: 'channel.theme must be sasi-overlays or sasi-overlays-<name>' });
-      }
-      // Persist activeChannel
-      parsed.activeChannel = key;
-      await fs.writeFile(secretsPath, serializeSecretsFile(parsed), { encoding: 'utf8' });
-      log.info(`switch-channel: ${key} (theme ${themeFolder}${archivedAs ? ', previous â†’ ' + archivedAs : ''})`);
-      res.json({ ok: true, key, theme: themeFolder, archivedAs });
+      // Whole switch is serialized: applyThemeByName + secrets write must
+      // happen as a single unit so a concurrent /apply-theme can't race the
+      // rename, and a concurrent /switch-channel can't write a stale
+      // activeChannel value over a fresh one.
+      const result = await withThemeLock(async () => {
+        let parsed = null;
+        if (existsSync(secretsPath)) parsed = parseSecretsFile(await fs.readFile(secretsPath, 'utf8'));
+        if (!parsed) parsed = defaultSecrets();
+        if (!parsed.channels || !parsed.channels[key]) {
+          throw Object.assign(new Error('channel not found: ' + key), { status: 404 });
+        }
+        const channel = parsed.channels[key];
+        const themeFolder = channel.theme || 'sasi-overlays';
+        let archivedAs = null;
+        if (themeFolder === 'sasi-overlays') {
+          // Already the active folder name — no swap needed.
+        } else if (themeFolder.startsWith('sasi-overlays-')) {
+          const suffix = themeFolder.slice('sasi-overlays-'.length);
+          const r = await applyThemeByName(suffix);
+          archivedAs = r.archivedAs;
+        } else {
+          throw Object.assign(new Error('channel.theme must be sasi-overlays or sasi-overlays-<name>'), { status: 400 });
+        }
+        parsed.activeChannel = key;
+        await fs.writeFile(secretsPath, serializeSecretsFile(parsed), { encoding: 'utf8' });
+        return { themeFolder, archivedAs };
+      });
+      log.info(`switch-channel: ${key} (theme ${result.themeFolder}${result.archivedAs ? ', previous -> ' + result.archivedAs : ''})`);
+      res.json({ ok: true, key, theme: result.themeFolder, archivedAs: result.archivedAs });
     } catch (err) {
       const status = err.status || 500;
       log.error(`switch-channel failed: ${err.message}`);
@@ -1485,8 +1530,12 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     const json = JSON.stringify(obj, null, 2);
     // Backwards-compat shim: older overlay code reads s.youtube / s.twitch
     // directly (single-channel shape). Project active channel up so nothing breaks.
-    return `// AUTO-GENERATED by Sasi Studio dashboard. You can also edit by hand.
-// Loaded by every overlay scene via lib/secrets.js stub loader. Never commit this file.
+    return `// AUTO-GENERATED by Sasi Studio dashboard. Hand-edits are preserved AS LONG
+// AS you don't click Save in the dashboard's Keys tab — Save overwrites this
+// file entirely (comments + extra top-level keys are lost on re-serialize).
+// To make permanent additions, edit this file AND save via the dashboard so
+// the round-trip is consistent. Loaded by every overlay scene via
+// lib/secrets.js stub loader. Never commit this file.
 window.SASI_SECRETS = ${json};
 
 (function () {
