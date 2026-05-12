@@ -114,7 +114,12 @@ goto :_bundle_done
 
 :_bundle_do_import
 echo   No existing OBS scene collections — importing vendored default bundle...
-powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\obs-import.ps1" -RepoRoot "!SCRIPT_DIR!" -BundleSubdir "default-bundle" -LuaPath "!SCRIPT_DIR!obs\game-tracker.lua"
+rem  Strip the trailing \ from SCRIPT_DIR so the powershell call's quoted
+rem  arg "...\\" doesn't get parsed as escaped quote — that mangles the
+rem  remaining args and PowerShell prompts for the missing -LuaPath.
+set "_SD_NB=!SCRIPT_DIR!"
+if "!_SD_NB:~-1!"=="\" set "_SD_NB=!_SD_NB:~0,-1!"
+powershell -NoProfile -ExecutionPolicy Bypass -File "!_SD_NB!\scripts\obs-import.ps1" -RepoRoot "!_SD_NB!" -BundleSubdir "default-bundle" -LuaPath "!_SD_NB!\obs\game-tracker.lua"
 if errorlevel 1 echo Note: default bundle import failed ^(non-fatal^). Use the dashboard's Import OBS Bundle button manually.
 goto :_bundle_done
 

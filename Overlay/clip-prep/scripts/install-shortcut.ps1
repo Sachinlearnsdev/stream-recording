@@ -77,6 +77,47 @@ try {
     Write-Output '  http://127.0.0.1:6789/dashboard.html'
   }
 
+  # 3. OBS Studio shortcut: winget --silent installs OBS to Program Files but
+  # doesn't create Start Menu / Desktop shortcuts. Result: user can't find OBS
+  # via Win+search and has nothing to click. Detect obs64.exe at the canonical
+  # paths and create our own shortcut alongside the Sasi Studio one.
+  $obsCandidates = @(
+    'C:\Program Files\obs-studio\bin\64bit\obs64.exe',
+    'C:\Program Files (x86)\obs-studio\bin\64bit\obs64.exe',
+    (Join-Path $env:LOCALAPPDATA 'Programs\obs-studio\bin\64bit\obs64.exe')
+  ) | Where-Object { Test-Path -LiteralPath $_ }
+
+  if ($obsCandidates.Count -gt 0) {
+    $obsExe = $obsCandidates[0]
+    $obsDir = Split-Path -Parent $obsExe
+    function Write-ObsShortcut($targetDir) {
+      if (-not $targetDir -or -not (Test-Path -LiteralPath $targetDir)) { return $null }
+      $lnkPath = Join-Path $targetDir 'OBS Studio.lnk'
+      try {
+        $s = $ws.CreateShortcut($lnkPath)
+        $s.TargetPath       = $obsExe
+        $s.WorkingDirectory = $obsDir
+        $s.IconLocation     = $obsExe + ',0'
+        $s.Description      = 'OBS Studio'
+        $s.Save()
+        return $lnkPath
+      } catch {
+        Write-Output ('  (OBS shortcut skip ' + $lnkPath + ': ' + $_.Exception.Message + ')')
+        return $null
+      }
+    }
+    # Start Menu OBS shortcut
+    $obsSm = Write-ObsShortcut $startMenuDir
+    if ($obsSm) { Write-Output ('OBS Start Menu shortcut: ' + $obsSm) }
+    # Desktop OBS shortcuts (every Desktop path, same coverage as Sasi Studio shortcut)
+    foreach ($d in $candidates) {
+      $obsDk = Write-ObsShortcut $d
+      if ($obsDk) { Write-Output ('OBS Desktop shortcut: ' + $obsDk) }
+    }
+  } else {
+    Write-Output 'OBS Studio not found at any known path - skipping OBS shortcut creation.'
+  }
+
   exit 0
 } catch {
   Write-Output ('FAILED: ' + $_.Exception.Message)
