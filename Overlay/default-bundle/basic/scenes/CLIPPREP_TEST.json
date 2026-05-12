@@ -1,16 +1,16 @@
 {
     "name":  "CLIPPREP_TEST",
-    "current_scene":  "CLIPPREP IMPORT OK - bundle 2026-05-09 20:29",
-    "current_program_scene":  "CLIPPREP IMPORT OK - bundle 2026-05-09 20:29",
+    "current_scene":  "CLIPPREP IMPORT OK - bundle 2026-05-12 18:23",
+    "current_program_scene":  "CLIPPREP IMPORT OK - bundle 2026-05-12 18:23",
     "scene_order":  [
                         {
-                            "name":  "CLIPPREP IMPORT OK - bundle 2026-05-09 20:29"
+                            "name":  "CLIPPREP IMPORT OK - bundle 2026-05-12 18:23"
                         }
                     ],
     "sources":  [
                     {
-                        "name":  "CLIPPREP IMPORT OK - bundle 2026-05-09 20:29",
-                        "uuid":  "e0e51663-7671-4fb2-96f1-fce639e817ea",
+                        "name":  "CLIPPREP IMPORT OK - bundle 2026-05-12 18:23",
+                        "uuid":  "a7e02c92-cf89-41d5-8bf9-400df7472eb7",
                         "id":  "scene",
                         "versioned_id":  "scene",
                         "settings":  {

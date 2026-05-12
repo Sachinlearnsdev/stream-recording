@@ -3872,7 +3872,7 @@
     "current_scene": "Live",
     "current_program_scene": "Live",
     "canvases": [],
-    "current_transition": "Glitch",
+    "current_transition": "Stinger",
     "transition_duration": 300,
     "transitions": [
         {
@@ -3886,6 +3886,11 @@
                 "path": "C:/Users/onlys/AppData/Roaming/obs-studio/basic/sasi-overlays/stingers/sasi-stinger-Slash.webm",
                 "hw_decode": false
             }
+        },
+        {
+            "name": "Stinger",
+            "id": "obs_stinger_transition",
+            "settings": {}
         },
         {
             "name": "Glitch",
@@ -3922,21 +3927,13 @@
     "saved_projectors": [],
     "preview_locked": false,
     "scaling_enabled": false,
-    "scaling_level": -17,
+    "scaling_level": -10,
     "scaling_off_x": 0.0,
     "scaling_off_y": 0.0,
     "virtual-camera": {
         "type2": 3
     },
     "modules": {
-        "scripts-tool": [
-            {
-                "path": "E:/Code/Discord & Stream/Overlay/clip-prep/game-tracker.lua",
-                "settings": {
-                    "test_dump_dir": "E:/OBS Recording/Dump"
-                }
-            }
-        ],
         "output-timer": {
             "streamTimerHours": 0,
             "streamTimerMinutes": 0,
@@ -4476,8 +4473,8 @@
                 }
             ],
             "saveWindowGeo": false,
-            "windowPosX": 1968,
-            "windowPosY": 484,
+            "windowPosX": 450,
+            "windowPosY": 187,
             "windowWidth": 1000,
             "windowHeight": 600,
             "macroListMacroEditSplitterPosition": [
@@ -4499,7 +4496,7 @@
                     "options": 0
                 }
             },
-            "suppressCrashDialog": false,
+            "suppressCrashDialog": true,
             "tabSettings": {
                 "searchType": 0,
                 "searchString": "",
@@ -4528,7 +4525,15 @@
                 "docks": []
             },
             "alwaysShowTabs": false
-        }
+        },
+        "scripts-tool": [
+            {
+                "path": "C:/Users/onlys/AppData/Local/clip-prep/obs/game-tracker.lua",
+                "settings": {
+                    "test_dump_dir": "E:/OBS Recording/_dump"
+                }
+            }
+        ]
     },
     "resolution": {
         "x": 1920,

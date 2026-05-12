@@ -551,21 +551,13 @@
     "saved_projectors": [],
     "preview_locked": false,
     "scaling_enabled": false,
-    "scaling_level": -17,
+    "scaling_level": -10,
     "scaling_off_x": 0.0,
     "scaling_off_y": 0.0,
     "virtual-camera": {
         "type2": 3
     },
     "modules": {
-        "scripts-tool": [
-            {
-                "path": "E:/Code/Discord & Stream/Overlay/clip-prep/game-tracker.lua",
-                "settings": {
-                    "test_dump_dir": "E:/OBS Recording/Dump"
-                }
-            }
-        ],
         "output-timer": {
             "streamTimerHours": 0,
             "streamTimerMinutes": 0,
@@ -831,7 +823,15 @@
                 "docks": []
             },
             "alwaysShowTabs": false
-        }
+        },
+        "scripts-tool": [
+            {
+                "path": "C:/Users/onlys/AppData/Local/clip-prep/obs/game-tracker.lua",
+                "settings": {
+                    "test_dump_dir": "E:/OBS Recording/_dump"
+                }
+            }
+        ]
     },
     "resolution": {
         "x": 1920,

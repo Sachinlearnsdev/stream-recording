@@ -3,5 +3,5 @@
 # by _obs-import.ps1 - no manual download needed on the new PC.
 # (Stock OBS DLLs are filtered out - see system-plugins.txt for raw list.)
 
-- advanced-scene-switcher  v1.33.1  [data dir; 20 subfolder DLL(s); sidecars: advanced-scene-switcher-lib.dll]
-    advanced-scene-switcher
+- Advanced Scene Switcher  v1.33.1  [data dir; 20 subfolder DLL(s); sidecars: advanced-scene-switcher-lib.dll]
+    folder: advanced-scene-switcher
