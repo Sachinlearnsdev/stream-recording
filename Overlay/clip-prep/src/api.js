@@ -155,7 +155,7 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       res.setHeader('Access-Control-Allow-Origin', origin || 'null');
       res.setHeader('Vary', 'Origin');
     }
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Clip-Prep');
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     // Require the custom header on state-changing requests.
@@ -520,17 +520,26 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         }
       }
       await walk(root);
-      if (found.length === 0) return res.json({ ok: true, recycled: 0, message: 'no .mkv files in targetRoot' });
+      // Skip any MKV currently being split — recycling the source mid-split
+      // leaves partial segment files and breaks the in-flight ffmpeg run.
+      // splitsInProgress is keyed by basename without extension.
+      const skipped = [];
+      const safe = found.filter(f => {
+        const base = path.basename(f, path.extname(f));
+        if (splitsInProgress.has(base)) { skipped.push(base); return false; }
+        return true;
+      });
+      if (safe.length === 0) return res.json({ ok: true, recycled: 0, skipped, message: skipped.length ? 'all .mkv files are mid-split; try again after splits finish' : 'no .mkv files in targetRoot' });
       const psScript = path.join(installDir || '', 'scripts', 'recycle.ps1');
-      log.warn(`recycle-all-mkvs: sending ${found.length} files to Recycle Bin`);
+      log.warn(`recycle-all-mkvs: sending ${safe.length} files to Recycle Bin${skipped.length ? ` (skipped ${skipped.length} mid-split)` : ''}`);
       // recycle.ps1 splits its -Files argument on '|' (an invalid filename
       // character on Windows, so splitting is unambiguous); pass the joined
       // list through the arg-array path so the outer process call doesn't get
       // shell-parsed (an outer shell would mishandle a path containing ').
-      const r = await runPowerShell(psScript, ['-Files', found.join('|')], { maxBuffer: 16 * 1024 * 1024, log });
+      const r = await runPowerShell(psScript, ['-Files', safe.join('|')], { maxBuffer: 16 * 1024 * 1024, log });
       if (r.code !== 0) return res.status(500).json({ error: 'recycle.ps1 failed', stdout: r.stdout, stderr: r.stderr });
       log.info(`recycle-all-mkvs done`);
-      res.json({ ok: true, recycled: found.length, output: r.stdout.trim().split('\n').slice(0, 10).join('\n') });
+      res.json({ ok: true, recycled: safe.length, skipped, output: r.stdout.trim().split('\n').slice(0, 10).join('\n') });
     } catch (err) {
       log.error(`recycle-all-mkvs failed: ${err.message}`);
       res.status(500).json({ error: err.message });
