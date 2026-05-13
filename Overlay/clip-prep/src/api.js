@@ -475,7 +475,34 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     // Safe JSON embed: escape `</` so a value containing "</script>" can't
     // break out of the tag.
     const json = JSON.stringify(safe).replace(/<\//g, '<\\/');
-    return `<script id="sasi-content-inject">try{var __s=${json};for(var k in __s){try{localStorage.setItem(k,__s[k]);}catch(e){}}}catch(e){}</script>`;
+    // Sync localStorage. Then ALSO directly apply via live-update once it's
+    // loaded — wait for window.applyLiveUpdaters then call it. This handles
+    // the case where the scene's bottom script ran applyLiveUpdaters BEFORE
+    // localStorage was set (shouldn't happen with our head-positioned inject,
+    // but seems to in OBS CEF for reasons we haven't pinned down). And we
+    // ALSO listen for late registrations via a MutationObserver-free poll.
+    const ts = Date.now();
+    return `<script id="sasi-content-inject">
+try{
+  var __s=${json};
+  for(var k in __s){try{localStorage.setItem(k,__s[k]);}catch(e){}}
+  window.__SASI_INJECTED_AT=${ts};
+  // Re-apply after live-update.js loads + scene script runs. Polls briefly
+  // for window.applyLiveUpdaters then calls it so OBS picks up the values
+  // even if it cached the scene's earlier applyLiveUpdaters call.
+  (function(){
+    var tries=0;
+    function tick(){
+      if (typeof window.applyLiveUpdaters==='function'){
+        try{window.applyLiveUpdaters();}catch(e){}
+        // Run a few more times in case scenes register handlers late.
+        if (++tries<6) setTimeout(tick, 250);
+      } else if (++tries<40) setTimeout(tick, 50);
+    }
+    tick();
+  })();
+}catch(e){}
+</script>`;
   }
 
   let _cachedPalette = null;
