@@ -9,13 +9,32 @@ function bgHexToRgb(hex) {
   const h = hex.replace('#', '');
   return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
 }
-// Resolve canvas colors from SASI_CONFIG (red, orange, gold) or fall back
+// Read canvas colors from the live CSS variables on :root. Previously this
+// read from SASI_CONFIG.colors which is captured at page-load time and never
+// re-checked — so palette swaps via the watcher's inject + the dashboard's
+// postMessage path didn't reach the canvas background. getComputedStyle on
+// document.documentElement always reflects the current CSS var resolution,
+// so each call to bgColors() picks up whatever palette is active right now.
 function bgColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const parseRgbTuple = (s) => {
+    if (!s) return null;
+    const parts = String(s).trim().split(',').map(n => parseInt(n.trim(), 10));
+    return (parts.length === 3 && parts.every(n => !isNaN(n))) ? parts : null;
+  };
+  const fromVar = (rgbVar, hexVar, fallback) => {
+    const tup = parseRgbTuple(cs.getPropertyValue(rgbVar));
+    if (tup) return tup;
+    const hex = (cs.getPropertyValue(hexVar) || '').trim();
+    if (hex) return bgHexToRgb(hex);
+    // Last-resort fall back to config (legacy path).
+    return fallback;
+  };
   const c = (window.SASI_CONFIG && SASI_CONFIG.colors) || {};
   return {
-    primary:   bgHexToRgb(c.red    || '#FF2200'),  // primary canvas color
-    secondary: bgHexToRgb(c.orange || '#FF7700'),  // secondary
-    accent:    bgHexToRgb(c.gold   || '#FFD700'),  // accent (sparkle)
+    primary:   fromVar('--red-rgb',    '--red',    bgHexToRgb(c.red    || '#FF2200')),
+    secondary: fromVar('--orange-rgb', '--orange', bgHexToRgb(c.orange || '#FF7700')),
+    accent:    fromVar('--gold-rgb',   '--gold',   bgHexToRgb(c.gold   || '#FFD700')),
   };
 }
 

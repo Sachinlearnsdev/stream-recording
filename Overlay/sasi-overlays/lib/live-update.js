@@ -63,7 +63,12 @@
     },
     cssVar: (varName) => (value) => {
       if (!value) return;
-      document.documentElement.style.setProperty(varName, value);
+      // 'important' priority so dashboard postMessage palette updates
+      // override the server's inject (which also uses !important — see
+      // buildPaletteStyleTag in api.js). Without 'important' here, the
+      // postMessage path would be silently overridden by the server inject
+      // and dashboard live preview would stop reflecting picker changes.
+      document.documentElement.style.setProperty(varName, value, 'important');
       // If the value is a 6-digit hex, also emit the `<varName>-rgb` companion
       // as a comma-separated RGB tuple. Theme files use rgba(var(--red-rgb), .55)
       // for semi-transparent palette usage — keeping both vars in sync from a
@@ -72,7 +77,7 @@
       const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(value);
       if (m) {
         const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
-        document.documentElement.style.setProperty(varName + '-rgb', r + ', ' + g + ', ' + b);
+        document.documentElement.style.setProperty(varName + '-rgb', r + ', ' + g + ', ' + b, 'important');
       }
     },
     show: (selector) => (value) => {

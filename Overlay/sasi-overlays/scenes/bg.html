@@ -15,9 +15,13 @@ canvas { position:absolute; inset:0; }
 
 /* Ambient blobs */
 .blob { position:absolute; border-radius:50%; filter:blur(160px); z-index:0; animation:blobF 12s ease-in-out infinite alternate; }
-.b1{width:900px;height:900px;background:#5c0000;opacity:.5;top:-200px;left:-200px;animation-delay:0s}
-.b2{width:700px;height:700px;background:#3a0000;opacity:.38;bottom:-100px;right:200px;animation-delay:-5s}
-.b3{width:400px;height:400px;background:#8b3a00;opacity:.18;top:300px;right:600px;animation-delay:-3s}
+/* Ambient glow blobs. Hardcoded reddish hex was here before — replaced
+   with rgba(var(--red-rgb),...) so blobs follow the active palette
+   instead of staying red regardless of theme. opacity is now 1 because
+   the tint+alpha lives in the rgba() itself. */
+.b1{width:900px;height:900px;background:rgba(var(--red-rgb),.22);top:-200px;left:-200px;animation-delay:0s}
+.b2{width:700px;height:700px;background:rgba(var(--red-rgb),.14);bottom:-100px;right:200px;animation-delay:-5s}
+.b3{width:400px;height:400px;background:rgba(var(--orange-rgb),.12);top:300px;right:600px;animation-delay:-3s}
 @keyframes blobF{from{transform:translate(0,0)scale(1)}to{transform:translate(50px,30px)scale(1.08)}}
 </style>
 </head>

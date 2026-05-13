@@ -462,14 +462,24 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(h || '');
       return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
     };
+    // !important is critical here. Without it, anything calling
+    // documentElement.style.setProperty('--red', X) from JS will win
+    // (inline-style specificity beats stylesheet specificity). In OBS,
+    // live-update.js's applyLiveUpdaters() can fire AFTER our inject and
+    // call setProperty from leftover localStorage values — that's how
+    // some elements ended up rendering the old palette while others took
+    // the new one. !important forces stylesheet to win unless the JS
+    // setProperty call ALSO uses 'important' priority (which we make
+    // live-update.js do for the postMessage path so the dashboard's live
+    // preview still works).
     const lines = [];
     for (const name of ['red', 'orange', 'gold', 'bg']) {
-      if (p[name]) lines.push(`--${name}:${p[name]};`);
+      if (p[name]) lines.push(`--${name}:${p[name]} !important;`);
     }
-    if (p.dim) lines.push(`--dim:${p.dim};`);
+    if (p.dim) lines.push(`--dim:${p.dim} !important;`);
     for (const name of ['red', 'orange', 'gold', 'bg']) {
       const rgb = hexToRgb(p[name]);
-      if (rgb) lines.push(`--${name}-rgb:${rgb};`);
+      if (rgb) lines.push(`--${name}-rgb:${rgb} !important;`);
     }
     return `<style id="sasi-palette-inject">:root{${lines.join('')}}</style>`;
   }
