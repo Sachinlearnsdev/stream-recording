@@ -339,6 +339,66 @@
   .quota-counter { background: var(--bg-page); border: 1px solid var(--bg-divider); border-radius: var(--r-button); padding: var(--sp-3); margin-bottom: var(--sp-3); display: flex; justify-content: space-between; align-items: center; }
   .quota-num { color: var(--accent-online); font-family: var(--font-mono); font-size: 18px; font-weight: 600; }
   .quota-label { color: var(--text-secondary); font-size: var(--text-small); }
+
+  /* ------- Floating "Push to OBS" button (bottom-right) ------- */
+  /* Always visible regardless of scroll position; shows the count of
+     unsynced sasi_* localStorage keys when dirty. Hits the same handler
+     as the inline Refresh button + Ctrl/Cmd+S. */
+  #sasi-push-fab {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 12px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--bg-divider);
+    border-radius: var(--r-button);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-mono);
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .45);
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), transform var(--t-fast);
+  }
+  #sasi-push-fab:hover { transform: translateY(-1px); }
+  #sasi-push-fab:active { transform: translateY(0); }
+  #sasi-push-fab[disabled] { opacity: .6; cursor: progress; }
+  #sasi-push-fab.dirty {
+    background: var(--accent-online);
+    border-color: var(--accent-online);
+    color: #000;
+  }
+  #sasi-push-fab.dirty .fab-icon { color: #000; }
+  #sasi-push-fab .fab-icon { font-size: 14px; line-height: 1; }
+  #sasi-push-fab .fab-count {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    background: #000;
+    color: var(--accent-online);
+    border-radius: 9px;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+    font-weight: 700;
+  }
+  #sasi-push-fab .fab-count:empty { display: none; }
+  #sasi-push-fab kbd {
+    margin-left: var(--sp-2);
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, .25);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: inherit;
+    opacity: .85;
+  }
 </style>
 </head>
 <body>
@@ -1491,13 +1551,90 @@ async function refreshObsSources(opts) {
       : 'Refreshed ' + n + (total !== n ? '/' + total : '') + ' browser source' + (n === 1 ? '' : 's') + '.';
     setLine('✓ ' + msg, 'ok');
     if (!opts.silent) toast(msg, 'ok', 3500);
+    // Snapshot the just-pushed state so the dirty tracker knows "in sync".
+    saveSyncSnapshot();
+    updateFab();
   } catch (e) {
     setLine('Failed: ' + e.message, 'err');
     if (!opts.silent) toast('Refresh failed: ' + e.message, 'err', 5000);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh OBS sources'; }
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Push all changes to OBS'; }
   }
 }
+
+// ============================================================
+//  Sync state tracker — dirty indicator + floating Push button
+// ============================================================
+//  Captures a snapshot of every sasi_* localStorage key after each
+//  successful Push to OBS. Any subsequent broadcastChange that
+//  diverges from the snapshot marks the dashboard "dirty" — the
+//  floating Push button (sasi-push-fab) reflects this in real-time
+//  so the user knows whether what's in OBS matches what's on screen.
+// ============================================================
+
+const SASI_SYNC_SNAPSHOT_KEY = '__sasi_last_pushed_snapshot';
+
+function currentSasiState() {
+  const state = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && /^sasi_[a-zA-Z0-9_]+$/.test(k)) state[k] = localStorage.getItem(k);
+  }
+  return state;
+}
+
+function saveSyncSnapshot() {
+  try {
+    localStorage.setItem(SASI_SYNC_SNAPSHOT_KEY, JSON.stringify(currentSasiState()));
+  } catch {}
+}
+
+function dirtyKeys() {
+  const cur = currentSasiState();
+  let snap = {};
+  try { snap = JSON.parse(localStorage.getItem(SASI_SYNC_SNAPSHOT_KEY) || '{}'); } catch {}
+  const keys = new Set([...Object.keys(cur), ...Object.keys(snap)]);
+  const dirty = [];
+  for (const k of keys) if (cur[k] !== snap[k]) dirty.push(k);
+  return dirty;
+}
+
+let __sasiFabTimer = null;
+function scheduleFabUpdate() {
+  clearTimeout(__sasiFabTimer);
+  __sasiFabTimer = setTimeout(updateFab, 120);
+}
+
+function updateFab() {
+  const fab = document.getElementById('sasi-push-fab');
+  if (!fab) return;
+  const dirty = dirtyKeys();
+  const label = fab.querySelector('.fab-label');
+  const count = fab.querySelector('.fab-count');
+  if (dirty.length > 0) {
+    fab.classList.add('dirty');
+    if (label) label.textContent = 'Push to OBS';
+    if (count) count.textContent = String(dirty.length);
+  } else {
+    fab.classList.remove('dirty');
+    if (label) label.textContent = 'In sync';
+    if (count) count.textContent = '';
+  }
+  fab.title = dirty.length > 0
+    ? 'Unsaved changes: ' + dirty.map(k => k.replace(/^sasi_/, '')).join(', ')
+    : 'Dashboard matches OBS';
+}
+
+// Bind Ctrl/Cmd+S to push so muscle memory works.
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    refreshObsSources();
+  }
+});
+
+// First render after page loads (snapshot may be empty -> everything dirty).
+window.addEventListener('DOMContentLoaded', updateFab);
 // Wire the manual button (idempotent — safe even if HTML re-rendered)
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'refresh-obs-btn') refreshObsSources();
@@ -1522,8 +1659,10 @@ function broadcastChange(key, value) {
   // NOTE: no per-keystroke POST to the watcher anymore. Dashboard live-preview
   // is fully driven by the postMessage path above. The user edits freely, sees
   // the change instantly in the preview, and pushes everything to OBS in one
-  // batch when they click "Save palette + refresh OBS" — that handler bulk-
+  // batch when they click "Push all changes to OBS" — that handler bulk-
   // flushes the entire sasi_* localStorage to /save-content in a single call.
+  // Mark the page dirty so the floating Push button reflects pending changes.
+  scheduleFabUpdate();
 }
 
 function renderEditor(sceneName, kind) {
@@ -3616,6 +3755,22 @@ $('key-save').addEventListener('click', async () => {
 });
 
 loadKeys();
+
+// Floating Push-to-OBS button — clicks call the same handler as the
+// inline one in the Common section, plus Ctrl/Cmd+S is bound globally.
+document.getElementById('sasi-push-fab')?.addEventListener('click', () => refreshObsSources());
+updateFab();
 </script>
+
+<!-- Floating Push-to-OBS button. Stays visible regardless of scroll position.
+     Green when there are unsynced changes (count badge shows how many), neutral
+     when dashboard state matches what's in OBS. Ctrl/Cmd+S triggers the same. -->
+<div id="sasi-push-fab" role="button" tabindex="0" title="Push all dashboard changes to OBS">
+  <span class="fab-icon">↻</span>
+  <span class="fab-label">In sync</span>
+  <span class="fab-count"></span>
+  <kbd>Ctrl S</kbd>
+</div>
+
 </body>
 </html>
