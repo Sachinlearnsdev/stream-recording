@@ -341,6 +341,54 @@ if (Test-Path $dstScenes) {
       }
       $modules | Add-Member -NotePropertyName 'scripts-tool' -NotePropertyValue $cleanScriptsTool
 
+      # Browser-source URL rewrite: convert any source pointing at a legacy
+      # local file path under /sasi-overlays/ to the watcher-served HTTP URL.
+      #
+      # Why: vendored bundle scene JSONs hardcode the maintainer's old
+      # install layout (e.g. %APPDATA%\obs-studio\basic\sasi-overlays\...).
+      # On a different user's machine that path doesn't exist - OBS shows
+      # blank scenes. Even on the maintainer's machine, theme swap via the
+      # dashboard never reached OBS because the dashboard mutates the
+      # install-dir folder while OBS was reading from the legacy path.
+      # Rewriting to http://127.0.0.1:6789/sasi-overlays/... makes browser
+      # sources user-independent AND auto-reflect every theme swap (the
+      # watcher's express.static serves whatever is in the active folder).
+      $urlRewrites = 0
+      if ($sc.PSObject.Properties.Name -contains 'sources' -and $sc.sources) {
+        foreach ($src in $sc.sources) {
+          if ($src.id -ne 'browser_source') { continue }
+          if (-not $src.settings) { continue }
+          $stProps = @($src.settings.PSObject.Properties.Name)
+          $isLocal = $false
+          if ($stProps -contains 'is_local_file') { $isLocal = [bool]$src.settings.is_local_file }
+          # Prefer url over local_file when is_local_file is false, so any
+          # query string (e.g. ?scene=brb) on `url` survives the conversion.
+          $existing = $null
+          if ($isLocal) {
+            if ($stProps -contains 'local_file' -and $src.settings.local_file) { $existing = $src.settings.local_file }
+            elseif ($stProps -contains 'url' -and $src.settings.url) { $existing = $src.settings.url }
+          } else {
+            if ($stProps -contains 'url' -and $src.settings.url) { $existing = $src.settings.url }
+            elseif ($stProps -contains 'local_file' -and $src.settings.local_file) { $existing = $src.settings.local_file }
+          }
+          if (-not $existing) { continue }
+          $norm = ($existing -replace '\\','/') -replace '^file:///?',''
+          if ($norm -notmatch '/sasi-overlays/(.+)$') { continue }
+          $rel = $Matches[1].TrimEnd()
+          $newUrl = "http://127.0.0.1:6789/sasi-overlays/$rel"
+          if ($newUrl -ieq $existing) { continue }  # already correct, no-op
+          if ($stProps -contains 'is_local_file') { $src.settings.is_local_file = $false }
+          else { $src.settings | Add-Member -NotePropertyName is_local_file -NotePropertyValue $false -Force }
+          if ($stProps -contains 'url') { $src.settings.url = $newUrl }
+          else { $src.settings | Add-Member -NotePropertyName url -NotePropertyValue $newUrl -Force }
+          if ($stProps -contains 'local_file') { $src.settings.local_file = '' }
+          $urlRewrites++
+        }
+      }
+      if ($urlRewrites -gt 0) {
+        Write-Output "  Rewrote $urlRewrites browser_source URLs in $($scFile.BaseName) to http://127.0.0.1:6789/..."
+      }
+
       $sc | ConvertTo-Json -Depth 32 | Set-Content $scFile.FullName -Encoding utf8
       if ($alreadyHas) {
         Write-Output "  Lua already registered in: $($scFile.BaseName) (cleaned scripts-tool shape)"
