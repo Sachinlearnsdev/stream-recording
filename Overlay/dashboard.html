@@ -521,9 +521,9 @@
             <input type="number" data-key="tickerSpeed" min="10" max="60" value="28" data-reload="1">
           </div>
           <div class="common-tile" style="grid-column:1 / -1">
-            <div class="common-tile-label">Apply palette to OBS</div>
-            <div class="section-hint" style="margin-bottom:var(--sp-2)">The dashboard preview updates instantly when you move the palette pickers above, but OBS reads theme files from disk and only sees changes after this step. Clicking this button saves your current palette to <code>sasi-overlays/lib/theme-tokens.css</code> AND tells OBS via obs-websocket to reload every browser source — your theme tweaks land in OBS in one round-trip.</div>
-            <button class="btn btn-primary" id="refresh-obs-btn">↻ Save palette + refresh OBS</button>
+            <div class="common-tile-label">Push to OBS</div>
+            <div class="section-hint" style="margin-bottom:var(--sp-2)">Edit palette + text fields freely — the dashboard preview updates instantly, but OBS only sees changes after this step. Click to save everything in one shot: palette to <code>theme-tokens.css</code>, all text fields to the watcher's content state, then tell OBS via obs-websocket to reload every browser source. Your tweaks land in OBS in one round-trip.</div>
+            <button class="btn btn-primary" id="refresh-obs-btn">↻ Push all changes to OBS</button>
             <div class="field-hint" id="refresh-obs-status" style="margin-top:6px;min-height:1.2em"></div>
           </div>
         </div>
@@ -1519,24 +1519,11 @@ function broadcastChange(key, value) {
   send(document.getElementById('editor-preview-iframe')?.contentWindow);
   document.querySelectorAll('.scene-thumb iframe').forEach(iframe => send(iframe.contentWindow));
 
-  // Mirror to the watcher's content state so OBS browser sources pick up the
-  // value on next load (the inject middleware prepopulates localStorage from
-  // _contentState before live-update.js runs). Debounced per key so a typing
-  // burst on a text field doesn't hammer the endpoint.
-  saveContentToWatcher('sasi_' + key, value);
-}
-
-const __sasiSaveContentTimers = {};
-function saveContentToWatcher(fullKey, value) {
-  if (!/^sasi_[a-zA-Z0-9_]+$/.test(fullKey)) return; // safety
-  if (__sasiSaveContentTimers[fullKey]) clearTimeout(__sasiSaveContentTimers[fullKey]);
-  __sasiSaveContentTimers[fullKey] = setTimeout(() => {
-    fetch(API + '/save-content', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
-      body: JSON.stringify({ key: fullKey, value: value == null ? '' : String(value) }),
-    }).catch(err => console.warn('[save-content]', err.message));
-  }, 350);
+  // NOTE: no per-keystroke POST to the watcher anymore. Dashboard live-preview
+  // is fully driven by the postMessage path above. The user edits freely, sees
+  // the change instantly in the preview, and pushes everything to OBS in one
+  // batch when they click "Save palette + refresh OBS" — that handler bulk-
+  // flushes the entire sasi_* localStorage to /save-content in a single call.
 }
 
 function renderEditor(sceneName, kind) {
