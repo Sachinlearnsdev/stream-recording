@@ -78,7 +78,7 @@ body {
   padding: 8px 14px;
   background: rgba(0, 0, 0, .6);
   border: 1px solid rgba(var(--red-rgb), .32);
-  border-radius: 8px;
+  border-radius:var(--corner-radius);
   box-shadow: 0 0 16px rgba(var(--red-rgb), .07), inset 0 0 10px rgba(0, 0, 0, .3);
   position: relative;
 }

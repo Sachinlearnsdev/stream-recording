@@ -35,4 +35,22 @@
   /* Dim / muted — used for de-emphasized text and subtle borders.
      Stored as rgba directly because it's already alpha-bearing. */
   --dim: rgba(255, 255, 255, 0.45);
+
+  /* ----- Layout tokens --------------------------------------- */
+  /* Card corner radius — applies to badges, panels, frames.
+     Increase for softer "rounded" themes, drop to 0 for square. */
+  --corner-radius: 8px;
+
+  /* Smaller radius used for chips, inline buttons, narrow inputs. */
+  --corner-radius-chip: 4px;
+
+  /* ----- Animation tokens ------------------------------------ */
+  /* Single multiplier so the dashboard can later expose a slider
+     "Animation speed" that scales every motion in the theme.
+     1 = baseline speeds defined in scene-base.css. >1 = slower,
+     <1 = snappier. Tokens below derive from this. */
+  --motion-scale: 1;
+  --dur-fade:  calc(1.2s * var(--motion-scale));
+  --dur-pulse: calc(1.2s * var(--motion-scale));
+  --dur-slide: calc(0.7s * var(--motion-scale));
 }
