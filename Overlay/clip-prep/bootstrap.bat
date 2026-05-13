@@ -171,14 +171,10 @@ robocopy "!_OVL_DIR!\sasi-overlays" "!INSTALL_DIR!\sasi-overlays" /E /XF secrets
 :_step4_after_active_theme
 
 rem  Vendor any sibling theme folders (sasi-overlays-<name>/) that exist in
-rem  the repo. The repo no longer ships vendored sample themes, so on a
-rem  fresh iex this loop is a no-op. It still matters in two cases:
-rem    1. Dev re-runs bootstrap from a local clone where they have
-rem       branched themes via dashboard "Save current as theme".
-rem    2. After install.bat runs generate-sample-theme.ps1, a
-rem       sasi-overlays-sample-blue/ exists in install dir — a later
-rem       bootstrap run picks it up via this same loop pattern (via
-rem       a future re-vendoring round trip).
+rem  the repo. The repo doesn't ship vendored sample themes today, so on a
+rem  fresh iex this loop is a no-op. Still matters when a dev re-runs
+rem  bootstrap from a local clone where they've branched themes via the
+rem  dashboard "Save current as theme" button.
 rem  pushd so the for-loop pattern is relative — %%T resolves to a bare name.
 pushd "!_OVL_DIR!" >nul
 for /d %%T in (sasi-overlays-*) do (

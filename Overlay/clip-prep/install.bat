@@ -23,11 +23,11 @@ del "!WARN_LOG!" 2>nul
 
 rem ---------- Step 1: Bootstrap config.json if missing ----------
 if not exist "!SCRIPT_DIR!config.json" (
-  echo [1/9] config.json not found - creating with defaults...
+  echo [1/8] config.json not found - creating with defaults...
   call :BootstrapConfig
   if errorlevel 1 goto :Failed
 ) else (
-  echo [1/9] config.json exists - keeping yours.
+  echo [1/8] config.json exists - keeping yours.
 )
 
 rem ---------- Step 2: npm install (always — handles upgrades) ----------
@@ -36,7 +36,7 @@ rem  the install on upgrade — new deps added to package.json wouldn't land
 rem  until a manual cleanup. npm install is idempotent and fast on no-op
 rem  (~1s when nothing changed), so just always run it.
 echo.
-echo [2/9] Running npm install (idempotent — fast if nothing changed)...
+echo [2/8] Running npm install (idempotent — fast if nothing changed)...
 pushd "!SCRIPT_DIR!"
 call npm install
 set "NPM_RC=!ERRORLEVEL!"
@@ -51,7 +51,7 @@ if not "!NPM_RC!"=="0" (
 
 rem ---------- Step 3: Register registry Run-key auto-start ----------
 echo.
-echo [3/9] Registering auto-start in registry as "!RUN_NAME!"...
+echo [3/8] Registering auto-start in registry as "!RUN_NAME!"...
 reg add "!RUN_KEY!" /v "!RUN_NAME!" /t REG_SZ /d "wscript.exe \"!LAUNCHER!\"" /f
 if errorlevel 1 (
   echo.
@@ -65,7 +65,7 @@ schtasks /Delete /F /TN "!RUN_NAME!" >nul 2>&1
 
 rem ---------- Step 4: Create Start Menu shortcut ----------
 echo.
-echo [4/9] Creating Start Menu + Desktop shortcuts ("Sasi Studio")...
+echo [4/8] Creating Start Menu + Desktop shortcuts ("Sasi Studio")...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\install-shortcut.ps1" -LauncherPath "!LAUNCHER!" -WorkingDir "!SCRIPT_DIR!"
 if errorlevel 1 (
   echo Note: could not create shortcuts ^(non-fatal^).
@@ -74,7 +74,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [5/9] Registering "clip-prep://" URL protocol...
+echo [5/8] Registering "clip-prep://" URL protocol...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\install-protocol.ps1" -LauncherPath "!LAUNCHER!"
 if errorlevel 1 (
   echo Note: could not register URL protocol ^(non-fatal^).
@@ -88,7 +88,7 @@ rem  exist and we can register the script automatically. On fresh installs
 rem  the bundle import (step 8) handles Lua registration for the imported
 rem  collections, so we can short-circuit if no scenes folder exists yet.
 echo.
-echo [6/9] Registering game-tracker.lua in OBS scene collections...
+echo [6/8] Registering game-tracker.lua in OBS scene collections...
 if not exist "%APPDATA%\obs-studio\basic\scenes" (
   echo   No %%APPDATA%%\obs-studio\basic\scenes yet ^(fresh OBS^) - step 8's bundle import will register Lua there.
 ) else (
@@ -99,22 +99,13 @@ if not exist "%APPDATA%\obs-studio\basic\scenes" (
   )
 )
 
-rem ---------- Step 7: Generate sample-blue theme so user has 2 themes to test swap ----------
-echo.
-echo [7/9] Generating sample-blue theme (alternate to test theme-swap UI)...
-powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\generate-sample-theme.ps1" -InstallDir "!SCRIPT_DIR!"
-if errorlevel 1 (
-  echo Note: generate-sample-theme.ps1 failed ^(non-fatal^). You'll start with one theme.
-  echo [step 7] generate-sample-theme failed - you'll only have the default theme; not a real problem. >> "!WARN_LOG!"
-)
-
-rem ---------- Step 8: Auto-import default OBS bundle on truly-fresh OBS ----------
+rem ---------- Step 7: Auto-import default OBS bundle on truly-fresh OBS ----------
 rem  If the user has NO existing OBS scene collections (truly first run) AND
 rem  the repo vendored a default-bundle, import it so they start with working
 rem  scenes instead of an empty OBS. Flat goto-based flow — nested parens with
 rem  delayed expansion misparse on some CMD versions ("." was unexpected ...).
 echo.
-echo [8/9] Checking for default OBS bundle auto-import...
+echo [7/8] Checking for default OBS bundle auto-import...
 set "_OBS_SCENES_DIR=%APPDATA%\obs-studio\basic\scenes"
 if not exist "!SCRIPT_DIR!default-bundle" goto :_bundle_skip_none
 rem  Bundle is vendored. Decide whether to import based on existing OBS state.
@@ -135,7 +126,7 @@ if "!_SD_NB:~-1!"=="\" set "_SD_NB=!_SD_NB:~0,-1!"
 powershell -NoProfile -ExecutionPolicy Bypass -File "!_SD_NB!\scripts\obs-import.ps1" -RepoRoot "!_SD_NB!" -BundleSubdir "default-bundle" -LuaPath "!_SD_NB!\obs\game-tracker.lua"
 if errorlevel 1 (
   echo Note: default bundle import failed ^(non-fatal^). Use the dashboard's Import OBS Bundle button manually.
-  echo [step 8] default-bundle import failed - use Import OBS Bundle button in the dashboard. >> "!WARN_LOG!"
+  echo [step 7] default-bundle import failed - use Import OBS Bundle button in the dashboard. >> "!WARN_LOG!"
 )
 goto :_bundle_done
 
@@ -144,9 +135,9 @@ echo   No vendored default-bundle in install dir; skipping auto-import.
 
 :_bundle_done
 
-rem ---------- Step 9: Start it now + open dashboard ----------
+rem ---------- Step 8: Start it now + open dashboard ----------
 echo.
-echo [9/9] Starting watcher (hidden) and opening dashboard...
+echo [8/8] Starting watcher (hidden) and opening dashboard...
 wscript.exe "!LAUNCHER!"
 
 rem Open the dashboard via http://127.0.0.1:6789 so every overlay iframe is

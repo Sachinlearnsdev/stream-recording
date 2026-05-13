@@ -1074,8 +1074,8 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
 
   // Read full theme.json manifest â€” used by /list-themes to surface preview colors.
   // Strips UTF-8 BOM before parse: PowerShell 5.1's `Set-Content -Encoding UTF8`
-  // (used by generate-sample-theme.ps1 + any user-edited theme.json that's been
-  // round-tripped through Notepad / Set-Content) writes a 0xEF 0xBB 0xBF BOM,
+  // (used by any user-edited theme.json that's been round-tripped through
+  // Notepad / Set-Content / older bundled tooling) writes a 0xEF 0xBB 0xBF BOM,
   // which Node's JSON.parse rejects with "Unexpected token". Silent null here
   // would cascade into the dashboard showing themes with no id/preview/name
   // and the apply-theme button having nothing to send.

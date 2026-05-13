@@ -10,7 +10,9 @@
 #
 # Returns 0 on success, non-zero on hard failure.
 #
-# ASCII-only. See generate-sample-theme.ps1 for the encoding rationale.
+# ASCII-only on purpose — PowerShell 5.1 reads .ps1 files as Windows-1252,
+# so non-ASCII chars (em-dashes, smart quotes, arrows) trigger
+# "string is missing the terminator" parse errors on user machines.
 
 [CmdletBinding()]
 param(
