@@ -1278,7 +1278,10 @@ async function buildTileGrid(kind) {
     const id = s.name.replace(/\.html?$/i, '');
     const label = labelMap[s.name] || id;
     const isActive = id === activeKey;
-    const previewSrc = folder + '/' + s.name;
+    // Cache-bust the iframe src so theme swaps always pull fresh content.
+    // Without this, browsers serve the previously-rendered (e.g. blue)
+    // copy from disk cache even though the active theme folder has changed.
+    const previewSrc = folder + '/' + s.name + '?v=' + Date.now();
     const obsUrl = s.fileUrl || ('file:///' + location.pathname.replace(/\/[^/]*$/, '') + '/' + folder + '/' + s.name);
     return `<div class="scene-card${isActive ? ' active' : ''}" data-scene="${id}" data-kind="${kind}" data-folder="${folder}" data-file="${escapeAttr(s.name)}">
       <div class="scene-thumb"><iframe data-src="${escapeAttr(previewSrc)}"></iframe></div>
@@ -1479,7 +1482,7 @@ window.addEventListener('sasi-scene-change', (e) => {
   // Detail is now an object: { name, kind, folder, file }
   const d = (e.detail && typeof e.detail === 'object') ? e.detail : { name: e.detail, kind: 'scene', folder: 'sasi-overlays/scenes', file: e.detail + '.html' };
   renderEditor(d.name, d.kind);
-  document.getElementById('editor-preview-iframe').src = (d.folder || 'scenes') + '/' + (d.file || (d.name + '.html'));
+  document.getElementById('editor-preview-iframe').src = (d.folder || 'scenes') + '/' + (d.file || (d.name + '.html')) + '?v=' + Date.now();
   setTimeout(scaleEditorPreview, 200);
 });
 
@@ -1826,10 +1829,13 @@ async function refreshStingers() {
     const stateBadge = s.isActive
       ? '<span style="color:var(--accent-online);font-weight:700;font-size:9px">● OBS ACTIVE</span>'
       : (s.kind === 'html' ? '<span style="color:var(--text-muted);font-size:9px;letter-spacing:0.1em">GENERATOR</span>' : '');
+    // Cache-bust src so a theme swap that ships new stinger files reflects
+    // immediately (else browser cache holds the previous theme's version).
+    const srcBust = s.relPath + (s.relPath.includes('?') ? '&' : '?') + 'v=' + Date.now();
     return `<div class="scene-card${cls}" data-stinger="${escapeAttr(s.name)}" data-stinger-kind="${s.kind}" data-stinger-rel="${escapeAttr(s.relPath)}">
       <div class="scene-thumb">${s.kind === 'webm'
-        ? `<video src="${escapeAttr(s.relPath)}" muted loop preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`
-        : `<iframe data-src="${escapeAttr(s.relPath)}"></iframe>`}</div>
+        ? `<video src="${escapeAttr(srcBust)}" muted loop preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`
+        : `<iframe data-src="${escapeAttr(srcBust)}"></iframe>`}</div>
       <div class="scene-label">
         <span class="name" title="${escapeAttr(s.name)}">${escapeAttr(s.name)}</span>
         ${stateBadge}
@@ -1852,7 +1858,7 @@ async function refreshStingers() {
       const rel = card.dataset.stingerRel;
       const kind = card.dataset.stingerKind;
       const iframe = document.getElementById('editor-preview-iframe');
-      if (iframe) iframe.src = rel;
+      if (iframe) iframe.src = rel + (rel.includes('?') ? '&' : '?') + 'v=' + Date.now();
       renderStingerActions(card.dataset.stinger, kind, items);
     });
   });
