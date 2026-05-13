@@ -3,21 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <link rel="stylesheet" href="../lib/theme-tokens.css">
+<link rel="stylesheet" href="../lib/scene-base.css">
 <title>Sasi Streams — Breaking News</title>
 <script src="../lib/config.js"></script>
 <script src="../lib/secrets.js"></script>
 <script src="../lib/alerts.js"></script>
 <script src="../lib/live-update.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  width:1920px; height:1080px; overflow:hidden;
-  background:var(--bg);
-  font-family:'Arial Black', Impact, Arial, sans-serif;
-  color:#fff;
-}
 
-@keyframes fadeIn      { from{opacity:0} to{opacity:1} }
+
+
+
 @keyframes slideUp     { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 @keyframes slideDown   { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
 @keyframes pulseRed    { 0%,100%{box-shadow:0 0 12px var(--red),0 0 24px rgba(var(--red-rgb),.4)} 50%{box-shadow:0 0 4px var(--red)} }

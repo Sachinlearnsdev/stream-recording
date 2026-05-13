@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="stylesheet" href="../lib/theme-tokens.css">
+<link rel="stylesheet" href="../lib/scene-base.css">
 <script src="../lib/config.js"></script>
 <script src="../lib/secrets.js"></script>
 <script src="../lib/alerts.js"></script>
@@ -14,20 +15,15 @@
    Edit CONFIG in <script> to customise
    ================================================ */
 
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  width:1920px; height:1080px; overflow:hidden;
-  background:var(--bg);
-  font-family:'Arial Black', Impact, Arial, sans-serif;
-  color:#fff;
-}
+
+
 
 
 
 /* Blobs */
 
 .stage { position:absolute; inset:0; z-index:10; animation:fadeIn 1.2s ease forwards; }
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
 
 /* ================================================
    BRAND — lower top-left (not first row)
@@ -37,7 +33,7 @@ body {
   display:flex; align-items:center; gap:12px;
   opacity:0; animation:tlIn .7s ease .1s forwards;
 }
-@keyframes tlIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+
 
 .logo-img {
   width:52px; height:52px; border-radius:10px; display:block;
@@ -45,10 +41,10 @@ body {
   fill:#FF0000;
   box-sizing:border-box;
 }
-.brand-rule { width:2px; height:40px; background:linear-gradient(to bottom,transparent,var(--red),transparent); box-shadow:0 0 7px var(--red); }
-.brand-text { display:flex; flex-direction:column; }
-.brand-l1 { font-size:14px; font-weight:900; letter-spacing:5px; color:#fff; line-height:1; }
-.brand-l2 { font-size:8px;  font-weight:700; letter-spacing:7px; color:rgba(255,255,255,.3); margin-top:3px; }
+
+
+
+
 
 /* ================================================
    FOLLOW & CONNECT — prominent, below brand
@@ -86,7 +82,7 @@ body {
   position:absolute; top:30px; right:30px;
   opacity:0; animation:trIn .7s ease .2s forwards;
 }
-@keyframes trIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+
 .live-badge {
   display:flex; align-items:center; gap:8px; padding:8px 14px;
   background:rgba(0,0,0,.6);
@@ -163,7 +159,7 @@ body {
   position:relative;
   animation:bigIn .9s cubic-bezier(.22,1,.36,1) .42s forwards;
 }
-@keyframes bigIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+
 @keyframes startGlow {
   0%,100% {
     text-shadow:0 0 30px rgba(var(--red-rgb),.4), 0 0 60px rgba(var(--red-rgb),.15), 0 0 100px rgba(var(--red-rgb),.05);
@@ -216,7 +212,7 @@ body {
   text-shadow:0 0 20px rgba(var(--red-rgb),.5), 0 0 40px rgba(var(--red-rgb),.15);
 }
 .countdown-time span { color:var(--red); animation:colonBlink 1s step-end infinite; }
-@keyframes colonBlink{0%,100%{opacity:1}50%{opacity:.15}}
+
 .countdown-label {
   font-size:8px; font-weight:700; letter-spacing:5px;
   color:rgba(var(--orange-rgb),.45); text-transform:uppercase;
@@ -313,7 +309,7 @@ body {
   text-shadow:0 0 18px rgba(var(--red-rgb),.6), 0 0 36px rgba(var(--red-rgb),.2);
 }
 .clock-time span { color:var(--red); animation:colonBlink 1s step-end infinite; }
-@keyframes colonBlink{0%,100%{opacity:1}50%{opacity:.15}}
+
 .clock-date {
   font-size:22px; font-weight:900; letter-spacing:4px;
   color:#fff; text-transform:uppercase;

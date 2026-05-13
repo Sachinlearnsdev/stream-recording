@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="stylesheet" href="../lib/theme-tokens.css">
+<link rel="stylesheet" href="../lib/scene-base.css">
 <script src="../lib/config.js"></script>
 <script src="../lib/secrets.js"></script>
 <script src="../lib/alerts.js"></script>
@@ -15,19 +16,14 @@
            text centered | alert bottom-right | ticker bottom
    ================================================ */
 
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  width:1920px; height:1080px; overflow:hidden;
-  background:var(--bg);
-  font-family:'Arial Black', Impact, Arial, sans-serif;
-  color:#fff;
-}
+
+
 
 
 
 
 .stage { position:absolute; inset:0; z-index:10; animation:fadeIn 1.5s ease forwards; }
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
 
 /* ================================================
    BRAND — top-left
@@ -37,17 +33,17 @@ body {
   display:flex; align-items:center; gap:12px;
   opacity:0; animation:tlIn .7s ease .2s forwards;
 }
-@keyframes tlIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+
 .logo-img {
   width:52px; height:52px; border-radius:10px; display:block;
   background:#fff; padding:9px;
   fill:#FF0000;
   box-sizing:border-box;
 }
-.brand-rule { width:2px; height:40px; background:linear-gradient(to bottom,transparent,var(--red),transparent); box-shadow:0 0 7px var(--red); }
-.brand-text { display:flex; flex-direction:column; }
-.brand-l1 { font-size:14px; font-weight:900; letter-spacing:5px; color:#fff; line-height:1; }
-.brand-l2 { font-size:8px;  font-weight:700; letter-spacing:7px; color:rgba(255,255,255,.3); margin-top:3px; }
+
+
+
+
 
 /* ================================================
    OFFLINE BADGE — top-right
@@ -56,7 +52,7 @@ body {
   position:absolute; top:30px; right:30px;
   opacity:0; animation:trIn .7s ease .2s forwards;
 }
-@keyframes trIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+
 .offline-badge {
   display:flex; align-items:center; gap:9px; padding:8px 14px;
   background:rgba(0,0,0,.6);
@@ -123,7 +119,7 @@ body {
   display:flex; justify-content:center;
   opacity:0; animation:bigIn .9s cubic-bezier(.22,1,.36,1) .45s forwards;
 }
-@keyframes bigIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+
 
 .t-watching .wl {
   display:inline-block;

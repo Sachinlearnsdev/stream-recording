@@ -1,0 +1,100 @@
+/* ============================================================
+   SASI STUDIO — scene base styles
+   ============================================================
+   Linked from every scene + component via:
+     <link rel="stylesheet" href="../lib/scene-base.css">
+   Pairs with theme-tokens.css — that file owns the palette
+   variables, this file owns the structural defaults (reset,
+   viewport, fonts, common animations, shared utility classes).
+
+   Scenes shouldn't redefine these rules locally. If you need a
+   variant (different brand-l1 size, different fadeIn duration),
+   either parameterize via a CSS var (preferred) or override the
+   class with an extra specificity in your scene's own <style>.
+   ============================================================ */
+
+/* ----- Reset ------------------------------------------------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ----- Viewport + base typography ---------------------------- */
+/* Every scene is rendered to a 1920x1080 OBS browser source.   */
+/* overflow:hidden so accidental layouts can't make OBS scroll. */
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: 'Arial Black', Impact, Arial, sans-serif;
+  color: #fff;
+}
+
+/* ----- Universal animations ---------------------------------- */
+@keyframes fadeIn   { from { opacity: 0 } to { opacity: 1 } }
+@keyframes tlIn     { from { opacity: 0; transform: translateX(-12px) } to { opacity: 1; transform: translateX(0) } }
+@keyframes trIn     { from { opacity: 0; transform: translateX(12px) }  to { opacity: 1; transform: translateX(0) } }
+@keyframes topIn    { from { opacity: 0; transform: translateX(-50%) translateY(-12px) } to { opacity: 1; transform: translateX(-50%) translateY(0) } }
+@keyframes bigIn    { from { opacity: 0; transform: scale(.88) } to { opacity: 1; transform: scale(1) } }
+@keyframes livePulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--red), 0 0 16px rgba(var(--red-rgb), .5) }
+  50%      { opacity: .35; box-shadow: 0 0 3px var(--red) }
+}
+@keyframes colonBlink { 0%, 100% { opacity: 1 } 50% { opacity: .15 } }
+@keyframes stripIn  { to { opacity: 1 } }
+
+/* ----- Stage container --------------------------------------- */
+.stage { position: absolute; inset: 0; z-index: 10; animation: fadeIn 1.2s ease forwards; }
+
+/* ----- Brand block (top-left logo + text) -------------------- */
+/* Scenes position .brand-wrap themselves (different offsets);  */
+/* the inner pieces are shared.                                 */
+.brand-rule {
+  width: 2px;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, var(--red), transparent);
+  box-shadow: 0 0 7px var(--red);
+}
+.brand-text { display: flex; flex-direction: column; }
+.brand-l1   { font-size: 14px; font-weight: 900; letter-spacing: 5px; color: #fff; line-height: 1; }
+.brand-l2   { font-size: 8px;  font-weight: 700; letter-spacing: 7px; color: rgba(255, 255, 255, .3); margin-top: 3px; }
+
+/* Square logo card with the YouTube/Twitch glyph. The #FF0000  */
+/* fill is intentional platform branding (NOT a palette token). */
+.logo-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  display: block;
+  background: #fff;
+  padding: 9px;
+  fill: #FF0000;
+  box-sizing: border-box;
+}
+
+/* ----- LIVE indicator (top-right pulse + LIVE text) ---------- */
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, .6);
+  border: 1px solid rgba(var(--red-rgb), .32);
+  border-radius: 8px;
+  box-shadow: 0 0 16px rgba(var(--red-rgb), .07), inset 0 0 10px rgba(0, 0, 0, .3);
+  position: relative;
+}
+.live-badge::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--red-rgb), .5), transparent);
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red), 0 0 16px rgba(var(--red-rgb), .5);
+  animation: livePulse 1.2s ease-in-out infinite;
+}
+.live-text { font-size: 12px; font-weight: 900; letter-spacing: 4px; color: var(--red); }

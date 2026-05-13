@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="stylesheet" href="../lib/theme-tokens.css">
+<link rel="stylesheet" href="../lib/scene-base.css">
 <title>Sasi Streams — Just Chatting</title>
 <script src="../lib/config.js"></script>
 <script src="../lib/secrets.js"></script>
@@ -12,21 +13,16 @@
 /* ================================================
    SASI STREAMS — JUST CHATTING  |  1920x1080
    ================================================ */
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  width:1920px; height:1080px; overflow:hidden;
-  background:var(--bg);
-  font-family:'Arial Black', Impact, Arial, sans-serif;
-  color:#fff;
-}
+
+
 
 
 
 .stage { position:absolute; inset:0; z-index:10; animation:fadeIn 1.2s ease forwards; }
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-@keyframes tlIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
-@keyframes trIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+
+
+
 @keyframes topIn{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(var(--red-rgb),.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
 @keyframes frameIn { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:translateY(0); } }
@@ -43,10 +39,10 @@ body {
   width:52px; height:52px; border-radius:10px; display:block;
   mix-blend-mode:screen; filter:brightness(1.1) contrast(1.05);
 }
-.brand-rule { width:2px; height:40px; background:linear-gradient(to bottom,transparent,var(--red),transparent); box-shadow:0 0 7px var(--red); }
-.brand-text { display:flex; flex-direction:column; }
-.brand-l1 { font-size:14px; font-weight:900; letter-spacing:5px; color:#fff; line-height:1; }
-.brand-l2 { font-size:8px;  font-weight:700; letter-spacing:7px; color:rgba(255,255,255,.3); margin-top:3px; }
+
+
+
+
 
 /* ================================================
    LIVE BADGE — top-right
