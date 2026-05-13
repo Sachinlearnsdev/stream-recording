@@ -521,9 +521,9 @@
             <input type="number" data-key="tickerSpeed" min="10" max="60" value="28" data-reload="1">
           </div>
           <div class="common-tile" style="grid-column:1 / -1">
-            <div class="common-tile-label">Refresh OBS browser sources</div>
-            <div class="section-hint" style="margin-bottom:var(--sp-2)">OBS caches browser source pages — after a theme swap or palette change, click this to force every browser_source in your scene collections to reload via obs-websocket. Requires OBS open with WebSocket enabled (auto-configured by the default-bundle import).</div>
-            <button class="btn btn-primary" id="refresh-obs-btn">↻ Refresh OBS sources</button>
+            <div class="common-tile-label">Apply palette to OBS</div>
+            <div class="section-hint" style="margin-bottom:var(--sp-2)">The dashboard preview updates instantly when you move the palette pickers above, but OBS reads theme files from disk and only sees changes after this step. Clicking this button saves your current palette to <code>sasi-overlays/lib/theme-tokens.css</code> AND tells OBS via obs-websocket to reload every browser source — your theme tweaks land in OBS in one round-trip.</div>
+            <button class="btn btn-primary" id="refresh-obs-btn">↻ Save palette + refresh OBS</button>
             <div class="field-hint" id="refresh-obs-status" style="margin-top:6px;min-height:1.2em"></div>
           </div>
         </div>
@@ -1423,8 +1423,35 @@ async function refreshObsSources(opts) {
     statusEl.style.color = kind === 'ok' ? 'var(--accent-online)' : (kind === 'err' ? 'var(--accent-rec)' : 'var(--text-muted)');
   };
   if (btn) { btn.disabled = true; btn.textContent = '↻ Refreshing...'; }
-  setLine('Asking OBS to reload all browser sources...', null);
+  setLine('Saving palette + asking OBS to reload all browser sources...', null);
   try {
+    // Step 1: persist current palette to disk so OBS picks it up.
+    // Dashboard pickers update localStorage (live preview in this tab), but
+    // OBS browser sources read theme-tokens.css directly — without flushing
+    // there, OBS keeps rendering the original theme palette regardless of
+    // how many times we tell it to reload.
+    const palette = {};
+    for (const [storageKey, paletteKey] of [['sasi_cRed','red'],['sasi_cOrange','orange'],['sasi_cGold','gold'],['sasi_cBg','bg'],['sasi_cDim','dim']]) {
+      const v = localStorage.getItem(storageKey);
+      if (v) palette[paletteKey] = v;
+    }
+    if (Object.keys(palette).length > 0) {
+      try {
+        const sp = await fetch(API + '/save-palette', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
+          body: JSON.stringify(palette),
+        });
+        if (!sp.ok) {
+          const ej = await sp.json().catch(() => ({}));
+          // Not fatal — log it but still try the OBS refresh below.
+          console.warn('[refresh-obs] save-palette failed:', ej.error || sp.status);
+        }
+      } catch (err) {
+        console.warn('[refresh-obs] save-palette network error:', err.message);
+      }
+    }
+    // Step 2: tell OBS to reload all browser sources.
     const r = await fetch(API + '/refresh-obs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' } });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
