@@ -14,14 +14,7 @@
    SASI STREAMS — JUST CHATTING  |  1920x1080
    ================================================ */
 
-
-
-
-
 .stage { position:absolute; inset:0; z-index:10; animation:fadeIn 1.2s ease forwards; }
-
-
-
 
 @keyframes topIn{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(var(--red-rgb),.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
@@ -39,10 +32,6 @@
   width:52px; height:52px; border-radius:10px; display:block;
   mix-blend-mode:screen; filter:brightness(1.1) contrast(1.05);
 }
-
-
-
-
 
 /* ================================================
    LIVE BADGE — top-right
@@ -304,12 +293,10 @@
   display:block;
 }
 
-
 .chat-frame {
   left:1380px; top:284px; width:480px; height:694px;
   animation:frameIn .8s cubic-bezier(.22,1,.36,1) .6s forwards;
 }
-
 
 /* ================================================
    STATS FRAME — rolling session stats (like info panel)
@@ -370,7 +357,6 @@
   text-transform:uppercase;
 }
 
-
 /* ================================================
    JACKPOT WHEEL — hidden modal (triggered from games tile)
    ================================================ */
@@ -430,7 +416,6 @@
   text-transform:uppercase;
 }
 .wheel-status.locked { color:rgba(255,255,255,.25); }
-
 
 /* ================================================
    ALERT ZONE — bottom-left, standard 110 size
@@ -501,121 +486,14 @@
   color:rgba(255,255,255,.4);
   margin-top:3px;
 }
-.activity-frame .frame-body {
-  position:relative;
-  overflow:hidden;
-}
-
 /* Each card is absolutely positioned, only one shown at a time */
-.activity-card {
-  position:absolute; inset:0;
-  display:flex; align-items:center; gap:18px;
-  padding:14px 28px;
-  opacity:0; transform:translateX(20px);
-  transition:opacity .4s ease, transform .4s ease;
-  pointer-events:none;
-}
-.activity-card.active { opacity:1; transform:translateX(0); }
-.activity-card.exit   { opacity:0; transform:translateX(-20px); }
-
 /* Left icon */
-.act-icon-wrap {
-  width:62px; height:62px; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center;
-  border-radius:8px;
-  background:rgba(var(--red-rgb),.08);
-  border:1px solid rgba(var(--red-rgb),.2);
-  position:relative;
-}
-.act-icon-wrap.tier-tip,
-.act-icon-wrap.tier-cheer {
-  background:rgba(var(--gold-rgb),.08);
-  border-color:rgba(var(--gold-rgb),.25);
-}
-.act-icon-wrap.tier-sub,
-.act-icon-wrap.tier-member {
-  background:rgba(var(--orange-rgb),.08);
-  border-color:rgba(var(--orange-rgb),.25);
-}
-.act-icon-wrap.tier-raid {
-  background:rgba(var(--red-rgb),.12);
-  border-color:rgba(var(--red-rgb),.35);
-}
-.act-icon { width:30px; height:30px; fill:#fff; opacity:.9; }
-
 /* Center content */
-.act-content {
-  flex:1;
-  display:flex; flex-direction:column; gap:4px;
-  min-width:0;
-}
-.act-label {
-  font-size:9px; font-weight:900; letter-spacing:4px;
-  color:rgba(var(--orange-rgb),.7);
-  text-transform:uppercase;
-}
-.act-name {
-  font-size:22px; font-weight:900; letter-spacing:2px;
-  color:#fff;
-  text-shadow:0 0 12px rgba(var(--red-rgb),.25);
-  line-height:1;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.act-name .amt {
-  color:var(--gold);
-  text-shadow:0 0 12px rgba(var(--gold-rgb),.5);
-  margin-left:8px;
-}
-.act-message {
-  font-size:11px; font-weight:700;
-  color:rgba(255,255,255,.55);
-  font-style:italic;
-  letter-spacing:1px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  margin-top:2px;
-}
-
 /* Right meta — tier badge / time */
-.act-right {
-  display:flex; flex-direction:column; align-items:flex-end; gap:4px;
-  flex-shrink:0;
-}
-.act-tier {
-  font-size:9px; font-weight:900; letter-spacing:3px;
-  color:var(--orange);
-  padding:4px 10px;
-  border:1px solid rgba(var(--orange-rgb),.4);
-  border-radius:4px;
-  background:rgba(var(--orange-rgb),.08);
-}
-.act-time {
-  font-size:8px; font-weight:700; letter-spacing:2px;
-  color:rgba(255,255,255,.3);
-  text-transform:uppercase;
-}
-
 /* Empty state — soft pulse */
-.activity-empty {
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  gap:14px;
-  font-size:10px; font-weight:900; letter-spacing:5px;
-  color:rgba(var(--orange-rgb),.35);
-  text-transform:uppercase;
-  opacity:0;
-  transition:opacity .4s ease;
-}
-.activity-empty.show { opacity:1; }
-.activity-empty .dot {
-  width:6px; height:6px; border-radius:50%;
-  background:var(--orange);
-  box-shadow:0 0 8px var(--orange);
-  animation:livePulse 1.6s ease-in-out infinite;
-}
 </style>
 </head>
 <body>
-
 
 <div class="stage">
 
@@ -981,7 +859,6 @@ document.getElementById('brand-l1').textContent = SASI_CONFIG.brand.name;
   }
 })();
 
-
 // ================================================
 // SESSION STATS — rolling cards from StreamElements
 // ================================================
@@ -1340,7 +1217,6 @@ document.getElementById('brand-l1').textContent = SASI_CONFIG.brand.name;
       });
     }
   }
-
 
   // ── Public APIs ──
   window.SPIN_WHEEL = function(username) { if (username) spinWheel(username); };
