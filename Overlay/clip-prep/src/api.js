@@ -182,9 +182,34 @@ async function refreshObsBrowserSources({ port = 4455, password = '', log = cons
           return;
         }
         if (kind && kind.kind === 'set') {
+          // After URL change, ALSO press the "Refresh cache of current page"
+          // properties button. SetInputSettings updates the settings struct
+          // but doesn't always trigger a page reload in OBS, and even when
+          // it does, CEF can cache subresources. PressInputPropertiesButton
+          // refreshnocache + no-store headers on theme-tokens.css is the
+          // combo that reliably gets the new palette into OBS.
+          if (ok) {
+            const idR = 'press-' + (++nextId);
+            pending.set(idR, { kind: 'press', name: kind.name });
+            send(6, {
+              requestType: 'PressInputPropertiesButton',
+              requestId: idR,
+              requestData: { inputName: kind.name, propertyName: 'refreshnocache' },
+            });
+          } else {
+            completed++;
+            log.warn(`refresh-obs: SetInputSettings ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
+            if (completed >= inputCount) {
+              clearTimeout(timer);
+              finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
+            }
+          }
+          return;
+        }
+        if (kind && kind.kind === 'press') {
           completed++;
           if (ok) REFRESHED.push(kind.name);
-          else log.warn(`refresh-obs: SetInputSettings ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
+          else log.warn(`refresh-obs: PressInputPropertiesButton ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
           if (completed >= inputCount) {
             clearTimeout(timer);
             finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
