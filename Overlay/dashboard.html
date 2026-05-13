@@ -1595,7 +1595,10 @@ async function refreshThemes() {
     const stateBadge = t.active
       ? '<span style="color:var(--accent-online);font-weight:700;font-size:10px;letter-spacing:0.1em">● ACTIVE</span>'
       : (!valid ? '<span style="color:var(--accent-rec);font-weight:700;font-size:10px;letter-spacing:0.1em">⚠ INVALID</span>' : '<span style="color:var(--text-muted);font-size:10px;letter-spacing:0.1em">INACTIVE</span>');
-    const displayName = t.id || (t.active ? 'sasi-default' : t.name);
+    // Prefer theme.json#name (human-readable, e.g. "Sasi Plays") over id
+    // ("sasi-default") so renames in theme.json land in the UI. Fall back
+    // chain handles themes whose manifest lacks a name field.
+    const displayName = t.displayName || t.id || t.name || t.folder;
     const border = selected ? '2px solid var(--accent-online)' : '1px solid var(--bg-divider)';
     const opacity = valid ? '1' : '0.5';
     return `<div class="theme-card${selected ? ' selected' : ''}" data-theme-folder="${escapeAttr(t.folder)}" style="background:var(--bg-card);border:${border};border-radius:var(--r-card);padding:var(--sp-3);cursor:pointer;opacity:${opacity};transition:border-color var(--t-fast)">
@@ -1624,7 +1627,7 @@ async function refreshThemes() {
       if (t.active) {
         setThemeStatus('Previewing ACTIVE theme — this is what OBS reads.', 'ok');
       } else {
-        setThemeStatus(`Previewing inactive "${t.id || t.name}". Below grids are showing this theme's files. Click "Make this theme active" to swap (OBS will switch on browser-source refresh).`, null);
+        setThemeStatus(`Previewing inactive "${t.displayName || t.id || t.name}". Below grids are showing this theme's files. Click "Make this theme active" to swap (OBS will switch on browser-source refresh).`, null);
       }
       // Rebuild grids with the new theme prefix
       if (typeof buildSceneGrid === 'function') buildSceneGrid();
@@ -1672,14 +1675,15 @@ function renderMakeActiveButton(t) {
     <button class="btn btn-destructive" id="theme-card-delete" style="font-size:10px;padding:6px 12px">Delete theme</button>
   `;
   const suffix = t.folder.replace(/^sasi-overlays-?/, '');
+  const themeLabel = t.displayName || t.id || suffix;
   document.getElementById('theme-card-apply').addEventListener('click', async () => {
-    if (!await confirmDialog('Apply theme "' + (t.id || suffix) + '"?\n\nYour current active theme will be archived as sasi-overlays-<id>/ so you can revert.', { okText: 'Apply' })) return;
-    setThemeStatus('Applying ' + (t.id || suffix) + '...', null);
+    if (!await confirmDialog('Apply theme "' + themeLabel + '"?\n\nYour current active theme will be archived as sasi-overlays-<id>/ so you can revert.', { okText: 'Apply' })) return;
+    setThemeStatus('Applying ' + themeLabel + '...', null);
     try {
       const r = await fetch(API + '/apply-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: suffix }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setThemeStatus('Apply failed: ' + (j.error || 'http ' + r.status), 'err'); return; }
-      setThemeStatus('✓ Active theme is now ' + (t.id || suffix) + '. Refresh OBS browser sources.' + (j.archivedAs ? ' Previous → ' + j.archivedAs + '.' : ''), 'ok');
+      setThemeStatus('✓ Active theme is now ' + themeLabel + '. Refresh OBS browser sources.' + (j.archivedAs ? ' Previous → ' + j.archivedAs + '.' : ''), 'ok');
       window.__previewTheme = 'sasi-overlays';
       refreshThemes();
       if (typeof buildSceneGrid === 'function') buildSceneGrid();
@@ -3332,7 +3336,7 @@ function renderChannelForm() {
   // Cached themes from refreshThemes()
   const themes = window.__themesCache || [];
   const opts = themes.length > 0
-    ? themes.map(t => `<option value="${escapeAttr(t.folder)}"${t.folder === current ? ' selected' : ''}>${escapeAttr(t.id || t.name)}${t.active ? ' · ACTIVE' : ''}</option>`)
+    ? themes.map(t => `<option value="${escapeAttr(t.folder)}"${t.folder === current ? ' selected' : ''}>${escapeAttr(t.displayName || t.id || t.name)}${t.active ? ' · ACTIVE' : ''}</option>`)
     : [`<option value="${escapeAttr(current)}" selected>${escapeAttr(current)}</option>`];
   themeSel.innerHTML = opts.join('');
 
