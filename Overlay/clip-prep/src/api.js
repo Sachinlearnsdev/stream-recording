@@ -457,9 +457,14 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       safe[k] = String(v);
     }
     if (Object.keys(safe).length === 0) return '';
-    // Safe JSON embed: escape `</` so a value containing "</script>" can't
-    // break out of the tag.
-    const json = JSON.stringify(safe).replace(/<\//g, '<\\/');
+    // Safe JSON embed for inline <script>: replace every `<` with the
+    // unicode escape `<`. Just escaping `</` is insufficient — a
+    // value containing `--></script><script>alert(1)` survives that
+    // narrow replace (only the closer is neutralized; the new opener
+    // still hatches a new script tag). Escaping all `<` neutralizes any
+    // tag boundary the HTML parser could latch onto. Canonical fix per
+    // OWASP cheat-sheet for embedding JSON into <script> bodies.
+    const json = JSON.stringify(safe).replace(/</g, '\\u003c');
     // Sync localStorage. Then ALSO directly apply via live-update once it's
     // loaded — wait for window.applyLiveUpdaters then call it. This handles
     // the case where the scene's bottom script ran applyLiveUpdaters BEFORE
@@ -490,29 +495,45 @@ try{
 </script>`;
   }
 
-  let _cachedPalette = null;
-  async function readActivePalette() {
-    if (_cachedPalette) return _cachedPalette;
-    const tokensPath = path.join(installDir || '', 'sasi-overlays', 'lib', 'theme-tokens.css');
-    const fallback = { red: '#FF2200', orange: '#FF7700', gold: '#FFD700', bg: '#050005', dim: 'rgba(255, 255, 255, 0.45)' };
-    if (!existsSync(tokensPath)) { _cachedPalette = fallback; return fallback; }
+  // Per-theme-folder palette cache. Previously a single global slot which
+  // meant: (a) reading a non-active theme's HTML still injected the active
+  // theme's palette (B5 in the review), and (b) caching the fallback on a
+  // transient read failure poisoned the cache until process restart. Now
+  // keyed by theme folder name; misses + errors do NOT cache, so transient
+  // I/O failures don't strand the wrong palette.
+  const _paletteCache = new Map();
+  const FALLBACK_PALETTE = { red: '#FF2200', orange: '#FF7700', gold: '#FFD700', bg: '#050005', dim: 'rgba(255, 255, 255, 0.45)' };
+  async function readPalette(themeFolder) {
+    const folder = themeFolder || 'sasi-overlays';
+    if (_paletteCache.has(folder)) return _paletteCache.get(folder);
+    const tokensPath = path.join(installDir || '', folder, 'lib', 'theme-tokens.css');
+    if (!existsSync(tokensPath)) return { ...FALLBACK_PALETTE };
     try {
       const text = await fs.readFile(tokensPath, 'utf8');
-      const p = { ...fallback };
+      const p = { ...FALLBACK_PALETTE };
       for (const name of ['red', 'orange', 'gold', 'bg']) {
         const m = new RegExp('--' + name + '\\s*:\\s*(#[0-9a-fA-F]{6})').exec(text);
         if (m) p[name] = m[1];
       }
       const dm = /--dim\s*:\s*([^;]+);/.exec(text);
       if (dm) p.dim = dm[1].trim();
-      _cachedPalette = p;
+      _paletteCache.set(folder, p);
       return p;
     } catch {
-      _cachedPalette = fallback;
-      return fallback;
+      return { ...FALLBACK_PALETTE };
     }
   }
-  function invalidatePaletteCache() { _cachedPalette = null; }
+  // Pass a specific folder to invalidate just that one (after /save-palette
+  // for the active theme); pass nothing to invalidate ALL cached palettes
+  // (called by applyThemeByName + switch-channel since folder renames mean
+  // every cached entry might now refer to the wrong palette).
+  function invalidatePaletteCache(themeFolder) {
+    if (themeFolder) _paletteCache.delete(themeFolder);
+    else _paletteCache.clear();
+  }
+  // Keep the old name as an alias for callers that always want the active
+  // theme's palette (e.g. /refresh-obs reporting back what it pushed).
+  const readActivePalette = () => readPalette('sasi-overlays');
 
   function buildPaletteStyleTag(p) {
     const hexToRgb = (h) => {
@@ -543,14 +564,30 @@ try{
 
   if (installDir && existsSync(installDir)) {
     const themeHtmlRe = /^\/sasi-overlays(?:-[^/]+)?\/(scenes|components)\/[^/]+\.html$/i;
+    const themeFolderRe = /^\/(sasi-overlays(?:-[^/]+)?)\//;
+    const resolvedInstallDir = path.resolve(installDir);
     app.get(themeHtmlRe, async (req, res, next) => {
       const decoded = decodeURIComponent(req.path);
       if (decoded.includes('..')) return res.status(400).end('bad path');
       const fullPath = path.join(installDir, decoded.replace(/^\//, ''));
+      // Defense in depth: assert the resolved path stays inside installDir.
+      // The regex already prevents `..` segments via [^/]+, but on Windows
+      // an oddly-encoded drive letter or UNC fragment could otherwise let
+      // path.join silently escape. startsWith on the resolved version is
+      // the canonical containment check.
+      if (!path.resolve(fullPath).startsWith(resolvedInstallDir + path.sep)) {
+        return res.status(400).end('bad path');
+      }
       if (!existsSync(fullPath)) return next();
       try {
         const html = await fs.readFile(fullPath, 'utf8');
-        const palette = await readActivePalette();
+        // B5: read the palette from THE THEME FOLDER OF THE REQUESTED URL,
+        // not always the active one. Previously archived/sample theme HTML
+        // got the active theme's palette injected on every fetch, which
+        // broke the planned multi-theme preview flow.
+        const themeFolderMatch = themeFolderRe.exec(decoded);
+        const themeFolder = themeFolderMatch ? themeFolderMatch[1] : 'sasi-overlays';
+        const palette = await readPalette(themeFolder);
         const styleTag = buildPaletteStyleTag(palette);
         // Content script must come BEFORE <link>s and <script>s in <head>
         // (especially live-update.js) so localStorage is populated by the
@@ -1603,6 +1640,12 @@ try{
       }
       throw renameErr;
     }
+    // Folder renames mean every cached palette entry might now refer to a
+    // theme that's at a DIFFERENT path. Clear the whole cache; next inject
+    // re-reads from disk. Previously this was missed, so OBS got stale
+    // palette injected into the new theme's HTML for the lifetime of the
+    // watcher process.
+    invalidatePaletteCache();
     return { active: name, archivedAs: archived ? path.basename(archived) : null };
   }
 
@@ -1685,7 +1728,8 @@ try{
       // Invalidate the in-memory palette cache so the next theme-HTML
       // request reads the updated file. Without this, /refresh-obs would
       // tell OBS to reload but the watcher would inject the OLD palette.
-      invalidatePaletteCache();
+      // Only the active theme's palette changed — invalidate that one entry.
+      invalidatePaletteCache('sasi-overlays');
       log.info(`save-palette: wrote ${activeTokensPath} (${Object.keys(palette).join(', ')})`);
       res.json({ ok: true, path: toWebPath(activeTokensPath), tokens: palette });
     } catch (err) {
@@ -1721,6 +1765,21 @@ try{
   // dashboard rehydration on cold reload (next session).
   app.get('/content-state', (_req, res) => {
     res.json({ state: _contentState });
+  });
+
+  // GET /get-state — combined server state for dashboard cold-load hydration.
+  // Returns the active palette (parsed from theme-tokens.css) + content map
+  // in one fetch so the dashboard can seed localStorage before initializing
+  // its pickers. Without this, opening the dashboard in a fresh browser
+  // (or after a localStorage clear) shows HTML default colors regardless of
+  // what's actually saved on the server.
+  app.get('/get-state', async (_req, res) => {
+    try {
+      const palette = await readPalette('sasi-overlays');
+      res.json({ palette, content: _contentState });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // POST /refresh-obs

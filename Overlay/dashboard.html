@@ -362,7 +362,6 @@
     font-weight: 600;
     cursor: pointer;
     user-select: none;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, .45);
     transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), transform var(--t-fast);
   }
   #sasi-push-fab:hover { transform: translateY(-1px); }
@@ -381,7 +380,7 @@
     padding: 0 6px;
     background: #000;
     color: var(--accent-online);
-    border-radius: 9px;
+    border-radius: 8px;
     font-size: 11px;
     line-height: 18px;
     text-align: center;
@@ -587,8 +586,8 @@
               Shortcuts: <kbd>Ctrl + S</kbd> = Save · <kbd>Ctrl + Shift + S</kbd> = Push.
             </div>
             <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap">
-              <button class="btn" id="save-btn">💾 Save</button>
-              <button class="btn btn-primary" id="refresh-obs-btn">↻ Push to OBS</button>
+              <button class="btn" id="save-btn">Save</button>
+              <button class="btn btn-primary" id="refresh-obs-btn">Push to OBS</button>
             </div>
             <div class="field-hint" id="refresh-obs-status" style="margin-top:6px;min-height:1.2em"></div>
           </div>
@@ -1492,17 +1491,19 @@ async function saveDashboardState() {
     if (v) palette[paletteKey] = v;
   }
   if (Object.keys(palette).length > 0) {
-    try {
-      const sp = await fetch(API + '/save-palette', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
-        body: JSON.stringify(palette),
-      });
-      if (!sp.ok) {
-        const ej = await sp.json().catch(() => ({}));
-        console.warn('[save] save-palette failed:', ej.error || sp.status);
-      }
-    } catch (err) { console.warn('[save] save-palette network error:', err.message); }
+    // B3 fix: a failed save-palette used to be console.warn'd and swallowed,
+    // letting save-content succeed and the user see a green "Saved" toast
+    // even though the palette didn't land on the server. Now throw so the
+    // outer saveChanges/refreshObsSources sees the failure atomically.
+    const sp = await fetch(API + '/save-palette', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
+      body: JSON.stringify(palette),
+    });
+    if (!sp.ok) {
+      const ej = await sp.json().catch(() => ({}));
+      throw new Error('save-palette: ' + (ej.error || 'http ' + sp.status));
+    }
   }
   // Content: bulk-flush every sasi_* localStorage key in one request.
   const entries = {};
@@ -1546,11 +1547,17 @@ async function saveChanges(opts) {
     const r = await saveDashboardState();
     setLine('✓ Saved. ' + r.paletteKeys + ' palette + ' + r.contentKeys + ' text keys persisted. OBS still showing previous state — click Push to update.', 'ok');
     if (!opts.silent) toast('Saved to watcher · click Push to update OBS', 'ok', 3000);
+    // B4 fix: Save now updates the sync snapshot too so the FAB shows
+    // "in sync" after a successful Save. Previously snapshot was only
+    // captured on Push, so Save left the FAB green forever — confusing
+    // because the watcher DOES have the latest state.
+    saveSyncSnapshot();
+    updateFab();
   } catch (e) {
     setLine('Save failed: ' + e.message, 'err');
     if (!opts.silent) toast('Save failed: ' + e.message, 'err', 5000);
   } finally {
-    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save'; }
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
     if (fab) fab.removeAttribute('disabled');
   }
 }
@@ -1674,8 +1681,69 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// First render after page loads (snapshot may be empty -> everything dirty).
-window.addEventListener('DOMContentLoaded', updateFab);
+// B2 fix: hydrate localStorage from the watcher's saved state on cold load.
+// Previously the dashboard ONLY read localStorage, so a fresh browser tab
+// (or one with cleared storage) showed HTML default colors regardless of
+// what was actually saved server-side. Now we GET /get-state, fill any
+// missing sasi_* keys with the server's values, re-sync the input DOM
+// values, then snapshot the result (server is the source of truth on
+// cold load so the dashboard starts "in sync", not falsely dirty).
+async function hydrateFromServer() {
+  let touched = 0;
+  try {
+    const r = await fetch(API + '/get-state');
+    if (!r.ok) return;
+    const j = await r.json();
+    const hexRe = /^#[0-9a-fA-F]{6}$/;
+    if (j.palette) {
+      const map = { red: 'sasi_cRed', orange: 'sasi_cOrange', gold: 'sasi_cGold', bg: 'sasi_cBg', dim: 'sasi_cDim' };
+      for (const [pKey, lsKey] of Object.entries(map)) {
+        const v = j.palette[pKey];
+        // Only seed hex values into the picker keys — `dim` may be rgba in
+        // the default file and the picker can only render 6-digit hex.
+        // Don't overwrite a value the user has in-progress in this tab.
+        if (v && hexRe.test(v) && !localStorage.getItem(lsKey)) {
+          localStorage.setItem(lsKey, v);
+          touched++;
+        }
+      }
+    }
+    if (j.content && typeof j.content === 'object') {
+      for (const [k, v] of Object.entries(j.content)) {
+        if (typeof v !== 'string' || !v) continue;
+        if (!/^sasi_[a-zA-Z0-9_]+$/.test(k)) continue;
+        if (!localStorage.getItem(k)) {
+          localStorage.setItem(k, v);
+          touched++;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[hydrate]', err.message);
+  }
+  if (touched > 0) {
+    // Re-sync any inputs that read localStorage in their init loop.
+    document.querySelectorAll('[data-key]').forEach(input => {
+      const key = input.dataset.key;
+      const stored = localStorage.getItem('sasi_' + key);
+      if (stored === null) return;
+      if (input.type === 'checkbox') input.checked = stored === 'true';
+      else if (input.type === 'color') {
+        if (/^#[0-9a-fA-F]{6}$/.test(stored)) input.value = stored;
+      } else {
+        input.value = stored;
+      }
+    });
+    console.log('[hydrate] seeded ' + touched + ' value(s) from /get-state');
+  }
+  // Snapshot the just-hydrated state — the dashboard starts in sync with
+  // the server on cold load (any local edits the user starts making after
+  // this point will properly mark the FAB dirty).
+  saveSyncSnapshot();
+  updateFab();
+}
+
+window.addEventListener('DOMContentLoaded', () => { hydrateFromServer(); });
 // Wire the manual button (idempotent — safe even if HTML re-rendered)
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'refresh-obs-btn') refreshObsSources();
