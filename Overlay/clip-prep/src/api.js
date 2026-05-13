@@ -4,6 +4,7 @@ import { exec, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import { splitMixFile } from '../split-mix.js';
 
 const execAsync = promisify(exec);
@@ -15,6 +16,152 @@ const execAsync = promisify(exec);
 // matters for shell-style consumers (cmd /c, robocopy, registry strings).
 const toOsPath  = (p) => (p == null ? '' : String(p).replace(/\//g, path.sep));
 const toWebPath = (p) => (p == null ? '' : String(p).replace(/\\/g, '/'));
+
+// Minimal obs-websocket v5 client used by POST /refresh-obs.
+//
+// Auth handshake (from the obs-websocket protocol docs):
+//   1. Server sends Hello (op=0) with { authentication: { challenge, salt } }
+//   2. Client computes:
+//        secret       = base64(SHA256(password + salt))
+//        authResponse = base64(SHA256(secret + challenge))
+//   3. Client sends Identify (op=1) with { authentication: authResponse }
+//   4. Server sends Identified (op=2) on success
+// Then we issue:
+//   GetInputList { inputKind: "browser_source" } -> get every browser source
+//   PressInputPropertiesButton { inputName, propertyName: "refreshnocache" }
+//     for each — this is what the OBS GUI's "Refresh cache of current page"
+//     right-click menu actually triggers.
+//
+// Relies on Node 21+ native global WebSocket. Throws with a useful `.hint`
+// on the common failure modes (port closed, auth wrong) so the dashboard
+// can surface concrete next steps.
+async function refreshObsBrowserSources({ port = 4455, password = '', log = console } = {}) {
+  if (typeof WebSocket !== 'function') {
+    const e = new Error('Node global WebSocket not available (need Node 21+).');
+    e.hint = 'Upgrade Node — current process lacks native WebSocket.';
+    throw e;
+  }
+  return await new Promise((resolve, reject) => {
+    const url = `ws://127.0.0.1:${port}`;
+    let ws;
+    try { ws = new WebSocket(url); }
+    catch (err) { const e = new Error(`Failed to open ${url}: ${err.message}`); e.code = err.code; reject(e); return; }
+
+    const REFRESHED = [];
+    const pending = new Map();        // requestId -> kind
+    let inputCount = 0;
+    let completed = 0;
+    let finalized = false;
+    const finalize = (errOrResult) => {
+      if (finalized) return; finalized = true;
+      try { ws.close(); } catch {}
+      if (errOrResult instanceof Error) reject(errOrResult);
+      else resolve(errOrResult);
+    };
+    const timer = setTimeout(() => {
+      const e = new Error('OBS WebSocket did not complete within 5s.');
+      e.hint = 'OBS might be unresponsive — try closing and reopening OBS.';
+      finalize(e);
+    }, 5000);
+
+    let nextId = 0;
+    const send = (op, d) => ws.send(JSON.stringify({ op, d }));
+
+    ws.onerror = () => {
+      // ws lib doesn't expose much error detail in the 'error' event payload.
+      // ECONNREFUSED surfaces here when port 4455 is closed (OBS off or
+      // WebSocket disabled). Caller handler will populate a hint.
+      const e = new Error('OBS WebSocket connection failed.');
+      e.code = 'ECONNREFUSED';
+      e.hint = 'OBS not running, or WebSocket Server is disabled. Open OBS, Tools -> WebSocket Server Settings, enable it, then try again.';
+      clearTimeout(timer);
+      finalize(e);
+    };
+
+    ws.onmessage = (event) => {
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+      // op=0 Hello — may include an authentication challenge
+      if (msg.op === 0) {
+        let authResponse;
+        if (msg.d.authentication && msg.d.authentication.challenge) {
+          if (!password) {
+            const e = new Error('OBS WebSocket requires a password but none configured.');
+            e.hint = 'Set config.obsWebSocketPassword to match OBS Tools -> WebSocket Server Settings -> Server Password.';
+            clearTimeout(timer); finalize(e); return;
+          }
+          const { challenge, salt } = msg.d.authentication;
+          const secret = crypto.createHash('sha256').update(password + salt).digest('base64');
+          authResponse = crypto.createHash('sha256').update(secret + challenge).digest('base64');
+        }
+        send(1, { rpcVersion: 1, eventSubscriptions: 0, ...(authResponse ? { authentication: authResponse } : {}) });
+        return;
+      }
+      // op=2 Identified — auth ok, ready to issue requests
+      if (msg.op === 2) {
+        const id = 'list-' + (++nextId);
+        pending.set(id, 'list');
+        send(6, { requestType: 'GetInputList', requestId: id, requestData: { inputKind: 'browser_source' } });
+        return;
+      }
+      // op=7 RequestResponse
+      if (msg.op === 7) {
+        const d = msg.d || {};
+        const kind = pending.get(d.requestId);
+        pending.delete(d.requestId);
+        const ok = d.requestStatus && d.requestStatus.result;
+        if (kind === 'list') {
+          if (!ok) {
+            const e = new Error('GetInputList failed: ' + (d.requestStatus?.comment || 'unknown'));
+            clearTimeout(timer); finalize(e); return;
+          }
+          const inputs = (d.responseData && d.responseData.inputs) || [];
+          inputCount = inputs.length;
+          if (inputCount === 0) {
+            clearTimeout(timer);
+            finalize({ refreshed: 0, names: [], message: 'No browser_source inputs in OBS.' });
+            return;
+          }
+          for (const inp of inputs) {
+            const id2 = 'refresh-' + (++nextId);
+            pending.set(id2, { kind: 'refresh', name: inp.inputName });
+            send(6, {
+              requestType: 'PressInputPropertiesButton',
+              requestId: id2,
+              requestData: { inputName: inp.inputName, propertyName: 'refreshnocache' },
+            });
+          }
+          return;
+        }
+        if (kind && kind.kind === 'refresh') {
+          completed++;
+          if (ok) REFRESHED.push(kind.name);
+          else log.warn(`refresh-obs: ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
+          if (completed >= inputCount) {
+            clearTimeout(timer);
+            finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
+          }
+        }
+        return;
+      }
+      // op=5 Event — ignore (we subscribed to 0)
+    };
+
+    ws.onclose = (ev) => {
+      if (!finalized) {
+        clearTimeout(timer);
+        // 4009 = auth failed in obs-websocket v5
+        const e = new Error('OBS WebSocket closed before completing (code ' + ev.code + ').');
+        if (ev.code === 4009) {
+          e.hint = 'Auth failed. The watcher\'s config.obsWebSocketPassword must match OBS\'s server password. Re-sync them (see config.json + plugin_config/obs-websocket/config.json).';
+        } else if (ev.code === 4008) {
+          e.hint = 'OBS WebSocket protocol version mismatch — update OBS / the watcher.';
+        }
+        finalize(e);
+      }
+    };
+  });
+}
 
 // Serializer for theme / stinger / channel-switch mutations. These all
 // involve atomic-rename operations on disk and can leave the system in a
@@ -1204,6 +1351,35 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       if (err.missing) body.missing = err.missing;
       if (err.hint) body.hint = err.hint;
       res.status(status).json(body);
+    }
+  });
+
+  // POST /refresh-obs
+  // Refreshes every browser_source input in OBS via obs-websocket v5 so the
+  // user sees the active theme without right-clicking each source.
+  //
+  // Why this is needed: theme swaps rename folders in the install dir, the
+  // watcher serves new HTML at the same URL, but OBS caches browser source
+  // pages aggressively in its embedded CEF. Without an explicit refresh
+  // signal, OBS keeps showing the previous theme's render until the user
+  // either restarts OBS or right-clicks every browser source.
+  //
+  // Requires obs-websocket enabled in OBS (Tools -> WebSocket Server Settings,
+  // or via the plugin_config/obs-websocket/config.json bundled with our
+  // default-bundle). Auth uses the password persisted in config.json's
+  // obsWebSocketPassword (set when the bundle was imported or by hand).
+  app.post('/refresh-obs', async (_req, res) => {
+    const port = Number(config.obsWebSocketPort) || 4455;
+    const password = config.obsWebSocketPassword || '';
+    try {
+      const out = await refreshObsBrowserSources({ port, password, log });
+      res.json({ ok: true, ...out });
+    } catch (err) {
+      log.error(`refresh-obs failed: ${err.message}`);
+      const hint = err.hint || (err.code === 'ECONNREFUSED'
+        ? 'OBS not running, or WebSocket not enabled. Open OBS -> Tools -> WebSocket Server Settings and enable it, then try again.'
+        : null);
+      res.status(502).json({ error: err.message, hint });
     }
   });
 

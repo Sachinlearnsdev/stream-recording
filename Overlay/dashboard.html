@@ -520,6 +520,12 @@
             <div class="common-tile-label">Ticker speed (sec) <span class="reload-tag">reload to apply</span></div>
             <input type="number" data-key="tickerSpeed" min="10" max="60" value="28" data-reload="1">
           </div>
+          <div class="common-tile" style="grid-column:1 / -1">
+            <div class="common-tile-label">Refresh OBS browser sources</div>
+            <div class="section-hint" style="margin-bottom:var(--sp-2)">OBS caches browser source pages — after a theme swap or palette change, click this to force every browser_source in your scene collections to reload via obs-websocket. Requires OBS open with WebSocket enabled (auto-configured by the default-bundle import).</div>
+            <button class="btn btn-primary" id="refresh-obs-btn">↻ Refresh OBS sources</button>
+            <div class="field-hint" id="refresh-obs-status" style="margin-top:6px;min-height:1.2em"></div>
+          </div>
         </div>
       </div>
 
@@ -1403,6 +1409,49 @@ const SCENE_FIELDS = {
 
 // Broadcast a localStorage change to all overlay iframes (they don't get
 // storage events from the same window — we manually dispatch).
+// POST /refresh-obs and surface the result. Used by the "Refresh OBS sources"
+// button + auto-fired after /apply-theme so a swap is visible in OBS without
+// the user right-clicking each browser source. opts.silent=true suppresses
+// success toast (still shows errors) — used for the post-swap auto-refresh.
+async function refreshObsSources(opts) {
+  opts = opts || {};
+  const statusEl = document.getElementById('refresh-obs-status');
+  const btn = document.getElementById('refresh-obs-btn');
+  const setLine = (msg, kind) => {
+    if (!statusEl) return;
+    statusEl.textContent = msg || '';
+    statusEl.style.color = kind === 'ok' ? 'var(--accent-online)' : (kind === 'err' ? 'var(--accent-rec)' : 'var(--text-muted)');
+  };
+  if (btn) { btn.disabled = true; btn.textContent = '↻ Refreshing...'; }
+  setLine('Asking OBS to reload all browser sources...', null);
+  try {
+    const r = await fetch(API + '/refresh-obs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' } });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const hint = j.hint ? '\n\n' + j.hint : '';
+      setLine('Failed: ' + (j.error || 'http ' + r.status) + (j.hint ? ' — ' + j.hint : ''), 'err');
+      if (!opts.silent) toast('Refresh failed: ' + (j.error || 'unknown') + hint, 'err', 6000);
+      return;
+    }
+    const n = j.refreshed || 0;
+    const total = j.attempted || n;
+    const msg = n === 0
+      ? (j.message || 'No browser sources in OBS to refresh.')
+      : 'Refreshed ' + n + (total !== n ? '/' + total : '') + ' browser source' + (n === 1 ? '' : 's') + '.';
+    setLine('✓ ' + msg, 'ok');
+    if (!opts.silent) toast(msg, 'ok', 3500);
+  } catch (e) {
+    setLine('Failed: ' + e.message, 'err');
+    if (!opts.silent) toast('Refresh failed: ' + e.message, 'err', 5000);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh OBS sources'; }
+  }
+}
+// Wire the manual button (idempotent — safe even if HTML re-rendered)
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'refresh-obs-btn') refreshObsSources();
+});
+
 function broadcastChange(key, value) {
   // Persist for new iframes / page reloads.
   localStorage.setItem('sasi_' + key, value);
@@ -1688,11 +1737,16 @@ function renderMakeActiveButton(t) {
       const r = await fetch(API + '/apply-theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: suffix }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setThemeStatus('Apply failed: ' + (j.error || 'http ' + r.status), 'err'); return; }
-      setThemeStatus('✓ Active theme is now ' + themeLabel + '. Refresh OBS browser sources.' + (j.archivedAs ? ' Previous → ' + j.archivedAs + '.' : ''), 'ok');
+      setThemeStatus('✓ Active theme is now ' + themeLabel + '. Refreshing OBS...' + (j.archivedAs ? ' Previous → ' + j.archivedAs + '.' : ''), 'ok');
       window.__previewTheme = 'sasi-overlays';
       refreshThemes();
       if (typeof buildSceneGrid === 'function') buildSceneGrid();
       refreshStingers();
+      // Auto-refresh OBS browser sources after a theme swap so the user sees
+      // the new theme without right-clicking each source. Best-effort — if OBS
+      // isn't open or WebSocket isn't reachable, log and let the user click
+      // the manual "Refresh OBS" button when ready.
+      refreshObsSources({ silent: true });
     } catch (e) { setThemeStatus('Apply failed: ' + e.message, 'err'); }
   });
   document.getElementById('theme-card-delete').addEventListener('click', async () => {
