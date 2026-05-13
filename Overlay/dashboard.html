@@ -1290,7 +1290,12 @@ async function buildTileGrid(kind) {
     // Without this, browsers serve the previously-rendered (e.g. blue)
     // copy from disk cache even though the active theme folder has changed.
     const previewSrc = folder + '/' + s.name + '?v=' + Date.now();
-    const obsUrl = s.fileUrl || ('file:///' + location.pathname.replace(/\/[^/]*$/, '') + '/' + folder + '/' + s.name);
+    // OBS browser-source URL: use the watcher's HTTP origin (NOT file://).
+    // Why: file:// loads bypass the watcher's palette injection + cache
+    // headers, so dashboard palette edits + /refresh-obs can't reach OBS
+    // when scenes are loaded via file://. The watcher serves the exact
+    // same files under http://127.0.0.1:6789/ — the only correct URL.
+    const obsUrl = location.origin + '/' + folder + '/' + s.name;
     return `<div class="scene-card${isActive ? ' active' : ''}" data-scene="${id}" data-kind="${kind}" data-folder="${folder}" data-file="${escapeAttr(s.name)}">
       <div class="scene-thumb"><iframe data-src="${escapeAttr(previewSrc)}"></iframe></div>
       <div class="scene-label">

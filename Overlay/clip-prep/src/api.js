@@ -35,7 +35,7 @@ const toWebPath = (p) => (p == null ? '' : String(p).replace(/\\/g, '/'));
 // Relies on Node 21+ native global WebSocket. Throws with a useful `.hint`
 // on the common failure modes (port closed, auth wrong) so the dashboard
 // can surface concrete next steps.
-async function refreshObsBrowserSources({ port = 4455, password = '', log = console } = {}) {
+async function refreshObsBrowserSources({ port = 4455, password = '', log = console, palette = {} } = {}) {
   if (typeof WebSocket !== 'function') {
     const e = new Error('Node global WebSocket not available (need Node 21+).');
     e.hint = 'Upgrade Node — current process lacks native WebSocket.';
@@ -164,12 +164,14 @@ async function refreshObsBrowserSources({ port = 4455, password = '', log = cons
             }
             return;
           }
-          // Compute the final target URL with a fresh cache-bust query.
-          // Strip any prior obsBust before re-adding so the query string
-          // doesn't grow unbounded.
-          const stripped = currentUrl.replace(/([?&])obsBust=[^&]*(&|$)/, (_m, pre, post) => post === '&' ? pre : '').replace(/[?&]$/, '');
-          const sep = stripped.includes('?') ? '&' : '?';
-          const targetUrl = stripped + sep + 'obsBust=' + Date.now();
+          // Compute the final target URL: append a fresh cache-bust AND
+          // bake the current palette into query params (p_red, p_orange,
+          // ...). live-update.js reads those params on page load and sets
+          // the matching --red / --orange / ... vars on <html> inline,
+          // which overrides whatever theme-tokens.css resolves to in CEF's
+          // (possibly stale) cache. Every dashboard palette change = new
+          // URL = new render = palette guaranteed to land in OBS.
+          const targetUrl = applyPaletteToUrl(currentUrl, palette);
           // Two-step reload: blank the URL first, then set the real one.
           // Just changing the URL via SetInputSettings doesn't reliably
           // make OBS re-navigate the CEF page (and PressInputPropertiesButton
@@ -1521,6 +1523,46 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     }
   });
 
+  // Read the active theme's current palette from theme-tokens.css.
+  // Used by /refresh-obs to bake the palette into each browser_source URL
+  // so OBS picks up the new colors regardless of CEF's CSS cache.
+  async function readActivePalette() {
+    const tokensPath = path.join(installDir || '', 'sasi-overlays', 'lib', 'theme-tokens.css');
+    if (!existsSync(tokensPath)) return {};
+    try {
+      const text = await fs.readFile(tokensPath, 'utf8');
+      const palette = {};
+      for (const name of ['red', 'orange', 'gold', 'bg', 'dim']) {
+        const m = new RegExp('--' + name + '\\s*:\\s*(#[0-9a-fA-F]{6})').exec(text);
+        if (m) palette[name] = m[1];
+      }
+      return palette;
+    } catch {
+      return {};
+    }
+  }
+
+  // Append palette to a browser_source URL as query params (p_red, p_orange,
+  // …). live-update.js in each scene reads these on load and applies them
+  // as inline CSS vars on <html>, overriding theme-tokens.css. This is how
+  // dashboard palette edits actually land in OBS — CEF's caching makes
+  // CSS-file-based propagation unreliable, but inline-set CSS vars win.
+  function applyPaletteToUrl(url, palette) {
+    if (!url || !palette) return url;
+    // Strip any prior obsBust / p_* params before re-adding so the query
+    // string doesn't grow unbounded on repeated refreshes.
+    let stripped = url
+      .replace(/([?&])obsBust=[^&]*(&|$)/, (_m, pre, post) => post === '&' ? pre : '')
+      .replace(/([?&])p_[a-z]+=[^&]*(&|$)/g, (_m, pre, post) => post === '&' ? pre : '')
+      .replace(/[?&]$/, '');
+    const queryParts = ['obsBust=' + Date.now()];
+    for (const name of ['red', 'orange', 'gold', 'bg', 'dim']) {
+      if (palette[name]) queryParts.push('p_' + name + '=' + palette[name].replace(/^#/, ''));
+    }
+    const sep = stripped.includes('?') ? '&' : '?';
+    return stripped + sep + queryParts.join('&');
+  }
+
   // POST /refresh-obs
   // Refreshes every browser_source input in OBS via obs-websocket v5 so the
   // user sees the active theme without right-clicking each source.
@@ -1539,8 +1581,9 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
     const port = Number(config.obsWebSocketPort) || 4455;
     const password = config.obsWebSocketPassword || '';
     try {
-      const out = await refreshObsBrowserSources({ port, password, log });
-      res.json({ ok: true, ...out });
+      const palette = await readActivePalette();
+      const out = await refreshObsBrowserSources({ port, password, log, palette });
+      res.json({ ok: true, palette, ...out });
     } catch (err) {
       log.error(`refresh-obs failed: ${err.message}`);
       const hint = err.hint || (err.code === 'ECONNREFUSED'

@@ -103,5 +103,31 @@
   // page reflects the dashboard's last palette without waiting for an event.
   window.applyLiveUpdaters();
 
+  // Apply palette from URL query params (?p_red=ffea00&p_orange=58e97c&…).
+  // This is how the watcher's /refresh-obs propagates dashboard palette
+  // changes into OBS browser sources WITHOUT relying on CEF to re-fetch
+  // theme-tokens.css after a navigation. CEF's disk cache for linked CSS
+  // outlives most "refresh" gestures, but inline CSS variables set via
+  // setProperty() trump anything from a cached stylesheet. So /refresh-obs
+  // bakes the current palette into the URL itself; each scene reads the
+  // params here on load and overrides --red / --orange / --gold / --bg /
+  // --dim (+ their *-rgb companions) directly on <html>. Result: dashboard
+  // edit -> /save-palette to disk -> /refresh-obs SetInputSettings with new
+  // URL carrying the same palette -> OBS reloads -> palette lands every time.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromParam = { p_red: '--red', p_orange: '--orange', p_gold: '--gold', p_bg: '--bg', p_dim: '--dim' };
+    const hexRe = /^[0-9a-fA-F]{6}$/;
+    for (const param of Object.keys(tokenFromParam)) {
+      const raw = params.get(param);
+      if (!raw) continue;
+      const cleaned = raw.replace(/^#/, '').trim();
+      if (!hexRe.test(cleaned)) continue;
+      window.liveUpdate.cssVar(tokenFromParam[param])('#' + cleaned);
+    }
+  } catch (err) {
+    console.warn('[live-update] URL palette params failed:', err);
+  }
+
   console.log('[live-update] framework loaded');
 })();
