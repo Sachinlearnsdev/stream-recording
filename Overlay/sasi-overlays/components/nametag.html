@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <title>Sasi Streams — Name Tag</title>
 <script src="../config.js"></script>
 <style>
@@ -14,8 +15,8 @@ body {
 .tag {
   display:inline-flex; align-items:center;
   padding:8px 22px;
-  background:#050005;
-  border:1px solid rgba(255,34,0,.3);
+  background:var(--bg);
+  border:1px solid rgba(var(--red-rgb),.3);
   border-radius:6px;
   position:relative;
   overflow:hidden;

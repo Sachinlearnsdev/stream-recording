@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <script src="../lib/config.js"></script>
 <script src="../lib/secrets.js"></script>
 <script src="../lib/alerts.js"></script>
@@ -13,17 +14,11 @@
    Mirrored from starting-soon.html:
    chat/alert panel LEFT  |  text block RIGHT
    ================================================ */
-:root {
-  --red:    #FF2200;
-  --orange: #FF7700;
-  --gold:   #FFD700;
-  --bg:     #050005;
-  --dim:    rgba(255,255,255,0.45);
-}
+
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   width:1920px; height:1080px; overflow:hidden;
-  background:#050005;
+  background:var(--bg);
   font-family:'Arial Black', Impact, Arial, sans-serif;
   color:#fff;
 }
@@ -67,32 +62,32 @@ body {
 .live-badge {
   display:flex; align-items:center; gap:8px; padding:8px 14px;
   background:rgba(0,0,0,.6);
-  border:1px solid rgba(255,34,0,.32);
+  border:1px solid rgba(var(--red-rgb),.32);
   border-radius:8px;
-  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  box-shadow:0 0 16px rgba(var(--red-rgb),.07), inset 0 0 10px rgba(0,0,0,.3);
   position:relative;
 }
 .live-badge::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,34,0,.5),transparent);
+  background:linear-gradient(90deg,transparent,rgba(var(--red-rgb),.5),transparent);
 }
 /* BRB badge — orange + static (no pulse) so it reads as "away", visually distinct from the red pulsing LIVE badge used everywhere else */
 .live-dot {
   width:8px; height:8px; border-radius:50%; background:var(--orange);
-  box-shadow:0 0 8px var(--orange), 0 0 16px rgba(255,119,0,.5);
+  box-shadow:0 0 8px var(--orange), 0 0 16px rgba(var(--orange-rgb),.5);
 }
 .live-text { font-size:12px; font-weight:900; letter-spacing:4px; color:var(--orange); }
 /* Pause icon glyph — small white bars next to the dot to reinforce "paused" */
 .live-badge::after {
   content:''; position:absolute; right:12px; top:50%; transform:translateY(-50%);
   width:6px; height:10px;
-  border-left:2px solid rgba(255,119,0,.7);
-  border-right:2px solid rgba(255,119,0,.7);
+  border-left:2px solid rgba(var(--orange-rgb),.7);
+  border-right:2px solid rgba(var(--orange-rgb),.7);
   opacity:.9;
 }
 .live-badge { padding-right:32px; }
 /* chat-dot still pulses red (chat is live), so keep the livePulse keyframe */
-@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(var(--red-rgb),.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
 
 /* ================================================
    CLOCK — date only, top-center
@@ -123,12 +118,12 @@ body {
 
 .chat-frame {
   flex:1;
-  border:1px solid rgba(255,34,0,.28);
+  border:1px solid rgba(var(--red-rgb),.28);
   border-radius:10px;
   background:rgba(0,0,0,.18);
   display:flex; flex-direction:column;
   overflow:hidden; position:relative;
-  box-shadow:0 0 20px rgba(255,34,0,.06), inset 0 0 30px rgba(0,0,0,.3);
+  box-shadow:0 0 20px rgba(var(--red-rgb),.06), inset 0 0 30px rgba(0,0,0,.3);
 }
 .chat-frame::before, .chat-frame::after {
   content:''; position:absolute;
@@ -140,7 +135,7 @@ body {
 .chat-header {
   display:flex; align-items:center; gap:10px;
   padding:10px 14px 9px;
-  border-bottom:1px solid rgba(255,34,0,.15);
+  border-bottom:1px solid rgba(var(--red-rgb),.15);
   background:rgba(0,0,0,.35);
   flex-shrink:0;
 }
@@ -153,7 +148,7 @@ body {
   font-size:9px; font-weight:900; letter-spacing:5px;
   color:rgba(255,255,255,.5); text-transform:uppercase;
 }
-.chat-icon { width:14px; height:14px; fill:rgba(255,34,0,.6); margin-left:auto; }
+.chat-icon { width:14px; height:14px; fill:rgba(var(--red-rgb),.6); margin-left:auto; }
 .chat-body  { flex:1; background:transparent; overflow:hidden; min-height:0; }
 
 /* ================================================
@@ -182,7 +177,7 @@ body {
 .alert-frame.sasi-has-alert .alert-sub { display:none; }
 .alert-label {
   font-size:8px; font-weight:900; letter-spacing:5px;
-  color:rgba(255,119,0,.35); text-transform:uppercase;
+  color:rgba(var(--orange-rgb),.35); text-transform:uppercase;
 }
 .alert-sub {
   font-size:7px; font-weight:700; letter-spacing:3px;
@@ -226,7 +221,7 @@ body {
   font-size:22px; font-weight:700; font-style:italic;
   letter-spacing:3px; text-align:right;
   color:var(--orange);
-  text-shadow:0 0 18px rgba(255,119,0,.45);
+  text-shadow:0 0 18px rgba(var(--orange-rgb),.45);
   margin-top:8px;
   opacity:0; transform:translateY(-10px);
   transition:opacity .6s ease, transform .6s ease;
@@ -255,13 +250,13 @@ body {
 .dot-pulse {
   width:14px; height:14px; border-radius:50%;
   background:var(--red);
-  box-shadow:0 0 12px var(--red), 0 0 28px rgba(255,34,0,.4);
+  box-shadow:0 0 12px var(--red), 0 0 28px rgba(var(--red-rgb),.4);
 }
 .dot-pulse:nth-child(1){ animation:dotPulse 1.8s ease-in-out .0s infinite; }
 .dot-pulse:nth-child(2){ animation:dotPulse 1.8s ease-in-out .3s infinite; }
 .dot-pulse:nth-child(3){ animation:dotPulse 1.8s ease-in-out .6s infinite; }
 @keyframes dotPulse{
-  0%,100%{ transform:scale(1);   opacity:1;   box-shadow:0 0 12px var(--red),0 0 28px rgba(255,34,0,.4); }
+  0%,100%{ transform:scale(1);   opacity:1;   box-shadow:0 0 12px var(--red),0 0 28px rgba(var(--red-rgb),.4); }
   50%    { transform:scale(.5);  opacity:.25; box-shadow:0 0 4px var(--red); }
 }
 
@@ -272,7 +267,7 @@ body {
   position:absolute; bottom:0; left:0; right:0;
   height:58px;
   background:rgba(0,0,0,.8);
-  border-top:1px solid rgba(255,34,0,.22);
+  border-top:1px solid rgba(var(--red-rgb),.22);
   display:flex; flex-direction:column; align-items:stretch;
   opacity:0; animation:fadeIn .6s ease 1.8s forwards;
   z-index:15;
@@ -300,7 +295,7 @@ body {
 .ticker-item .t-handle { color:rgba(255,255,255,.8); }
 .ticker-dot {
   width:4px; height:4px; border-radius:50%;
-  background:rgba(255,34,0,.5); flex-shrink:0;
+  background:rgba(var(--red-rgb),.5); flex-shrink:0;
 }
 </style>
 </head>

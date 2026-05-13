@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <script src="../lib/config.js"></script>
 <script src="../lib/secrets.js"></script>
 <script src="../lib/alerts.js"></script>
@@ -13,16 +14,11 @@
    Layout: brand top-left | offline badge top-right
            text centered | alert bottom-right | ticker bottom
    ================================================ */
-:root {
-  --red:    #FF2200;
-  --orange: #FF7700;
-  --gold:   #FFD700;
-  --bg:     #050005;
-}
+
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   width:1920px; height:1080px; overflow:hidden;
-  background:#050005;
+  background:var(--bg);
   font-family:'Arial Black', Impact, Arial, sans-serif;
   color:#fff;
 }
@@ -64,14 +60,14 @@ body {
 .offline-badge {
   display:flex; align-items:center; gap:9px; padding:8px 14px;
   background:rgba(0,0,0,.6);
-  border:1px solid rgba(255,34,0,.32);
+  border:1px solid rgba(var(--red-rgb),.32);
   border-radius:8px;
-  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  box-shadow:0 0 16px rgba(var(--red-rgb),.07), inset 0 0 10px rgba(0,0,0,.3);
   position:relative;
 }
 .offline-badge::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,34,0,.5),transparent);
+  background:linear-gradient(90deg,transparent,rgba(var(--red-rgb),.5),transparent);
 }
 .offline-icon {
   width:18px; height:18px; flex-shrink:0;
@@ -148,14 +144,14 @@ body {
 .t-seeyou {
   font-size:52px; font-weight:700; letter-spacing:20px;
   color:var(--red); margin-top:4px;
-  text-shadow:0 0 18px rgba(255,34,0,.5);
+  text-shadow:0 0 18px rgba(var(--red-rgb),.5);
   opacity:0; animation:slideUp .7s ease .7s forwards;
   cursor:default; display:inline-block;
   transition:letter-spacing .4s ease, text-shadow .4s ease, color .3s;
 }
 .t-seeyou:hover {
   letter-spacing:28px; color:#fff;
-  text-shadow:0 0 30px rgba(255,34,0,.9), 0 0 60px rgba(255,119,0,.4);
+  text-shadow:0 0 30px rgba(var(--red-rgb),.9), 0 0 60px rgba(var(--orange-rgb),.4);
 }
 
 .bar {
@@ -189,7 +185,7 @@ body {
 .alert-frame.sasi-has-alert .alert-sub { display:none; }
 .alert-label {
   font-size:8px; font-weight:900; letter-spacing:5px;
-  color:rgba(255,119,0,.35); text-transform:uppercase;
+  color:rgba(var(--orange-rgb),.35); text-transform:uppercase;
 }
 .alert-sub {
   font-size:7px; font-weight:700; letter-spacing:3px;
@@ -203,7 +199,7 @@ body {
   position:absolute; bottom:0; left:0; right:0;
   height:58px;
   background:rgba(0,0,0,.8);
-  border-top:1px solid rgba(255,34,0,.22);
+  border-top:1px solid rgba(var(--red-rgb),.22);
   display:flex; flex-direction:column; align-items:stretch;
   opacity:0; animation:fadeIn .6s ease 1.8s forwards;
   z-index:15;
@@ -231,7 +227,7 @@ body {
 .ticker-item .t-handle { color:rgba(255,255,255,.8); }
 .ticker-dot {
   width:4px; height:4px; border-radius:50%;
-  background:rgba(255,34,0,.5); flex-shrink:0;
+  background:rgba(var(--red-rgb),.5); flex-shrink:0;
 }
 </style>
 </head>

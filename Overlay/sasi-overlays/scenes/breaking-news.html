@@ -2,15 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <title>Sasi Streams — Breaking News</title>
 <script src="../lib/config.js"></script>
 <script src="../lib/secrets.js"></script>
 <script src="../lib/alerts.js"></script>
+<script src="../lib/live-update.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   width:1920px; height:1080px; overflow:hidden;
-  background:#050005;
+  background:var(--bg);
   font-family:'Arial Black', Impact, Arial, sans-serif;
   color:#fff;
 }
@@ -18,7 +20,7 @@ body {
 @keyframes fadeIn      { from{opacity:0} to{opacity:1} }
 @keyframes slideUp     { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 @keyframes slideDown   { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
-@keyframes pulseRed    { 0%,100%{box-shadow:0 0 12px var(--red),0 0 24px rgba(255,34,0,.4)} 50%{box-shadow:0 0 4px var(--red)} }
+@keyframes pulseRed    { 0%,100%{box-shadow:0 0 12px var(--red),0 0 24px rgba(var(--red-rgb),.4)} 50%{box-shadow:0 0 4px var(--red)} }
 @keyframes tickerScroll{ from{transform:translateX(100%)} to{transform:translateX(-100%)} }
 
 /* ─────────── BREAKING BANNER (top) ─────────── */
@@ -26,8 +28,8 @@ body {
   position:absolute; top:0; left:0; right:0;
   height:78px;
   background:rgba(0,0,0,.8);
-  border-bottom:1px solid rgba(255,34,0,.28);
-  box-shadow:0 4px 24px rgba(255,34,0,.1);
+  border-bottom:1px solid rgba(var(--red-rgb),.28);
+  box-shadow:0 4px 24px rgba(var(--red-rgb),.1);
   display:flex; align-items:center;
   z-index:20;
   opacity:0; animation:slideDown .8s ease forwards;
@@ -35,7 +37,7 @@ body {
 /* Brand gradient top line */
 .breaking-bar::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+  background:linear-gradient(90deg, transparent, rgba(var(--red-rgb),.5), transparent);
 }
 /* Brand gradient bottom line */
 .breaking-bar::after {
@@ -50,15 +52,15 @@ body {
   margin-left:30px;
   padding:12px 20px;
   background:rgba(0,0,0,.6);
-  border:1px solid rgba(255,34,0,.32);
+  border:1px solid rgba(var(--red-rgb),.32);
   border-radius:8px;
-  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  box-shadow:0 0 16px rgba(var(--red-rgb),.07), inset 0 0 10px rgba(0,0,0,.3);
   position:relative;
 }
 /* Brand gradient top line on the badge itself */
 .breaking-badge::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+  background:linear-gradient(90deg, transparent, rgba(var(--red-rgb),.5), transparent);
 }
 /* Red top-right corner L-tick to match other brand frames */
 .breaking-badge::after {
@@ -69,13 +71,13 @@ body {
 .breaking-dot {
   width:10px; height:10px; border-radius:50%;
   background:var(--red);
-  box-shadow:0 0 8px var(--red), 0 0 16px rgba(255,34,0,.5);
+  box-shadow:0 0 8px var(--red), 0 0 16px rgba(var(--red-rgb),.5);
   animation:pulseRed 1.2s ease-in-out infinite;
 }
 .breaking-text {
   font-size:22px; font-weight:900; letter-spacing:5px;
   color:var(--red);
-  text-shadow:0 0 14px rgba(255,34,0,.35);
+  text-shadow:0 0 14px rgba(var(--red-rgb),.35);
 }
 
 .breaking-headline {
@@ -94,20 +96,20 @@ body {
   display:flex; align-items:center; gap:8px;
   padding:8px 14px;
   background:rgba(0,0,0,.6);
-  border:1px solid rgba(255,34,0,.32);
+  border:1px solid rgba(var(--red-rgb),.32);
   border-radius:8px;
-  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  box-shadow:0 0 16px rgba(var(--red-rgb),.07), inset 0 0 10px rgba(0,0,0,.3);
   z-index:25;
   opacity:0; animation:fadeIn .8s ease .5s forwards;
 }
 .live-badge::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+  background:linear-gradient(90deg, transparent, rgba(var(--red-rgb),.5), transparent);
 }
 .live-dot {
   width:8px; height:8px; border-radius:50%;
   background:var(--red);
-  box-shadow:0 0 8px var(--red), 0 0 16px rgba(255,34,0,.5);
+  box-shadow:0 0 8px var(--red), 0 0 16px rgba(var(--red-rgb),.5);
   animation:pulseRed 1.2s ease-in-out infinite;
 }
 .live-text {
@@ -121,9 +123,9 @@ body {
   left:60px; top:120px;
   width:1290px; height:780px;
   background:rgba(0,0,0,.3);
-  border:1px solid rgba(255,34,0,.3);
+  border:1px solid rgba(var(--red-rgb),.3);
   border-radius:8px;
-  box-shadow:0 0 30px rgba(255,34,0,.15), inset 0 0 40px rgba(0,0,0,.5);
+  box-shadow:0 0 30px rgba(var(--red-rgb),.15), inset 0 0 40px rgba(0,0,0,.5);
   opacity:0; animation:slideUp .8s ease .3s forwards;
 }
 .cam-frame::before {
@@ -170,8 +172,8 @@ body {
 }
 
 .side-block {
-  background:rgba(8,0,2,.85);
-  border:1px solid rgba(255,34,0,.3);
+  background:rgba(var(--bg-rgb),.85);
+  border:1px solid rgba(var(--red-rgb),.3);
   border-radius:8px;
   padding:18px 22px;
   position:relative;
@@ -188,7 +190,7 @@ body {
 .side-block-value {
   font-size:22px; font-weight:900; letter-spacing:1px;
   color:#fff;
-  text-shadow:0 0 12px rgba(255,34,0,.4);
+  text-shadow:0 0 12px rgba(var(--red-rgb),.4);
   line-height:1.2;
 }
 .side-block-sub {
@@ -210,7 +212,7 @@ body {
 }
 .headline-item {
   padding:10px 12px;
-  background:rgba(255,34,0,.05);
+  background:rgba(var(--red-rgb),.05);
   border-left:3px solid var(--red);
   border-radius:4px;
 }
@@ -230,8 +232,8 @@ body {
   position:absolute; bottom:0; left:0; right:0;
   height:54px;
   background:rgba(0,0,0,.8);
-  border-top:1px solid rgba(255,34,0,.22);
-  box-shadow:0 -4px 20px rgba(255,34,0,.1);
+  border-top:1px solid rgba(var(--red-rgb),.22);
+  box-shadow:0 -4px 20px rgba(var(--red-rgb),.1);
   display:flex; align-items:center;
   z-index:20;
   opacity:0; animation:slideUp .8s ease .5s forwards;
@@ -247,14 +249,14 @@ body {
   margin-left:24px;
   padding:8px 14px;
   background:rgba(0,0,0,.6);
-  border:1px solid rgba(255,34,0,.32);
+  border:1px solid rgba(var(--red-rgb),.32);
   border-radius:8px;
-  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  box-shadow:0 0 16px rgba(var(--red-rgb),.07), inset 0 0 10px rgba(0,0,0,.3);
   position:relative;
 }
 .ticker-label::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(255,34,0,.5), transparent);
+  background:linear-gradient(90deg, transparent, rgba(var(--red-rgb),.5), transparent);
 }
 .ticker-label-text {
   font-size:11px; font-weight:900; letter-spacing:4px;
@@ -302,7 +304,7 @@ body {
 .alert-panel .alert-frame.sasi-has-alert .alert-sub { display:none; }
 .alert-label {
   font-size:8px; font-weight:900; letter-spacing:5px;
-  color:rgba(255,119,0,.35); text-transform:uppercase;
+  color:rgba(var(--orange-rgb),.35); text-transform:uppercase;
 }
 .alert-sub {
   font-size:7px; font-weight:700; letter-spacing:3px;

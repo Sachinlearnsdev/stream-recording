@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <title>Sasi Streams — Subscribe Strip</title>
 <script src="../config.js"></script>
 <style>
-:root { --red:#FF2200; --orange:#FF7700; --gold:#FFD700; }
+
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   width:1920px; height:1080px; overflow:hidden;
@@ -19,7 +20,7 @@ body {
   bottom:110px; left:0; right:0;
   height:64px;
   background:
-    linear-gradient(180deg, rgba(8,0,2,.82) 0%, rgba(4,0,1,.92) 50%, rgba(8,0,2,.82) 100%);
+    linear-gradient(180deg, rgba(var(--bg-rgb),.82) 0%, rgba(var(--bg-rgb),.92) 50%, rgba(var(--bg-rgb),.82) 100%);
   display:flex; align-items:center;
   overflow:hidden;
   opacity:0; animation:stripIn .6s ease forwards;
@@ -28,16 +29,16 @@ body {
 
 .strip::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(255,34,0,.55) 12%, rgba(255,34,0,.55) 88%, transparent);
+  background:linear-gradient(90deg, transparent, rgba(var(--red-rgb),.55) 12%, rgba(var(--red-rgb),.55) 88%, transparent);
 }
 .strip::after {
   content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(255,34,0,.35) 12%, rgba(255,34,0,.35) 88%, transparent);
+  background:linear-gradient(90deg, transparent, rgba(var(--red-rgb),.35) 12%, rgba(var(--red-rgb),.35) 88%, transparent);
 }
 
 .strip-mask {
   position:absolute; inset:0;
-  background:linear-gradient(90deg, rgba(5,0,5,1) 0%, transparent 5%, transparent 95%, rgba(5,0,5,1) 100%);
+  background:linear-gradient(90deg, rgba(var(--bg-rgb),1) 0%, transparent 5%, transparent 95%, rgba(var(--bg-rgb),1) 100%);
   pointer-events:none; z-index:5;
 }
 
@@ -72,7 +73,7 @@ body {
   font-style:italic;
   letter-spacing:.5px;
   color:var(--red);
-  text-shadow:0 0 12px rgba(255,34,0,.4);
+  text-shadow:0 0 12px rgba(var(--red-rgb),.4);
   white-space:nowrap;
 }
 </style>

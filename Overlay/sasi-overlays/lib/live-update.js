@@ -62,7 +62,18 @@
       document.querySelectorAll(selector).forEach(el => { el.textContent = value || ''; });
     },
     cssVar: (varName) => (value) => {
-      if (value) document.documentElement.style.setProperty(varName, value);
+      if (!value) return;
+      document.documentElement.style.setProperty(varName, value);
+      // If the value is a 6-digit hex, also emit the `<varName>-rgb` companion
+      // as a comma-separated RGB tuple. Theme files use rgba(var(--red-rgb), .55)
+      // for semi-transparent palette usage — keeping both vars in sync from a
+      // single dashboard picker means changing red updates every red-tinted
+      // glow / border / gradient automatically.
+      const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(value);
+      if (m) {
+        const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+        document.documentElement.style.setProperty(varName + '-rgb', r + ', ' + g + ', ' + b);
+      }
     },
     show: (selector) => (value) => {
       const visible = (value === 'true' || value === true);
@@ -72,6 +83,25 @@
       document.querySelectorAll(selector).forEach(el => { el.setAttribute(attrName, value || ''); });
     },
   };
+
+  // Auto-register the standard palette tokens so every scene/component that
+  // includes live-update.js gets palette swap for free — no per-file
+  // registerLiveUpdater boilerplate. Adding a new palette token below + a
+  // matching picker in the dashboard's Common section is the only work
+  // needed to expose it to the user.
+  const PALETTE_TOKENS = {
+    cRed:    '--red',
+    cOrange: '--orange',
+    cGold:   '--gold',
+    cBg:     '--bg',
+    cDim:    '--dim',
+  };
+  for (const key of Object.keys(PALETTE_TOKENS)) {
+    window.registerLiveUpdater(key, window.liveUpdate.cssVar(PALETTE_TOKENS[key]));
+  }
+  // Apply any saved values from localStorage immediately so a freshly-loaded
+  // page reflects the dashboard's last palette without waiting for an event.
+  window.applyLiveUpdaters();
 
   console.log('[live-update] framework loaded');
 })();

@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <title>Sasi Streams — Background</title>
 <script src="../lib/config.js"></script>
+<script src="../lib/live-update.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   width:1920px; height:1080px; overflow:hidden;
-  background:var(--bg, #050005);
+  background:var(--bg);
 }
 canvas { position:absolute; inset:0; }
 #c-bg  { z-index:0; }

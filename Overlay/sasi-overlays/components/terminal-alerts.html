@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <title>Sasi Streams — Terminal Alerts</title>
 <!--
   TERMINAL ALERTS — standalone OBS browser source
@@ -23,12 +24,7 @@
 <style>
 /* ───────── Brand-scoped tokens come from config.js but mirror defaults here
             so the file still renders if opened standalone ───────── */
-:root {
-  --red:#FF2200; --orange:#FF7700; --gold:#FFD700;
-  --term-green:#00ff9c;
-  --term-cyan:#5cf;
-  --term-muted:rgba(255,255,255,.45);
-}
+
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   width:1920px; height:1080px; overflow:hidden;
@@ -43,11 +39,11 @@ body {
   top:64px; left:64px;
   width:540px;
   background:rgba(0,0,0,.84);
-  border:1px solid rgba(255,34,0,.38);
+  border:1px solid rgba(var(--red-rgb),.38);
   border-radius:8px;
   box-shadow:
     0 18px 50px rgba(0,0,0,.55),
-    0 0 60px rgba(255,34,0,.1),
+    0 0 60px rgba(var(--red-rgb),.1),
     inset 0 0 30px rgba(0,0,0,.55);
   overflow:hidden;
   opacity:0; transform:translateY(8px);
@@ -166,13 +162,13 @@ body {
   padding:13px 14px 13px 16px;
   gap:16px;
   opacity:1;
-  background:linear-gradient(90deg, rgba(255,34,0,.22), rgba(255,34,0,0) 70%);
+  background:linear-gradient(90deg, rgba(var(--red-rgb),.22), rgba(var(--red-rgb),0) 70%);
   margin-top:6px;
 }
 .log-row.featured::before {
   content:''; position:absolute; left:0; top:7px; bottom:7px; width:3px;
   background:var(--red);
-  box-shadow:0 0 9px var(--red), 0 0 18px rgba(255,34,0,.55);
+  box-shadow:0 0 9px var(--red), 0 0 18px rgba(var(--red-rgb),.55);
   border-radius:2px;
 }
 .log-row.featured .ts   { width:84px; font-size:15px; }
@@ -195,11 +191,11 @@ body {
   border:1px solid currentColor;
   transition:font-size .45s ease, padding .45s ease, min-width .45s ease;
 }
-.chip.follow { color:var(--orange);    background:rgba(255,119,0,.1);  box-shadow:0 0 6px rgba(255,119,0,.25); }
-.chip.sub    { color:var(--gold);      background:rgba(255,215,0,.1);  box-shadow:0 0 6px rgba(255,215,0,.25); }
+.chip.follow { color:var(--orange);    background:rgba(var(--orange-rgb),.1);  box-shadow:0 0 6px rgba(var(--orange-rgb),.25); }
+.chip.sub    { color:var(--gold);      background:rgba(var(--gold-rgb),.1);  box-shadow:0 0 6px rgba(var(--gold-rgb),.25); }
 .chip.cheer  { color:var(--term-cyan); background:rgba(85,204,255,.1); box-shadow:0 0 6px rgba(85,204,255,.25); }
 .chip.tip    { color:var(--term-green);background:rgba(0,255,156,.1);  box-shadow:0 0 6px rgba(0,255,156,.25); }
-.chip.raid   { color:var(--red);       background:rgba(255,34,0,.12);  box-shadow:0 0 6px rgba(255,34,0,.25); }
+.chip.raid   { color:var(--red);       background:rgba(var(--red-rgb),.12);  box-shadow:0 0 6px rgba(var(--red-rgb),.25); }
 
 /* ───── Prompt line ───── */
 .prompt-line {

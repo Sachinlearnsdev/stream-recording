@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <script src="../lib/config.js"></script>
 <script src="../lib/secrets.js"></script>
 <script src="../lib/alerts.js"></script>
@@ -12,17 +13,11 @@
    SASI STREAMS — STARTING SOON  |  1920x1080
    Edit CONFIG in <script> to customise
    ================================================ */
-:root {
-  --red:    #FF2200;
-  --orange: #FF7700;
-  --gold:   #FFD700;
-  --bg:     #050005;
-  --dim:    rgba(255,255,255,0.45);
-}
+
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   width:1920px; height:1080px; overflow:hidden;
-  background:#050005;
+  background:var(--bg);
   font-family:'Arial Black', Impact, Arial, sans-serif;
   color:#fff;
 }
@@ -65,7 +60,7 @@ body {
 }
 .follow-label {
   font-size:8px; font-weight:900; letter-spacing:5px;
-  color:rgba(255,119,0,.6); margin-bottom:10px;
+  color:rgba(var(--orange-rgb),.6); margin-bottom:10px;
   text-transform:uppercase;
 }
 .follow-socials { display:flex; flex-direction:column; gap:8px; }
@@ -73,13 +68,13 @@ body {
   display:flex; align-items:center; gap:10px;
   padding:9px 14px;
   background:rgba(0,0,0,.55);
-  border:1px solid rgba(255,34,0,.2);
+  border:1px solid rgba(var(--red-rgb),.2);
   border-left:2px solid var(--red);
   border-radius:0 6px 6px 0;
-  box-shadow:0 0 12px rgba(255,34,0,.05);
+  box-shadow:0 0 12px rgba(var(--red-rgb),.05);
   transition:border-color .2s, box-shadow .2s;
 }
-.follow-item:hover { border-color:rgba(255,34,0,.6); box-shadow:0 0 18px rgba(255,34,0,.12); }
+.follow-item:hover { border-color:rgba(var(--red-rgb),.6); box-shadow:0 0 18px rgba(var(--red-rgb),.12); }
 .follow-icon { width:16px; height:16px; fill:var(--red); opacity:.85; flex-shrink:0; }
 .follow-platform { font-size:7px; font-weight:900; letter-spacing:3px; color:rgba(255,255,255,.3); width:60px; }
 .follow-handle   { font-size:13px; font-weight:900; letter-spacing:1px; color:#fff; }
@@ -95,21 +90,21 @@ body {
 .live-badge {
   display:flex; align-items:center; gap:8px; padding:8px 14px;
   background:rgba(0,0,0,.6);
-  border:1px solid rgba(255,34,0,.32);
+  border:1px solid rgba(var(--red-rgb),.32);
   border-radius:8px;
-  box-shadow:0 0 16px rgba(255,34,0,.07), inset 0 0 10px rgba(0,0,0,.3);
+  box-shadow:0 0 16px rgba(var(--red-rgb),.07), inset 0 0 10px rgba(0,0,0,.3);
   position:relative;
 }
 .live-badge::before {
   content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,34,0,.5),transparent);
+  background:linear-gradient(90deg,transparent,rgba(var(--red-rgb),.5),transparent);
 }
 .live-dot {
   width:8px; height:8px; border-radius:50%; background:var(--red);
-  box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5);
+  box-shadow:0 0 8px var(--red),0 0 16px rgba(var(--red-rgb),.5);
   animation:livePulse 1.2s ease-in-out infinite;
 }
-@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(255,34,0,.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--red),0 0 16px rgba(var(--red-rgb),.5)}50%{opacity:.35;box-shadow:0 0 3px var(--red)}}
 .live-text { font-size:12px; font-weight:900; letter-spacing:4px; color:var(--red); }
 
 /* ================================================
@@ -124,7 +119,7 @@ body {
 .t-stream {
   font-size:70px; font-weight:900; font-style:italic;
   letter-spacing:10px; text-transform:uppercase; color:var(--red);
-  text-shadow:0 0 1px rgba(255,34,0,.9), 0 0 3px rgba(255,34,0,.4);
+  text-shadow:0 0 1px rgba(var(--red-rgb),.9), 0 0 3px rgba(var(--red-rgb),.4);
   opacity:0;
   animation:streamIn .7s ease .3s forwards;
   line-height:1;
@@ -133,7 +128,7 @@ body {
 @keyframes streamIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
 @keyframes streamGlitch {
   /* Normal most of the time */
-  0%,38%,100% { opacity:1; transform:skewX(-4deg) translate(0,0); text-shadow:0 0 12px rgba(255,34,0,.6),0 0 24px rgba(255,34,0,.2); clip-path:none; filter:none; }
+  0%,38%,100% { opacity:1; transform:skewX(-4deg) translate(0,0); text-shadow:0 0 12px rgba(var(--red-rgb),.6),0 0 24px rgba(var(--red-rgb),.2); clip-path:none; filter:none; }
   /* Fast flicker burst */
   39%   { opacity:0; }
   39.3% { opacity:1; }
@@ -171,10 +166,10 @@ body {
 @keyframes bigIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
 @keyframes startGlow {
   0%,100% {
-    text-shadow:0 0 30px rgba(255,34,0,.4), 0 0 60px rgba(255,34,0,.15), 0 0 100px rgba(255,34,0,.05);
+    text-shadow:0 0 30px rgba(var(--red-rgb),.4), 0 0 60px rgba(var(--red-rgb),.15), 0 0 100px rgba(var(--red-rgb),.05);
   }
   50% {
-    text-shadow:0 0 60px rgba(255,34,0,.9), 0 0 120px rgba(255,34,0,.5), 0 0 200px rgba(255,34,0,.2);
+    text-shadow:0 0 60px rgba(var(--red-rgb),.9), 0 0 120px rgba(var(--red-rgb),.5), 0 0 200px rgba(var(--red-rgb),.2);
   }
 }
 
@@ -195,7 +190,7 @@ body {
 .t-soon:hover {
   letter-spacing:36px;
   color:#fff;
-  text-shadow:0 0 30px rgba(255,119,0,.9), 0 0 60px rgba(255,34,0,.4);
+  text-shadow:0 0 30px rgba(var(--orange-rgb),.9), 0 0 60px rgba(var(--red-rgb),.4);
 }
 
 /* Gold bar */
@@ -218,13 +213,13 @@ body {
   font-size:58px; font-weight:900; letter-spacing:8px;
   color:#fff;
   font-variant-numeric:tabular-nums;
-  text-shadow:0 0 20px rgba(255,34,0,.5), 0 0 40px rgba(255,34,0,.15);
+  text-shadow:0 0 20px rgba(var(--red-rgb),.5), 0 0 40px rgba(var(--red-rgb),.15);
 }
 .countdown-time span { color:var(--red); animation:colonBlink 1s step-end infinite; }
 @keyframes colonBlink{0%,100%{opacity:1}50%{opacity:.15}}
 .countdown-label {
   font-size:8px; font-weight:700; letter-spacing:5px;
-  color:rgba(255,119,0,.45); text-transform:uppercase;
+  color:rgba(var(--orange-rgb),.45); text-transform:uppercase;
 }
 /* Flash when done */
 .countdown-time.done {
@@ -232,8 +227,8 @@ body {
   color:var(--red);
 }
 @keyframes countdownDone {
-  0%,100% { text-shadow:0 0 20px rgba(255,34,0,.5); }
-  50%     { text-shadow:0 0 50px rgba(255,34,0,1), 0 0 90px rgba(255,34,0,.5); }
+  0%,100% { text-shadow:0 0 20px rgba(var(--red-rgb),.5); }
+  50%     { text-shadow:0 0 50px rgba(var(--red-rgb),1), 0 0 90px rgba(var(--red-rgb),.5); }
 }
 
 /* ================================================
@@ -252,16 +247,16 @@ body {
 .ring-mid {
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
   width:232px; height:232px; border-radius:50%;
-  border:1.5px solid rgba(255,34,0,.3);
-  box-shadow:0 0 18px rgba(255,34,0,.15), inset 0 0 18px rgba(255,34,0,.06);
+  border:1.5px solid rgba(var(--red-rgb),.3);
+  box-shadow:0 0 18px rgba(var(--red-rgb),.15), inset 0 0 18px rgba(var(--red-rgb),.06);
   animation:ringGlow 2.8s ease-in-out infinite;
 }
-@keyframes ringGlow{0%,100%{box-shadow:0 0 18px rgba(255,34,0,.15),inset 0 0 18px rgba(255,34,0,.06)}50%{box-shadow:0 0 36px rgba(255,34,0,.4),inset 0 0 28px rgba(255,34,0,.14)}}
+@keyframes ringGlow{0%,100%{box-shadow:0 0 18px rgba(var(--red-rgb),.15),inset 0 0 18px rgba(var(--red-rgb),.06)}50%{box-shadow:0 0 36px rgba(var(--red-rgb),.4),inset 0 0 28px rgba(var(--red-rgb),.14)}}
 .ring-clip {
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
   width:196px; height:196px; border-radius:50%;
   overflow:hidden; background:#080000;
-  border:1px solid rgba(255,34,0,.18);
+  border:1px solid rgba(var(--red-rgb),.18);
 }
 .ring-logo-img {
   width:100%; height:100%; object-fit:cover;
@@ -279,7 +274,7 @@ body {
 
 .ns-label {
   font-size:9px; font-weight:900; letter-spacing:6px;
-  color:rgba(255,119,0,.5); text-transform:uppercase;
+  color:rgba(var(--orange-rgb),.5); text-transform:uppercase;
 }
 .ns-value {
   font-size:22px; font-weight:900; letter-spacing:4px;
@@ -315,7 +310,7 @@ body {
 .clock-time {
   font-size:38px; font-weight:900; letter-spacing:6px;
   color:#fff;
-  text-shadow:0 0 18px rgba(255,34,0,.6), 0 0 36px rgba(255,34,0,.2);
+  text-shadow:0 0 18px rgba(var(--red-rgb),.6), 0 0 36px rgba(var(--red-rgb),.2);
 }
 .clock-time span { color:var(--red); animation:colonBlink 1s step-end infinite; }
 @keyframes colonBlink{0%,100%{opacity:1}50%{opacity:.15}}
@@ -333,7 +328,7 @@ body {
   position:absolute; bottom:0; left:0; right:0;
   height:58px;
   background:rgba(0,0,0,.8);
-  border-top:1px solid rgba(255,34,0,.22);
+  border-top:1px solid rgba(var(--red-rgb),.22);
   display:flex; flex-direction:column; align-items:stretch;
   opacity:0; animation:fadeIn .6s ease 1.8s forwards;
   z-index:15;
@@ -365,7 +360,7 @@ body {
 .ticker-item .t-handle { color:rgba(255,255,255,.8); }
 .ticker-dot {
   width:4px; height:4px; border-radius:50%;
-  background:rgba(255,34,0,.5);
+  background:rgba(var(--red-rgb),.5);
   flex-shrink:0;
 }
 
@@ -385,13 +380,13 @@ body {
 /* Chat frame — full height */
 .chat-frame {
   flex:1;
-  border:1px solid rgba(255,34,0,.28);
+  border:1px solid rgba(var(--red-rgb),.28);
   border-radius:10px;
   background:rgba(0,0,0,.18);
   display:flex; flex-direction:column;
   overflow:hidden;
   position:relative;
-  box-shadow:0 0 20px rgba(255,34,0,.06), inset 0 0 30px rgba(0,0,0,.3);
+  box-shadow:0 0 20px rgba(var(--red-rgb),.06), inset 0 0 30px rgba(0,0,0,.3);
 }
 .chat-frame::before, .chat-frame::after {
   content:''; position:absolute;
@@ -403,7 +398,7 @@ body {
 .chat-header {
   display:flex; align-items:center; gap:10px;
   padding:10px 14px 9px;
-  border-bottom:1px solid rgba(255,34,0,.15);
+  border-bottom:1px solid rgba(var(--red-rgb),.15);
   background:rgba(0,0,0,.35);
   flex-shrink:0;
 }
@@ -418,7 +413,7 @@ body {
   color:rgba(255,255,255,.5); text-transform:uppercase;
 }
 .chat-icon {
-  width:14px; height:14px; fill:rgba(255,34,0,.6); margin-left:auto;
+  width:14px; height:14px; fill:rgba(var(--red-rgb),.6); margin-left:auto;
 }
 .chat-body {
   flex:1;
@@ -452,7 +447,7 @@ body {
 .alert-frame.sasi-has-alert .alert-sub { display:none; }
 .alert-label {
   font-size:8px; font-weight:900; letter-spacing:5px;
-  color:rgba(255,119,0,.35); text-transform:uppercase;
+  color:rgba(var(--orange-rgb),.35); text-transform:uppercase;
 }
 .alert-sub {
   font-size:7px; font-weight:700; letter-spacing:3px;
@@ -531,12 +526,12 @@ body {
     <div class="logo-ring-wrap">
       <!-- Outer rotating dashes -->
       <svg class="ring-svg" viewBox="0 0 280 280">
-        <circle cx="140" cy="140" r="135" fill="none" stroke="rgba(255,34,0,.25)" stroke-width="1.5"
+        <circle cx="140" cy="140" r="135" fill="none" stroke="rgba(var(--red-rgb),.25)" stroke-width="1.5"
           stroke-dasharray="8 6" stroke-linecap="round"/>
       </svg>
       <!-- Inner counter-rotating dashes -->
       <svg class="ring-inner-rot" viewBox="0 0 280 280">
-        <circle cx="140" cy="140" r="122" fill="none" stroke="rgba(255,119,0,.15)" stroke-width="1"
+        <circle cx="140" cy="140" r="122" fill="none" stroke="rgba(var(--orange-rgb),.15)" stroke-width="1"
           stroke-dasharray="4 10" stroke-linecap="round"/>
       </svg>
       <div class="ring-mid"></div>

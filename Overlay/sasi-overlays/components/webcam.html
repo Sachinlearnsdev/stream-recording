@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="../lib/theme-tokens.css">
 <title>Sasi Streams — Webcam Frame</title>
 <script src="../config.js"></script>
 <style>
@@ -22,12 +23,12 @@ body {
 /* ── Outer frame ── */
 .cam-frame {
   position:relative;
-  border:2px solid rgba(255,34,0,.35);
+  border:2px solid rgba(var(--red-rgb),.35);
   border-radius:10px;
   background:transparent;
   box-shadow:
-    0 0 20px rgba(255,34,0,.1),
-    0 0 40px rgba(255,34,0,.04),
+    0 0 20px rgba(var(--red-rgb),.1),
+    0 0 40px rgba(var(--red-rgb),.04),
     inset 0 0 20px rgba(0,0,0,.3);
   overflow:visible;
 }
@@ -35,7 +36,7 @@ body {
 /* Top gradient line */
 .cam-frame::before {
   content:''; position:absolute; top:-1px; left:10px; right:10px; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,34,0,.5),transparent);
+  background:linear-gradient(90deg,transparent,rgba(var(--red-rgb),.5),transparent);
   z-index:2;
 }
 
@@ -63,8 +64,8 @@ body {
   animation:borderPulse 3s ease-in-out infinite;
 }
 @keyframes borderPulse {
-  0%,100% { box-shadow:0 0 20px rgba(255,34,0,.1), 0 0 40px rgba(255,34,0,.04), inset 0 0 20px rgba(0,0,0,.3); }
-  50%     { box-shadow:0 0 28px rgba(255,34,0,.18), 0 0 50px rgba(255,34,0,.08), inset 0 0 20px rgba(0,0,0,.3); }
+  0%,100% { box-shadow:0 0 20px rgba(var(--red-rgb),.1), 0 0 40px rgba(var(--red-rgb),.04), inset 0 0 20px rgba(0,0,0,.3); }
+  50%     { box-shadow:0 0 28px rgba(var(--red-rgb),.18), 0 0 50px rgba(var(--red-rgb),.08), inset 0 0 20px rgba(0,0,0,.3); }
 }
 
 /* ── Label under frame ── */

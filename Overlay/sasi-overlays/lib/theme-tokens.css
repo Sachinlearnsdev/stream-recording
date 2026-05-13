@@ -1,0 +1,38 @@
+/* ============================================================
+   SASI STUDIO — theme tokens (single source of truth for palette)
+   ============================================================
+   Linked from every scene + component via:
+     <link rel="stylesheet" href="../lib/theme-tokens.css">
+   Live-edited from the dashboard via live-update.js, which:
+     1. Sets --red, --orange, --gold, --bg, --dim via inline style
+        on <html>, overriding what's defined here (initial state)
+     2. Also sets the *-rgb companion (e.g. --red-rgb: "255, 34, 0")
+        so theme files can do rgba(var(--red-rgb), 0.55) without
+        hardcoding palette RGB values. Changing palette in the
+        dashboard updates BOTH the solid var AND its rgba sources.
+
+   When themes get swapped via folder rename, each theme's own
+   copy of this file ships with it — so a new theme just edits
+   the values below and ships theme-tokens.css with new defaults.
+   ============================================================ */
+
+:root {
+  /* Primary palette — solid colors */
+  --red:    #FF2200;
+  --orange: #FF7700;
+  --gold:   #FFD700;
+  --bg:     #050005;
+
+  /* RGB-tuple companions for rgba() usage. Update these alongside
+     the solid vars whenever you change the palette so semi-transparent
+     usages stay in sync. (live-update.js does this automatically when
+     the dashboard's color pickers fire.) */
+  --red-rgb:    255, 34, 0;
+  --orange-rgb: 255, 119, 0;
+  --gold-rgb:   255, 215, 0;
+  --bg-rgb:     5, 0, 5;
+
+  /* Dim / muted — used for de-emphasized text and subtle borders.
+     Stored as rgba directly because it's already alpha-bearing. */
+  --dim: rgba(255, 255, 255, 0.45);
+}
