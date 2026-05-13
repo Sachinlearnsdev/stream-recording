@@ -1275,9 +1275,6 @@ document.getElementById('brand-l1').textContent = SASI_CONFIG.brand.name;
 // === Live updates from dashboard (sasi-studio v2) ===
 if (window.registerLiveUpdater) {
   registerLiveUpdater('brand_name',    liveUpdate.text('.brand-l1, #brand-l1'));
-  registerLiveUpdater('cRed',    liveUpdate.cssVar('--red'));
-  registerLiveUpdater('cOrange', liveUpdate.cssVar('--orange'));
-  registerLiveUpdater('cGold',   liveUpdate.cssVar('--gold'));
   applyLiveUpdaters();
 }
 </script>

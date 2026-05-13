@@ -70,9 +70,6 @@ setName('');
 if (window.registerLiveUpdater) {
   registerLiveUpdater('nametag', setName);
   registerLiveUpdater('brand_name', () => setName(localStorage.getItem('sasi_nametag') || ''));
-  registerLiveUpdater('cRed',    liveUpdate.cssVar('--red'));
-  registerLiveUpdater('cOrange', liveUpdate.cssVar('--orange'));
-  registerLiveUpdater('cGold',   liveUpdate.cssVar('--gold'));
   applyLiveUpdaters();
 }
 </script>

@@ -108,9 +108,6 @@ rebuildTrack(TEXT);
 // Sasi Studio v2 — live updates from dashboard
 if (window.registerLiveUpdater) {
   registerLiveUpdater('likes_items', (v) => rebuildTrack(v));
-  registerLiveUpdater('cRed',    liveUpdate.cssVar('--red'));
-  registerLiveUpdater('cOrange', liveUpdate.cssVar('--orange'));
-  registerLiveUpdater('cGold',   liveUpdate.cssVar('--gold'));
   applyLiveUpdaters();
 }
 </script>

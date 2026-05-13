@@ -137,9 +137,6 @@ setLabel();
 // Sasi Studio v2 — live updates from dashboard
 if (window.registerLiveUpdater) {
   registerLiveUpdater('webcam_label', setLabel);
-  registerLiveUpdater('cRed',    liveUpdate.cssVar('--red'));
-  registerLiveUpdater('cOrange', liveUpdate.cssVar('--orange'));
-  registerLiveUpdater('cGold',   liveUpdate.cssVar('--gold'));
   applyLiveUpdaters();
 }
 </script>
