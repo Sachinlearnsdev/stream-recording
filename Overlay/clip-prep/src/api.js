@@ -433,6 +433,51 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // dashboard's palette edits reach OBS — inline CSS variables on <html>
   // beat anything CEF has cached from theme-tokens.css. Must be registered
   // BEFORE express.static or the static middleware grabs the request first.
+
+  // ===== Content state hydration (dashboard editor text/toggles -> OBS) =====
+  // Mirrors the palette pattern but for the live-update.js localStorage
+  // keys (sasi_ss_badge, sasi_brand_name, etc.). Dashboard POSTs each edit
+  // to /save-content; we keep it in memory + persist to JSON; the inject
+  // middleware emits a <script> that pre-populates localStorage on every
+  // theme HTML response so applyLiveUpdaters() picks up the latest values.
+  const contentStatePath = path.join(installDir || '', 'content-state.json');
+  let _contentState = {};
+  try {
+    if (existsSync(contentStatePath)) {
+      _contentState = JSON.parse(readFileSync(contentStatePath, 'utf8')) || {};
+    }
+  } catch (err) {
+    log.warn(`content-state.json load failed (starting empty): ${err.message}`);
+    _contentState = {};
+  }
+  let _contentSaveTimer = null;
+  function persistContentState() {
+    if (_contentSaveTimer) clearTimeout(_contentSaveTimer);
+    _contentSaveTimer = setTimeout(async () => {
+      try {
+        await fs.writeFile(contentStatePath, JSON.stringify(_contentState, null, 2), 'utf8');
+      } catch (err) {
+        log.warn(`content-state.json write failed: ${err.message}`);
+      }
+    }, 500);
+  }
+  function buildContentScriptTag(state) {
+    if (!state || Object.keys(state).length === 0) return '';
+    // Only inject keys that look like our naming convention to avoid
+    // accidentally clobbering localStorage set by other code.
+    const safe = {};
+    for (const [k, v] of Object.entries(state)) {
+      if (typeof k !== 'string' || !/^sasi_[a-zA-Z0-9_]+$/.test(k)) continue;
+      if (v == null) continue;
+      safe[k] = String(v);
+    }
+    if (Object.keys(safe).length === 0) return '';
+    // Safe JSON embed: escape `</` so a value containing "</script>" can't
+    // break out of the tag.
+    const json = JSON.stringify(safe).replace(/<\//g, '<\\/');
+    return `<script id="sasi-content-inject">try{var __s=${json};for(var k in __s){try{localStorage.setItem(k,__s[k]);}catch(e){}}}catch(e){}</script>`;
+  }
+
   let _cachedPalette = null;
   async function readActivePalette() {
     if (_cachedPalette) return _cachedPalette;
@@ -495,10 +540,31 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
         const html = await fs.readFile(fullPath, 'utf8');
         const palette = await readActivePalette();
         const styleTag = buildPaletteStyleTag(palette);
-        const headIdx = html.search(/<\/head>/i);
-        const modified = headIdx >= 0
-          ? html.slice(0, headIdx) + styleTag + html.slice(headIdx)
-          : styleTag + html;
+        // Content script must come BEFORE <link>s and <script>s in <head>
+        // (especially live-update.js) so localStorage is populated by the
+        // time applyLiveUpdaters() runs. Inject it right after <head> opens.
+        const contentScript = buildContentScriptTag(_contentState);
+        const headOpenMatch = html.match(/<head[^>]*>/i);
+        let modified;
+        if (headOpenMatch) {
+          const headOpenEnd = headOpenMatch.index + headOpenMatch[0].length;
+          // Order: <head>{contentScript}{rest of head...}{styleTag}</head>
+          // contentScript first (so JS hydration is ready before scripts run),
+          // styleTag right before </head> so it overrides earlier <link>s.
+          const headCloseIdx = html.search(/<\/head>/i);
+          if (headCloseIdx > headOpenEnd) {
+            modified =
+              html.slice(0, headOpenEnd) +
+              contentScript +
+              html.slice(headOpenEnd, headCloseIdx) +
+              styleTag +
+              html.slice(headCloseIdx);
+          } else {
+            modified = html.slice(0, headOpenEnd) + contentScript + styleTag + html.slice(headOpenEnd);
+          }
+        } else {
+          modified = contentScript + styleTag + html;
+        }
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -1614,6 +1680,35 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       log.error(`save-palette failed: ${err.message}`);
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // POST /save-content  body: { key, value }  -or-  body: { entries: { k: v, ... } }
+  // Updates the in-memory content state that the inject middleware pre-populates
+  // into each theme HTML's localStorage. Persisted to content-state.json.
+  app.post('/save-content', async (req, res) => {
+    const body = req.body || {};
+    const keyRe = /^sasi_[a-zA-Z0-9_]+$/;
+    let changes = 0;
+    const entries = body.entries && typeof body.entries === 'object'
+      ? body.entries
+      : (typeof body.key === 'string' ? { [body.key]: body.value } : {});
+    for (const [k, v] of Object.entries(entries)) {
+      if (!keyRe.test(k)) continue;
+      if (v == null || v === '') {
+        if (k in _contentState) { delete _contentState[k]; changes++; }
+      } else {
+        const str = String(v).slice(0, 4000); // hard cap per value
+        if (_contentState[k] !== str) { _contentState[k] = str; changes++; }
+      }
+    }
+    if (changes > 0) persistContentState();
+    res.json({ ok: true, changes, total: Object.keys(_contentState).length });
+  });
+
+  // GET /content-state — returns the full in-memory content map, useful for
+  // dashboard rehydration on cold reload (next session).
+  app.get('/content-state', (_req, res) => {
+    res.json({ state: _contentState });
   });
 
   // POST /refresh-obs

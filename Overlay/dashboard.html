@@ -1456,6 +1456,29 @@ async function refreshObsSources(opts) {
         console.warn('[refresh-obs] save-palette network error:', err.message);
       }
     }
+    // Step 1b: bulk-flush every sasi_* localStorage value to the watcher's
+    // content state. Per-field saveContentToWatcher debounce might still have
+    // pending writes when the user clicks Refresh — sending the whole set in
+    // one batch guarantees the watcher's inject reflects everything in the
+    // dashboard before OBS reloads.
+    try {
+      const entries = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || !/^sasi_[a-zA-Z0-9_]+$/.test(k)) continue;
+        const v = localStorage.getItem(k);
+        if (v != null) entries[k] = v;
+      }
+      if (Object.keys(entries).length > 0) {
+        await fetch(API + '/save-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
+          body: JSON.stringify({ entries }),
+        });
+      }
+    } catch (err) {
+      console.warn('[refresh-obs] bulk save-content failed:', err.message);
+    }
     // Step 2: tell OBS to reload all browser sources.
     const r = await fetch(API + '/refresh-obs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' } });
     const j = await r.json().catch(() => ({}));
@@ -1499,6 +1522,25 @@ function broadcastChange(key, value) {
   };
   send(document.getElementById('editor-preview-iframe')?.contentWindow);
   document.querySelectorAll('.scene-thumb iframe').forEach(iframe => send(iframe.contentWindow));
+
+  // Mirror to the watcher's content state so OBS browser sources pick up the
+  // value on next load (the inject middleware prepopulates localStorage from
+  // _contentState before live-update.js runs). Debounced per key so a typing
+  // burst on a text field doesn't hammer the endpoint.
+  saveContentToWatcher('sasi_' + key, value);
+}
+
+const __sasiSaveContentTimers = {};
+function saveContentToWatcher(fullKey, value) {
+  if (!/^sasi_[a-zA-Z0-9_]+$/.test(fullKey)) return; // safety
+  if (__sasiSaveContentTimers[fullKey]) clearTimeout(__sasiSaveContentTimers[fullKey]);
+  __sasiSaveContentTimers[fullKey] = setTimeout(() => {
+    fetch(API + '/save-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
+      body: JSON.stringify({ key: fullKey, value: value == null ? '' : String(value) }),
+    }).catch(err => console.warn('[save-content]', err.message));
+  }, 350);
 }
 
 function renderEditor(sceneName, kind) {
