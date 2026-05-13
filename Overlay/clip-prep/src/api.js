@@ -164,14 +164,18 @@ async function refreshObsBrowserSources({ port = 4455, password = '', log = cons
             }
             return;
           }
-          // Compute the final target URL: append a fresh cache-bust AND
-          // bake the current palette into query params (p_red, p_orange,
-          // ...). live-update.js reads those params on page load and sets
-          // the matching --red / --orange / ... vars on <html> inline,
-          // which overrides whatever theme-tokens.css resolves to in CEF's
-          // (possibly stale) cache. Every dashboard palette change = new
-          // URL = new render = palette guaranteed to land in OBS.
-          const targetUrl = applyPaletteToUrl(currentUrl, palette);
+          // Compute the final target URL with a fresh cache-bust.
+          // Palette no longer travels through the URL — the watcher's
+          // theme-HTML inject middleware splices the current palette
+          // into every HTML response, so OBS gets the right colors as
+          // long as it re-fetches the page. The obsBust query just
+          // forces CEF to treat the page as a new resource and re-fetch.
+          const stripped = currentUrl
+            .replace(/([?&])obsBust=[^&]*(&|$)/, (_m, pre, post) => post === '&' ? pre : '')
+            .replace(/([?&])p_[a-z]+=[^&]*(&|$)/g, (_m, pre, post) => post === '&' ? pre : '')
+            .replace(/[?&]$/, '');
+          const sep = stripped.includes('?') ? '&' : '?';
+          const targetUrl = stripped + sep + 'obsBust=' + Date.now();
           // Two-step reload: blank the URL first, then set the real one.
           // Just changing the URL via SetInputSettings doesn't reliably
           // make OBS re-navigate the CEF page (and PressInputPropertiesButton
@@ -421,6 +425,81 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
   // user explicitly hits /dashboard.html. dotfiles:'ignore' so we don't expose
   // .gitignore. We mount AFTER the CSRF middleware on purpose â€” these are
   // GETs only and the static middleware doesn't process mutating methods.
+  //
+  // BEFORE express.static: theme HTML inject middleware. For every request
+  // for sasi-overlays/{scenes,components}/*.html we read the file off disk,
+  // splice <style>:root{--red:...;--orange:...;...}</style> right before
+  // </head>, and send the modified body. This is the canonical way the
+  // dashboard's palette edits reach OBS — inline CSS variables on <html>
+  // beat anything CEF has cached from theme-tokens.css. Must be registered
+  // BEFORE express.static or the static middleware grabs the request first.
+  let _cachedPalette = null;
+  async function readActivePalette() {
+    if (_cachedPalette) return _cachedPalette;
+    const tokensPath = path.join(installDir || '', 'sasi-overlays', 'lib', 'theme-tokens.css');
+    const fallback = { red: '#FF2200', orange: '#FF7700', gold: '#FFD700', bg: '#050005', dim: 'rgba(255, 255, 255, 0.45)' };
+    if (!existsSync(tokensPath)) { _cachedPalette = fallback; return fallback; }
+    try {
+      const text = await fs.readFile(tokensPath, 'utf8');
+      const p = { ...fallback };
+      for (const name of ['red', 'orange', 'gold', 'bg']) {
+        const m = new RegExp('--' + name + '\\s*:\\s*(#[0-9a-fA-F]{6})').exec(text);
+        if (m) p[name] = m[1];
+      }
+      const dm = /--dim\s*:\s*([^;]+);/.exec(text);
+      if (dm) p.dim = dm[1].trim();
+      _cachedPalette = p;
+      return p;
+    } catch {
+      _cachedPalette = fallback;
+      return fallback;
+    }
+  }
+  function invalidatePaletteCache() { _cachedPalette = null; }
+
+  function buildPaletteStyleTag(p) {
+    const hexToRgb = (h) => {
+      const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(h || '');
+      return m ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` : null;
+    };
+    const lines = [];
+    for (const name of ['red', 'orange', 'gold', 'bg']) {
+      if (p[name]) lines.push(`--${name}:${p[name]};`);
+    }
+    if (p.dim) lines.push(`--dim:${p.dim};`);
+    for (const name of ['red', 'orange', 'gold', 'bg']) {
+      const rgb = hexToRgb(p[name]);
+      if (rgb) lines.push(`--${name}-rgb:${rgb};`);
+    }
+    return `<style id="sasi-palette-inject">:root{${lines.join('')}}</style>`;
+  }
+
+  if (installDir && existsSync(installDir)) {
+    const themeHtmlRe = /^\/sasi-overlays(?:-[^/]+)?\/(scenes|components)\/[^/]+\.html$/i;
+    app.get(themeHtmlRe, async (req, res, next) => {
+      const decoded = decodeURIComponent(req.path);
+      if (decoded.includes('..')) return res.status(400).end('bad path');
+      const fullPath = path.join(installDir, decoded.replace(/^\//, ''));
+      if (!existsSync(fullPath)) return next();
+      try {
+        const html = await fs.readFile(fullPath, 'utf8');
+        const palette = await readActivePalette();
+        const styleTag = buildPaletteStyleTag(palette);
+        const headIdx = html.search(/<\/head>/i);
+        const modified = headIdx >= 0
+          ? html.slice(0, headIdx) + styleTag + html.slice(headIdx)
+          : styleTag + html;
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(modified);
+      } catch (err) {
+        log.warn(`palette inject failed for ${req.path}: ${err.message}`);
+        next();
+      }
+    });
+  }
+
   if (installDir && existsSync(installDir)) {
     app.use(express.static(installDir, {
       index: false,
@@ -1515,6 +1594,10 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       // Best-effort ensure dir exists (it should — install ships it).
       await fs.mkdir(path.dirname(activeTokensPath), { recursive: true });
       await fs.writeFile(activeTokensPath, css, { encoding: 'utf8' });
+      // Invalidate the in-memory palette cache so the next theme-HTML
+      // request reads the updated file. Without this, /refresh-obs would
+      // tell OBS to reload but the watcher would inject the OLD palette.
+      invalidatePaletteCache();
       log.info(`save-palette: wrote ${activeTokensPath} (${Object.keys(palette).join(', ')})`);
       res.json({ ok: true, path: toWebPath(activeTokensPath), tokens: palette });
     } catch (err) {
@@ -1522,46 +1605,6 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       res.status(500).json({ error: err.message });
     }
   });
-
-  // Read the active theme's current palette from theme-tokens.css.
-  // Used by /refresh-obs to bake the palette into each browser_source URL
-  // so OBS picks up the new colors regardless of CEF's CSS cache.
-  async function readActivePalette() {
-    const tokensPath = path.join(installDir || '', 'sasi-overlays', 'lib', 'theme-tokens.css');
-    if (!existsSync(tokensPath)) return {};
-    try {
-      const text = await fs.readFile(tokensPath, 'utf8');
-      const palette = {};
-      for (const name of ['red', 'orange', 'gold', 'bg', 'dim']) {
-        const m = new RegExp('--' + name + '\\s*:\\s*(#[0-9a-fA-F]{6})').exec(text);
-        if (m) palette[name] = m[1];
-      }
-      return palette;
-    } catch {
-      return {};
-    }
-  }
-
-  // Append palette to a browser_source URL as query params (p_red, p_orange,
-  // …). live-update.js in each scene reads these on load and applies them
-  // as inline CSS vars on <html>, overriding theme-tokens.css. This is how
-  // dashboard palette edits actually land in OBS — CEF's caching makes
-  // CSS-file-based propagation unreliable, but inline-set CSS vars win.
-  function applyPaletteToUrl(url, palette) {
-    if (!url || !palette) return url;
-    // Strip any prior obsBust / p_* params before re-adding so the query
-    // string doesn't grow unbounded on repeated refreshes.
-    let stripped = url
-      .replace(/([?&])obsBust=[^&]*(&|$)/, (_m, pre, post) => post === '&' ? pre : '')
-      .replace(/([?&])p_[a-z]+=[^&]*(&|$)/g, (_m, pre, post) => post === '&' ? pre : '')
-      .replace(/[?&]$/, '');
-    const queryParts = ['obsBust=' + Date.now()];
-    for (const name of ['red', 'orange', 'gold', 'bg', 'dim']) {
-      if (palette[name]) queryParts.push('p_' + name + '=' + palette[name].replace(/^#/, ''));
-    }
-    const sep = stripped.includes('?') ? '&' : '?';
-    return stripped + sep + queryParts.join('&');
-  }
 
   // POST /refresh-obs
   // Refreshes every browser_source input in OBS via obs-websocket v5 so the
