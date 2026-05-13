@@ -85,7 +85,12 @@ try {
         $json.preview.secondary = '#00BFFF'
         $json.preview.accent = '#C0C0C0'
       }
-      ($json | ConvertTo-Json -Depth 8) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+      # Write WITHOUT BOM. `Set-Content -Encoding UTF8` on PS 5.1 writes a
+      # 0xEF 0xBB 0xBF BOM, which Node's JSON.parse rejects - broke the live
+      # /list-themes endpoint (id/name/preview came back null) and the
+      # dashboard's theme swap had no manifest data to work with.
+      $jsonText = ($json | ConvertTo-Json -Depth 8)
+      [System.IO.File]::WriteAllText($manifestPath, $jsonText, [System.Text.UTF8Encoding]::new($false))
     } catch {
       Write-Output "    (theme.json patch skipped: $($_.Exception.Message))"
     }
