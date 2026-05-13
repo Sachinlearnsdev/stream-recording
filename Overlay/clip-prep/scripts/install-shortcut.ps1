@@ -1,34 +1,45 @@
 # Creates Start Menu + Desktop shortcuts for Sasi Studio.
 # Called by install.bat. Returns 0 on success, non-zero on failure.
+#
+# Both user-facing shortcuts target clip-prep-dashboard.vbs (next to
+# the launcher VBS in the install dir). That script ensures the watcher
+# is running, then opens the dashboard URL in the default browser.
+# Run-key auto-start keeps using clip-prep-launcher.vbs directly so
+# logins don't open a browser tab.
 
 param(
   [Parameter(Mandatory=$true)][string]$LauncherPath,
   [Parameter(Mandatory=$true)][string]$WorkingDir,
-  [string]$Name = 'clip-prep'
+  [string]$Name = 'Sasi Studio'
 )
 
 $ws = New-Object -ComObject WScript.Shell
 
+# Derive the dashboard-opener VBS path from the launcher path (same dir).
+$installDir = Split-Path -Parent $LauncherPath
+$dashboardVbs = Join-Path $installDir 'clip-prep-dashboard.vbs'
+
 try {
-  # 1. Start Menu shortcut: launches the watcher service via launcher VBS.
+  # Remove the legacy "clip-prep.lnk" Start Menu entry from older installs
+  # so users don't see two shortcuts side-by-side after upgrade.
   $startMenuDir = [Environment]::GetFolderPath('Programs')
+  $legacyLnk = Join-Path $startMenuDir 'clip-prep.lnk'
+  if (Test-Path -LiteralPath $legacyLnk) {
+    try { Remove-Item -LiteralPath $legacyLnk -Force; Write-Output ('Removed legacy: ' + $legacyLnk) } catch {}
+  }
+
+  # 1. Start Menu shortcut: opens the dashboard (and starts watcher if needed).
   $startMenuLnk = Join-Path $startMenuDir ($Name + '.lnk')
   $lnk = $ws.CreateShortcut($startMenuLnk)
   $lnk.TargetPath       = 'wscript.exe'
-  $lnk.Arguments        = '"' + $LauncherPath + '"'
+  $lnk.Arguments        = '"' + $dashboardVbs + '"'
   $lnk.WorkingDirectory = $WorkingDir
   $lnk.IconLocation     = 'shell32.dll,15'
-  $lnk.Description      = 'Start the clip-prep watcher'
+  $lnk.Description      = 'Open Sasi Studio dashboard'
   $lnk.Save()
   Write-Output ('Start Menu shortcut: ' + $startMenuLnk)
 
-  # 2. Desktop shortcut: opens the dashboard URL in the default browser.
-  # We point at http://127.0.0.1:6789/dashboard.html (served by the watcher's
-  # express.static middleware) instead of the file:// path. Reason: file://
-  # iframes are cross-origin in Chromium and that breaks canvas access for
-  # HTML stinger auto-record + several other live-edit features.
-  # The watcher auto-starts at Windows login; if it's offline the URL just
-  # fails to load and the user can hit the Start Menu shortcut to launch it.
+  # 2. Desktop shortcut: same behavior (ensure watcher + open dashboard).
   #
   # OneDrive: on accounts with OneDrive enabled, [Environment]::GetFolderPath
   # returns the redirected OneDrive\Desktop path. The .lnk sometimes never
@@ -45,12 +56,11 @@ try {
     $lnkPath = Join-Path $targetDir 'Sasi Studio.lnk'
     try {
       $s = $ws.CreateShortcut($lnkPath)
-      $s.TargetPath       = "$env:windir\System32\cmd.exe"
-      $s.Arguments        = '/c start "" "http://127.0.0.1:6789/dashboard.html"'
+      $s.TargetPath       = 'wscript.exe'
+      $s.Arguments        = '"' + $dashboardVbs + '"'
       $s.WorkingDirectory = $WorkingDir
       $s.IconLocation     = 'shell32.dll,14'
-      $s.Description      = 'Open the Sasi Studio dashboard'
-      $s.WindowStyle      = 7  # minimized — the cmd window flashes briefly only
+      $s.Description      = 'Open Sasi Studio dashboard'
       $s.Save()
       return $lnkPath
     } catch {

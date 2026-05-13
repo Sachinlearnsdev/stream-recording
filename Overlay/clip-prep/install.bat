@@ -65,12 +65,12 @@ schtasks /Delete /F /TN "!RUN_NAME!" >nul 2>&1
 
 rem ---------- Step 4: Create Start Menu shortcut ----------
 echo.
-echo [4/9] Creating Start Menu shortcut "clip-prep"...
+echo [4/9] Creating Start Menu + Desktop shortcuts ("Sasi Studio")...
 powershell -NoProfile -ExecutionPolicy Bypass -File "!SCRIPT_DIR!scripts\install-shortcut.ps1" -LauncherPath "!LAUNCHER!" -WorkingDir "!SCRIPT_DIR!"
 if errorlevel 1 (
-  echo Note: could not create Start Menu shortcut ^(non-fatal^).
+  echo Note: could not create shortcuts ^(non-fatal^).
 ) else (
-  echo You can now press Win key, type "clip-prep", press Enter to start the watcher.
+  echo You can now press Win key, type "Sasi Studio", press Enter to open the dashboard.
 )
 
 echo.
@@ -164,7 +164,7 @@ echo ========================================
 echo   Dashboard:    http://127.0.0.1:6789/dashboard.html ^(opening now^)
 echo   Install dir:  !SCRIPT_DIR!
 echo   Auto-start:   on every Windows login ^(hidden in background^)
-echo   Restart cmd:  Win key -^> "clip-prep" -^> Enter
+echo   Open later:   Win key -^> "Sasi Studio" -^> Enter ^(or click Desktop shortcut^)
 echo   Live logs:    run start.bat in a cmd window
 echo ========================================
 
