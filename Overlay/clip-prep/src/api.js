@@ -58,11 +58,15 @@ async function refreshObsBrowserSources({ port = 4455, password = '', log = cons
       if (errOrResult instanceof Error) reject(errOrResult);
       else resolve(errOrResult);
     };
+    // 15s overall budget: two-step (about:blank -> real) reload per source
+    // plus a 200ms settle delay between the two steps, multiplied by ~13
+    // browser sources, lands well under this in practice but the headroom
+    // matters when OBS is busy compositing.
     const timer = setTimeout(() => {
-      const e = new Error('OBS WebSocket did not complete within 5s.');
+      const e = new Error('OBS WebSocket did not complete within 15s.');
       e.hint = 'OBS might be unresponsive — try closing and reopening OBS.';
       finalize(e);
-    }, 5000);
+    }, 15000);
 
     let nextId = 0;
     const send = (op, d) => ws.send(JSON.stringify({ op, d }));
@@ -144,76 +148,89 @@ async function refreshObsBrowserSources({ port = 4455, password = '', log = cons
           if (!ok) {
             completed++;
             log.warn(`refresh-obs: GetInputSettings ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
-          } else {
-            const settings = (d.responseData && d.responseData.inputSettings) || {};
-            const currentUrl = settings.url || '';
-            // Append/refresh a cache-bust query. Preserve any existing query.
-            let newUrl;
-            if (currentUrl) {
-              const stripped = currentUrl.replace(/([?&])obsBust=[^&]*(&|$)/, (_m, pre, post) => post === '&' ? pre : '').replace(/[?&]$/, '');
-              const sep = stripped.includes('?') ? '&' : '?';
-              newUrl = stripped + sep + 'obsBust=' + Date.now();
-            } else {
-              // Source has no URL (or uses local_file) — skip; nothing to bust.
-              completed++;
-              if (completed >= inputCount) {
-                clearTimeout(timer);
-                finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED, skipped: 'sources without url' });
-              }
-              return;
-            }
-            const idS = 'set-' + (++nextId);
-            pending.set(idS, { kind: 'set', name: kind.name });
-            send(6, {
-              requestType: 'SetInputSettings',
-              requestId: idS,
-              requestData: {
-                inputName: kind.name,
-                inputSettings: { ...settings, is_local_file: false, url: newUrl },
-                overlay: false, // overwrite the URL completely
-              },
-            });
-            return;
-          }
-          if (completed >= inputCount) {
-            clearTimeout(timer);
-            finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
-          }
-          return;
-        }
-        if (kind && kind.kind === 'set') {
-          // After URL change, ALSO press the "Refresh cache of current page"
-          // properties button. SetInputSettings updates the settings struct
-          // but doesn't always trigger a page reload in OBS, and even when
-          // it does, CEF can cache subresources. PressInputPropertiesButton
-          // refreshnocache + no-store headers on theme-tokens.css is the
-          // combo that reliably gets the new palette into OBS.
-          if (ok) {
-            const idR = 'press-' + (++nextId);
-            pending.set(idR, { kind: 'press', name: kind.name });
-            send(6, {
-              requestType: 'PressInputPropertiesButton',
-              requestId: idR,
-              requestData: { inputName: kind.name, propertyName: 'refreshnocache' },
-            });
-          } else {
-            completed++;
-            log.warn(`refresh-obs: SetInputSettings ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
             if (completed >= inputCount) {
               clearTimeout(timer);
               finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
             }
+            return;
           }
+          const settings = (d.responseData && d.responseData.inputSettings) || {};
+          const currentUrl = settings.url || '';
+          if (!currentUrl) {
+            completed++;
+            if (completed >= inputCount) {
+              clearTimeout(timer);
+              finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED, skipped: 'sources without url' });
+            }
+            return;
+          }
+          // Compute the final target URL with a fresh cache-bust query.
+          // Strip any prior obsBust before re-adding so the query string
+          // doesn't grow unbounded.
+          const stripped = currentUrl.replace(/([?&])obsBust=[^&]*(&|$)/, (_m, pre, post) => post === '&' ? pre : '').replace(/[?&]$/, '');
+          const sep = stripped.includes('?') ? '&' : '?';
+          const targetUrl = stripped + sep + 'obsBust=' + Date.now();
+          // Two-step reload: blank the URL first, then set the real one.
+          // Just changing the URL via SetInputSettings doesn't reliably
+          // make OBS re-navigate the CEF page (and PressInputPropertiesButton
+          // refreshnocache silently no-ops when called outside the props
+          // dialog). Navigating to about:blank tears down CEF's loaded page;
+          // navigating to targetUrl on the second step gives CEF nothing to
+          // resurrect from cache and forces a fresh fetch of the HTML + all
+          // subresources (which the no-store headers on theme-tokens.css
+          // guarantee come back fresh).
+          const idBlank = 'blank-' + (++nextId);
+          pending.set(idBlank, { kind: 'blank', name: kind.name, targetUrl, settings });
+          send(6, {
+            requestType: 'SetInputSettings',
+            requestId: idBlank,
+            requestData: {
+              inputName: kind.name,
+              inputSettings: { ...settings, is_local_file: false, url: 'about:blank' },
+              overlay: false,
+            },
+          });
           return;
         }
-        if (kind && kind.kind === 'press') {
+        if (kind && kind.kind === 'blank') {
+          if (!ok) {
+            completed++;
+            log.warn(`refresh-obs: SetInputSettings (blank) ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
+            if (completed >= inputCount) {
+              clearTimeout(timer);
+              finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
+            }
+            return;
+          }
+          // Wait for CEF to actually tear down before navigating to the real URL.
+          // 200ms is the empirical floor — shorter and OBS sometimes optimizes
+          // both SetInputSettings calls into a single Update() with the final URL,
+          // skipping the about:blank step.
+          setTimeout(() => {
+            if (finalized) return;
+            const idReal = 'real-' + (++nextId);
+            pending.set(idReal, { kind: 'real', name: kind.name });
+            send(6, {
+              requestType: 'SetInputSettings',
+              requestId: idReal,
+              requestData: {
+                inputName: kind.name,
+                inputSettings: { ...kind.settings, is_local_file: false, url: kind.targetUrl },
+                overlay: false,
+              },
+            });
+          }, 200);
+          return;
+        }
+        if (kind && kind.kind === 'real') {
           completed++;
           if (ok) REFRESHED.push(kind.name);
-          else log.warn(`refresh-obs: PressInputPropertiesButton ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
+          else log.warn(`refresh-obs: SetInputSettings (real) ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
           if (completed >= inputCount) {
             clearTimeout(timer);
             finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
           }
+          return;
         }
         return;
       }
