@@ -581,9 +581,15 @@
             <input type="number" data-key="tickerSpeed" min="10" max="60" value="28" data-reload="1">
           </div>
           <div class="common-tile" style="grid-column:1 / -1">
-            <div class="common-tile-label">Push to OBS</div>
-            <div class="section-hint" style="margin-bottom:var(--sp-2)">Edit palette + text fields freely — the dashboard preview updates instantly, but OBS only sees changes after this step. Click to save everything in one shot: palette to <code>theme-tokens.css</code>, all text fields to the watcher's content state, then tell OBS via obs-websocket to reload every browser source. Your tweaks land in OBS in one round-trip.</div>
-            <button class="btn btn-primary" id="refresh-obs-btn">↻ Push all changes to OBS</button>
+            <div class="common-tile-label">Save · Push</div>
+            <div class="section-hint" style="margin-bottom:var(--sp-2)">
+              <strong>Save</strong> commits palette + every text field to the watcher (<code>theme-tokens.css</code> + <code>content-state.json</code>) but doesn't disturb OBS — useful if you're mid-stream and don't want viewers to see a reload. <strong>Push to OBS</strong> does the same save AND tells OBS via obs-websocket to reload every browser source.<br>
+              Shortcuts: <kbd>Ctrl + S</kbd> = Save · <kbd>Ctrl + Shift + S</kbd> = Push.
+            </div>
+            <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap">
+              <button class="btn" id="save-btn">💾 Save</button>
+              <button class="btn btn-primary" id="refresh-obs-btn">↻ Push to OBS</button>
+            </div>
             <div class="field-hint" id="refresh-obs-status" style="margin-top:6px;min-height:1.2em"></div>
           </div>
         </div>
@@ -1474,67 +1480,99 @@ const SCENE_FIELDS = {
 // button + auto-fired after /apply-theme so a swap is visible in OBS without
 // the user right-clicking each browser source. opts.silent=true suppresses
 // success toast (still shows errors) — used for the post-swap auto-refresh.
-async function refreshObsSources(opts) {
+// Save current dashboard state (palette + every sasi_* localStorage key)
+// to the watcher. Does NOT touch OBS — OBS keeps rendering whatever it
+// has until you explicitly Push. Returns { ok: true } on success, throws
+// on hard failure.
+async function saveDashboardState() {
+  // Palette: pickers write hex to localStorage keys like sasi_cRed.
+  const palette = {};
+  for (const [storageKey, paletteKey] of [['sasi_cRed','red'],['sasi_cOrange','orange'],['sasi_cGold','gold'],['sasi_cBg','bg'],['sasi_cDim','dim']]) {
+    const v = localStorage.getItem(storageKey);
+    if (v) palette[paletteKey] = v;
+  }
+  if (Object.keys(palette).length > 0) {
+    try {
+      const sp = await fetch(API + '/save-palette', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
+        body: JSON.stringify(palette),
+      });
+      if (!sp.ok) {
+        const ej = await sp.json().catch(() => ({}));
+        console.warn('[save] save-palette failed:', ej.error || sp.status);
+      }
+    } catch (err) { console.warn('[save] save-palette network error:', err.message); }
+  }
+  // Content: bulk-flush every sasi_* localStorage key in one request.
+  const entries = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || !/^sasi_[a-zA-Z0-9_]+$/.test(k)) continue;
+    const v = localStorage.getItem(k);
+    if (v != null) entries[k] = v;
+  }
+  if (Object.keys(entries).length > 0) {
+    const sc = await fetch(API + '/save-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
+      body: JSON.stringify({ entries }),
+    });
+    if (!sc.ok) {
+      const ej = await sc.json().catch(() => ({}));
+      throw new Error(ej.error || 'save-content http ' + sc.status);
+    }
+  }
+  return { ok: true, paletteKeys: Object.keys(palette).length, contentKeys: Object.keys(entries).length };
+}
+
+// User-facing "Save" — wraps saveDashboardState with status UI + button states.
+// Does NOT push to OBS. Does NOT clear the dirty indicator (OBS still has
+// the previous state).
+async function saveChanges(opts) {
   opts = opts || {};
   const statusEl = document.getElementById('refresh-obs-status');
-  const btn = document.getElementById('refresh-obs-btn');
+  const saveBtn = document.getElementById('save-btn');
+  const fab = document.getElementById('sasi-push-fab');
   const setLine = (msg, kind) => {
     if (!statusEl) return;
     statusEl.textContent = msg || '';
     statusEl.style.color = kind === 'ok' ? 'var(--accent-online)' : (kind === 'err' ? 'var(--accent-rec)' : 'var(--text-muted)');
   };
-  if (btn) { btn.disabled = true; btn.textContent = '↻ Refreshing...'; }
-  setLine('Saving palette + asking OBS to reload all browser sources...', null);
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+  if (fab) fab.setAttribute('disabled', 'true');
+  setLine('Saving palette + content to watcher (OBS unchanged)...', null);
   try {
-    // Step 1: persist current palette to disk so OBS picks it up.
-    // Dashboard pickers update localStorage (live preview in this tab), but
-    // OBS browser sources read theme-tokens.css directly — without flushing
-    // there, OBS keeps rendering the original theme palette regardless of
-    // how many times we tell it to reload.
-    const palette = {};
-    for (const [storageKey, paletteKey] of [['sasi_cRed','red'],['sasi_cOrange','orange'],['sasi_cGold','gold'],['sasi_cBg','bg'],['sasi_cDim','dim']]) {
-      const v = localStorage.getItem(storageKey);
-      if (v) palette[paletteKey] = v;
-    }
-    if (Object.keys(palette).length > 0) {
-      try {
-        const sp = await fetch(API + '/save-palette', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
-          body: JSON.stringify(palette),
-        });
-        if (!sp.ok) {
-          const ej = await sp.json().catch(() => ({}));
-          // Not fatal — log it but still try the OBS refresh below.
-          console.warn('[refresh-obs] save-palette failed:', ej.error || sp.status);
-        }
-      } catch (err) {
-        console.warn('[refresh-obs] save-palette network error:', err.message);
-      }
-    }
-    // Step 1b: bulk-flush every sasi_* localStorage value to the watcher's
-    // content state. Per-field saveContentToWatcher debounce might still have
-    // pending writes when the user clicks Refresh — sending the whole set in
-    // one batch guarantees the watcher's inject reflects everything in the
-    // dashboard before OBS reloads.
-    try {
-      const entries = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k || !/^sasi_[a-zA-Z0-9_]+$/.test(k)) continue;
-        const v = localStorage.getItem(k);
-        if (v != null) entries[k] = v;
-      }
-      if (Object.keys(entries).length > 0) {
-        await fetch(API + '/save-content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' },
-          body: JSON.stringify({ entries }),
-        });
-      }
-    } catch (err) {
-      console.warn('[refresh-obs] bulk save-content failed:', err.message);
-    }
+    const r = await saveDashboardState();
+    setLine('✓ Saved. ' + r.paletteKeys + ' palette + ' + r.contentKeys + ' text keys persisted. OBS still showing previous state — click Push to update.', 'ok');
+    if (!opts.silent) toast('Saved to watcher · click Push to update OBS', 'ok', 3000);
+  } catch (e) {
+    setLine('Save failed: ' + e.message, 'err');
+    if (!opts.silent) toast('Save failed: ' + e.message, 'err', 5000);
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save'; }
+    if (fab) fab.removeAttribute('disabled');
+  }
+}
+
+// User-facing "Push" — saves then tells OBS to reload. Clears the dirty
+// flag on success (snapshot captures the pushed state).
+async function refreshObsSources(opts) {
+  opts = opts || {};
+  const statusEl = document.getElementById('refresh-obs-status');
+  const pushBtn = document.getElementById('refresh-obs-btn');
+  const fab = document.getElementById('sasi-push-fab');
+  const setLine = (msg, kind) => {
+    if (!statusEl) return;
+    statusEl.textContent = msg || '';
+    statusEl.style.color = kind === 'ok' ? 'var(--accent-online)' : (kind === 'err' ? 'var(--accent-rec)' : 'var(--text-muted)');
+  };
+  if (pushBtn) { pushBtn.disabled = true; pushBtn.textContent = '↻ Pushing...'; }
+  if (fab) fab.setAttribute('disabled', 'true');
+  setLine('Saving + pushing to OBS...', null);
+  try {
+    // Step 1: persist palette + content (same as Save).
+    await saveDashboardState();
     // Step 2: tell OBS to reload all browser sources.
     const r = await fetch(API + '/refresh-obs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Clip-Prep': '1' } });
     const j = await r.json().catch(() => ({}));
@@ -1548,17 +1586,17 @@ async function refreshObsSources(opts) {
     const total = j.attempted || n;
     const msg = n === 0
       ? (j.message || 'No browser sources in OBS to refresh.')
-      : 'Refreshed ' + n + (total !== n ? '/' + total : '') + ' browser source' + (n === 1 ? '' : 's') + '.';
+      : 'Pushed to OBS · ' + n + (total !== n ? '/' + total : '') + ' browser source' + (n === 1 ? '' : 's') + ' reloaded.';
     setLine('✓ ' + msg, 'ok');
     if (!opts.silent) toast(msg, 'ok', 3500);
-    // Snapshot the just-pushed state so the dirty tracker knows "in sync".
     saveSyncSnapshot();
     updateFab();
   } catch (e) {
-    setLine('Failed: ' + e.message, 'err');
-    if (!opts.silent) toast('Refresh failed: ' + e.message, 'err', 5000);
+    setLine('Push failed: ' + e.message, 'err');
+    if (!opts.silent) toast('Push failed: ' + e.message, 'err', 5000);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '↻ Push all changes to OBS'; }
+    if (pushBtn) { pushBtn.disabled = false; pushBtn.textContent = '↻ Push to OBS'; }
+    if (fab) fab.removeAttribute('disabled');
   }
 }
 
@@ -1625,11 +1663,14 @@ function updateFab() {
     : 'Dashboard matches OBS';
 }
 
-// Bind Ctrl/Cmd+S to push so muscle memory works.
+// Keyboard shortcuts.
+//   Ctrl/Cmd+S         = Save (persists state to watcher, OBS unchanged)
+//   Ctrl/Cmd+Shift+S   = Push (save + tell OBS to reload)
 window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
     e.preventDefault();
-    refreshObsSources();
+    if (e.shiftKey) refreshObsSources();
+    else saveChanges();
   }
 });
 
@@ -3756,8 +3797,12 @@ $('key-save').addEventListener('click', async () => {
 
 loadKeys();
 
-// Floating Push-to-OBS button — clicks call the same handler as the
-// inline one in the Common section, plus Ctrl/Cmd+S is bound globally.
+// Save + Push buttons. Save persists state to the watcher without
+// touching OBS; Push does Save + tell OBS to reload. Floating FAB =
+// Push (the action that completes the workflow). Ctrl/Cmd+S = Save,
+// Ctrl/Cmd+Shift+S = Push (bound globally above).
+document.getElementById('save-btn')?.addEventListener('click', () => saveChanges());
+document.getElementById('refresh-obs-btn')?.addEventListener('click', () => refreshObsSources());
 document.getElementById('sasi-push-fab')?.addEventListener('click', () => refreshObsSources());
 updateFab();
 </script>
@@ -3765,11 +3810,11 @@ updateFab();
 <!-- Floating Push-to-OBS button. Stays visible regardless of scroll position.
      Green when there are unsynced changes (count badge shows how many), neutral
      when dashboard state matches what's in OBS. Ctrl/Cmd+S triggers the same. -->
-<div id="sasi-push-fab" role="button" tabindex="0" title="Push all dashboard changes to OBS">
+<div id="sasi-push-fab" role="button" tabindex="0" title="Push all dashboard changes to OBS (Ctrl+Shift+S). Click '💾 Save' in the Common section, or Ctrl+S, to persist state without reloading OBS.">
   <span class="fab-icon">↻</span>
   <span class="fab-label">In sync</span>
   <span class="fab-count"></span>
-  <kbd>Ctrl S</kbd>
+  <kbd>Ctrl ⇧ S</kbd>
 </div>
 
 </body>
