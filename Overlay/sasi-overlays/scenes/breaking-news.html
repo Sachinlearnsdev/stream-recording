@@ -314,7 +314,7 @@
 <div class="breaking-bar">
   <div class="breaking-badge">
     <div class="breaking-dot"></div>
-    <span class="breaking-text">BREAKING</span>
+    <span class="breaking-text" id="breaking-badge">BREAKING</span>
   </div>
   <div class="breaking-headline" id="headline">SASI STREAMS GOES LIVE — VIEWERS REPORT EXTREME ENTERTAINMENT</div>
 </div>
@@ -333,7 +333,7 @@
   <div class="cam-corner br"></div>
   <div class="cam-label">
     <div class="cam-label-dot"></div>
-    <span class="cam-label-text">LIVE FROM STUDIO</span>
+    <span class="cam-label-text" id="cam-label-text">LIVE FROM STUDIO</span>
   </div>
 
 
@@ -449,6 +449,18 @@ setInterval(() => {
   }, 300);
 }, 12000);
 document.getElementById('headline').style.transition = 'opacity .3s ease';
+
+// ── Live updates from dashboard ──
+// Skips the rotating headline (#headline) — it's driven by SASI_CONFIG.
+// .breakingNews.headlines and rotates every 12s, so a single live value
+// would just get overwritten on the next interval tick.
+if (window.registerLiveUpdater) {
+  registerLiveUpdater('bn_badge',    liveUpdate.text('#breaking-badge'));
+  registerLiveUpdater('bn_anchor',   liveUpdate.text('#anchor-name'));
+  registerLiveUpdater('bn_topic',    liveUpdate.text('#topic-text'));
+  registerLiveUpdater('bn_camLabel', liveUpdate.text('#cam-label-text'));
+  applyLiveUpdaters();
+}
 </script>
 </body>
 </html>
