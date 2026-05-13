@@ -375,7 +375,12 @@ document.getElementById('brand-l1').textContent    = SASI_CONFIG.brand.name;
 document.getElementById('brand-l2').textContent    = SASI_CONFIG.brb.tagline;
 document.getElementById('brb-badge').textContent   = SASI_CONFIG.brb.badge;
 document.getElementById('brb-subtext').textContent = SASI_CONFIG.brb.subtext;
-document.getElementById('t-back').textContent = SASI_CONFIG.brb.mainText.split('\n')[1] || 'BACK';
+// Split on EITHER a real newline OR the literal text "\n" (backslash + n,
+// what users type in the dashboard's text field). Same split rule is used
+// inside the typing loop + the live-update handler so all three paths
+// agree on what the main text is.
+const _brbSplit = (s) => String(s || '').split(/\\n|\n/);
+document.getElementById('t-back').textContent = _brbSplit(SASI_CONFIG.brb.mainText)[1] || '';
 
 // ---- Clock visibility ----
 const _clockShow = (SASI_CONFIG.brb._clock && SASI_CONFIG.brb._clock.show !== undefined) ? SASI_CONFIG.brb._clock.show : SASI_CONFIG.clock.show;
@@ -388,7 +393,20 @@ if (!_clockShow) {
   const line1  = document.getElementById('t-line1');
   const cursor = document.getElementById('t-cursor');
   const back   = document.getElementById('t-back');
-  const TEXT   = SASI_CONFIG.brb.mainText.split('\n')[0];
+  // CURRENT_TEXT / CURRENT_BACK are read on every runSequence iteration so
+  // dashboard live-edits land permanently — previously TEXT was captured
+  // once at init, which meant typed updates lasted only until the next
+  // animation cycle (every ~8s) reset back to the config defaults.
+  // window.__sasiBrbSetMain (defined at the bottom of this script) updates
+  // these mid-flight; the empty-string case explicitly clears the strings
+  // so the user can wipe BRB text by emptying the dashboard field.
+  let CURRENT_TEXT = _brbSplit(SASI_CONFIG.brb.mainText)[0] || '';
+  let CURRENT_BACK = _brbSplit(SASI_CONFIG.brb.mainText)[1] || '';
+  window.__sasiBrbSetMain = function(v) {
+    const parts = _brbSplit(v);
+    CURRENT_TEXT = parts[0] || '';
+    CURRENT_BACK = parts[1] || '';
+  };
 
   line1.style.opacity = '1';
 
@@ -465,16 +483,25 @@ if (!_clockShow) {
     let i = 0;
 
     function type() {
-      if (i < TEXT.length) {
-        line1.insertBefore(document.createTextNode(TEXT[i]), cursor);
+      if (i < CURRENT_TEXT.length) {
+        line1.insertBefore(document.createTextNode(CURRENT_TEXT[i]), cursor);
         i++;
-        setTimeout(type, TEXT[i - 1] === ' ' ? 180 : 95);
+        setTimeout(type, CURRENT_TEXT[i - 1] === ' ' ? 180 : 95);
       } else {
         // Typing done — brief pause, hide cursor, scramble-decode BACK
         setTimeout(() => {
           cursor.style.animation = 'none';
           cursor.style.opacity   = '0';
-          const backText = SASI_CONFIG.brb.mainText.split('\n')[1] || 'BACK';
+          const backText = CURRENT_BACK;
+          if (!backText) {
+            // Skip scramble + just trigger the sub elements so the layout
+            // still settles when the user clears the second line.
+            setTimeout(() => subEl.classList.add('show'), 200);
+            setTimeout(() => barEl.classList.add('show'), 500);
+            setTimeout(() => dotsEl.classList.add('show'), 800);
+            setTimeout(runSequence, 6000);
+            return;
+          }
           scrambleDecode(back, backText, () => {
             // Slide in sub elements after scramble settles
             setTimeout(() => subEl.classList.add('show'), 200);
@@ -565,12 +592,11 @@ if (window.registerLiveUpdater) {
   registerLiveUpdater('brb_subtext',   liveUpdate.text('#brb-subtext'));
   registerLiveUpdater('brb_tagline',   liveUpdate.text('#brand-l2'));
   registerLiveUpdater('brb_mainText',  (v) => {
-    if (!v) return;
-    const parts = String(v).split('\\n');
-    const l1 = document.getElementById('t-line1');
-    const back = document.getElementById('t-back');
-    if (l1) l1.firstChild ? l1.firstChild.textContent = parts[0] || '' : (l1.textContent = parts[0] || '');
-    if (back) back.textContent = parts[1] || '';
+    // Push the new text into the typing animation's mutable state so the
+    // NEXT cycle picks it up (the current cycle finishes with the old text
+    // — bailing out of an in-progress scramble mid-frame just looks broken).
+    // Empty value is allowed: clears both lines on the next animation cycle.
+    if (window.__sasiBrbSetMain) window.__sasiBrbSetMain(v == null ? '' : v);
   });
   registerLiveUpdater('brb_clock',     liveUpdate.show('.clock-wrap'));
   registerLiveUpdater('brb_ticker',    liveUpdate.show('.ticker-wrap'));

@@ -1444,7 +1444,7 @@ const SCENE_FIELDS = {
   ],
   'brb': [
     { key: 'brb_badge',    type: 'text',   label: 'Badge',                       placeholder: 'BRB' },
-    { key: 'brb_mainText', type: 'text',   label: 'Main text (\\n for line break)', placeholder: 'BE RIGHT\\nBACK', requiresReload: true },
+    { key: 'brb_mainText', type: 'text',   label: 'Main text (use \\n for the second line)', placeholder: 'BE RIGHT\\nBACK' },
     { key: 'brb_subtext',  type: 'text',   label: 'Subtext',                     placeholder: 'grabbing something, back in a moment' },
     { key: 'brb_tagline',  type: 'text',   label: 'Tagline',                     placeholder: 'BE RIGHT BACK' },
     { key: 'brb_clock',    type: 'toggle', label: 'Show clock' },
@@ -1818,10 +1818,11 @@ function renderEditor(sceneName, kind) {
       if (isToggle) {
         value = String(input.checked);
       } else {
-        // Empty field falls back to placeholder so clearing reverts to the
-        // default instead of leaving a blank overlay. Matches what the user
-        // sees in the input UI (the dim placeholder text IS the default).
-        value = input.value.length > 0 ? input.value : (input.placeholder || '');
+        // No placeholder fallback. Whatever the user typed is the value —
+        // including the empty string. Clearing a field clears the overlay.
+        // (Previously we substituted input.placeholder when the field was
+        // blank, which made it impossible to actually empty a text element.)
+        value = input.value;
       }
       broadcastChange(key, value);
     };
