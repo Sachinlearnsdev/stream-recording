@@ -122,21 +122,69 @@ async function refreshObsBrowserSources({ port = 4455, password = '', log = cons
             finalize({ refreshed: 0, names: [], message: 'No browser_source inputs in OBS.' });
             return;
           }
+          // First fetch each input's settings so we can mutate the URL with a
+          // cache-bust query and SetInputSettings. PressInputPropertiesButton
+          // refreshnocache only reloads the page; CEF caches subresources
+          // (theme-tokens.css, lib/*.js) separately and serves the stale ones
+          // back, so palette/CSS edits never reach OBS. Changing the URL with
+          // a new ?obsBust=<ts> forces CEF to treat the page as a new resource
+          // and re-fetch the full subresource tree.
           for (const inp of inputs) {
-            const id2 = 'refresh-' + (++nextId);
-            pending.set(id2, { kind: 'refresh', name: inp.inputName });
+            const idG = 'getSet-' + (++nextId);
+            pending.set(idG, { kind: 'getSet', name: inp.inputName, uuid: inp.inputUuid });
             send(6, {
-              requestType: 'PressInputPropertiesButton',
-              requestId: id2,
-              requestData: { inputName: inp.inputName, propertyName: 'refreshnocache' },
+              requestType: 'GetInputSettings',
+              requestId: idG,
+              requestData: { inputName: inp.inputName },
             });
           }
           return;
         }
-        if (kind && kind.kind === 'refresh') {
+        if (kind && kind.kind === 'getSet') {
+          if (!ok) {
+            completed++;
+            log.warn(`refresh-obs: GetInputSettings ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
+          } else {
+            const settings = (d.responseData && d.responseData.inputSettings) || {};
+            const currentUrl = settings.url || '';
+            // Append/refresh a cache-bust query. Preserve any existing query.
+            let newUrl;
+            if (currentUrl) {
+              const stripped = currentUrl.replace(/([?&])obsBust=[^&]*(&|$)/, (_m, pre, post) => post === '&' ? pre : '').replace(/[?&]$/, '');
+              const sep = stripped.includes('?') ? '&' : '?';
+              newUrl = stripped + sep + 'obsBust=' + Date.now();
+            } else {
+              // Source has no URL (or uses local_file) — skip; nothing to bust.
+              completed++;
+              if (completed >= inputCount) {
+                clearTimeout(timer);
+                finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED, skipped: 'sources without url' });
+              }
+              return;
+            }
+            const idS = 'set-' + (++nextId);
+            pending.set(idS, { kind: 'set', name: kind.name });
+            send(6, {
+              requestType: 'SetInputSettings',
+              requestId: idS,
+              requestData: {
+                inputName: kind.name,
+                inputSettings: { ...settings, is_local_file: false, url: newUrl },
+                overlay: false, // overwrite the URL completely
+              },
+            });
+            return;
+          }
+          if (completed >= inputCount) {
+            clearTimeout(timer);
+            finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
+          }
+          return;
+        }
+        if (kind && kind.kind === 'set') {
           completed++;
           if (ok) REFRESHED.push(kind.name);
-          else log.warn(`refresh-obs: ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
+          else log.warn(`refresh-obs: SetInputSettings ${kind.name} -> ${d.requestStatus?.comment || 'failed'}`);
           if (completed >= inputCount) {
             clearTimeout(timer);
             finalize({ refreshed: REFRESHED.length, attempted: inputCount, names: REFRESHED });
@@ -335,6 +383,19 @@ export function createApi({ state, log, config, gamesPath, configPath, installDi
       dotfiles: 'ignore',
       maxAge: 0,
       etag: false,
+      // CEF (OBS browser source's embedded Chromium) caches subresources
+      // even when the parent page reloads with no-cache. theme-tokens.css
+      // is the worst offender — palette updates never reach OBS until the
+      // user closes/reopens the source. no-store on theme files forces CEF
+      // to fetch a fresh copy every time, so /save-palette + /refresh-obs
+      // round-trips actually land in OBS within one reload.
+      setHeaders: (res, filePath) => {
+        if (/(theme-tokens\.css|live-update\.js|config\.js)$/i.test(filePath)) {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+        }
+      },
     }));
   }
 
